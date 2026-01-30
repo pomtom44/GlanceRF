@@ -1,7 +1,7 @@
 """
 Logging configuration for GlanceRF.
 Configures console (always) and optional log file from config.
-Levels: default (startup + errors), detailed (+ api checks, heartbeat), verbose (+ request details).
+Levels: default (INFO: startup/shutdown, ERROR: errors), detailed (+ DETAILED: requests, heartbeat, etc.), verbose (+ DEBUG: everything else).
 """
 
 import logging
@@ -9,19 +9,23 @@ import sys
 from pathlib import Path
 from typing import Any, Optional
 
+# Custom level between DEBUG (10) and INFO (20): web requests, heartbeat, update checks
+DETAILED_LEVEL = 15
+logging.addLevelName(DETAILED_LEVEL, "DETAILED")
+
 LOG_LEVEL_MAP = {
-    "default": logging.WARNING,   # startup and errors only
-    "detailed": logging.INFO,    # + api checks, heartbeat (one or two lines each)
-    "verbose": logging.DEBUG,    # + request details, debug
+    "default": logging.INFO,     # startup, shutdown (INFO), errors (ERROR)
+    "detailed": DETAILED_LEVEL,  # same + DETAILED (web requests, heartbeat, sync checks)
+    "verbose": logging.DEBUG,    # same + DEBUG (per-request details, etc.)
 }
 
 
 def _level_from_config(config: Any) -> int:
-    """Resolve numeric level from config. Default to WARNING if missing or invalid."""
+    """Resolve numeric level from config. Default to INFO if missing or invalid."""
     raw = config.get("log_level") if hasattr(config, "get") else None
     if not raw:
-        return logging.WARNING
-    return LOG_LEVEL_MAP.get(str(raw).strip().lower(), logging.WARNING)
+        return logging.INFO
+    return LOG_LEVEL_MAP.get(str(raw).strip().lower(), logging.INFO)
 
 
 def _log_path_from_config(config: Any) -> Optional[str]:
@@ -43,7 +47,7 @@ def setup_logging(config: Any) -> None:
     level = _level_from_config(config)
     log_path = _log_path_from_config(config)
 
-    fmt = "%(asctime)s [%(levelname)s] %(name)s: %(message)s"
+    fmt = "%(asctime)s [%(levelname)s] %(message)s"
     date_fmt = "%Y-%m-%d %H:%M:%S"
     formatter = logging.Formatter(fmt, datefmt=date_fmt)
 

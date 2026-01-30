@@ -31,7 +31,6 @@ def _get_layout_template() -> str:
 
 def register_layout_routes(app: FastAPI, connection_manager: ConnectionManager):
     """Register layout configurator routes."""
-    limiter = app.state.limiter
 
     @app.get("/layout")
     async def layout_configurator():
@@ -164,16 +163,15 @@ def register_layout_routes(app: FastAPI, connection_manager: ConnectionManager):
         setup_callsign_json = _json.dumps(current_config.get("setup_callsign") or "")
         setup_location_json = _json.dumps(current_config.get("setup_location") or "")
 
-        html_content = _get_layout_template().format(
-            grid_css=grid_css,
-            grid_html=grid_html,
-            grid_columns=grid_columns,
-            grid_rows=grid_rows,
-            module_settings_by_cell_json=module_settings_by_cell_json,
-            modules_settings_schema_json=modules_settings_schema_json,
-            setup_callsign_json=setup_callsign_json,
-            setup_location_json=setup_location_json,
-        )
+        html_content = _get_layout_template()
+        html_content = html_content.replace("__GRID_CSS__", grid_css)
+        html_content = html_content.replace("__GRID_HTML__", grid_html)
+        html_content = html_content.replace("__GRID_COLUMNS__", str(grid_columns))
+        html_content = html_content.replace("__GRID_ROWS__", str(grid_rows))
+        html_content = html_content.replace("__MODULE_SETTINGS_BY_CELL_JSON__", module_settings_by_cell_json)
+        html_content = html_content.replace("__MODULES_SETTINGS_SCHEMA_JSON__", modules_settings_schema_json)
+        html_content = html_content.replace("__SETUP_CALLSIGN_JSON__", setup_callsign_json)
+        html_content = html_content.replace("__SETUP_LOCATION_JSON__", setup_location_json)
 
         return HTMLResponse(content=html_content)
 

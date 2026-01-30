@@ -113,14 +113,35 @@ The values you may want to change are:
 
 ## Logging and errors
 
-Error and exception logging goes to **standard error (stderr)**. If you start the app from a terminal (e.g. `python run.py`), that is the **same console window** where you see the startup messages ("Read-only server started...", "Starting GlanceRF server...", etc.). Any asyncio or application errors will appear there.
+Logging always goes to **the console (stderr)**. You can optionally add a **log file** and choose how much is logged by editing `glancerf_config.json`.
 
-- **Running from a terminal** – Watch that window for errors.
-- **Running in the background or from a shortcut** – To capture errors to a file, redirect stderr when starting the app:
-  - Windows (Command Prompt): `python run.py 2> glancerf_errors.log`
-  - Windows (PowerShell): `python run.py 2>&1 | Tee-Object -FilePath glancerf_errors.log`
-  - Linux/macOS: `python run.py 2> glancerf_errors.log`
+### Log levels
 
-The app does not write a log file by default. Config save errors are printed with `print()` and also go to the same console.
+Add a **`log_level`** key to your config (or leave it out for default behaviour):
+
+| Level | What you see |
+|-------|----------------|
+| **default** | **INFO:** Startup and shutdown messages. **ERROR:** Error messages. |
+| **detailed** | Same as default, plus **DETAILED:** Web requests, telemetry heartbeat, update checks, and similar one-line events. |
+| **verbose** | Same as default and detailed (INFO, ERROR, DETAILED), plus **DEBUG:** Per-request details (method, path, status, duration) and other debug output. |
+
+If `log_level` is missing, the app uses **default** (startup, shutdown, and errors).
+
+### File logging
+
+To also write logs to a file, add **`log_path`** to `glancerf_config.json` with a full or relative path. The app will create the file and its parent folders if needed. Example:
+
+```json
+{
+  "port": 8080,
+  "readonly_port": 8081,
+  "use_desktop": true,
+  "log_level": "detailed",
+  "log_path": "C:/GlanceRF/logs/glancerf.log"
+}
+```
+
+- **Console** – Always used; level is controlled by `log_level`.
+- **File** – Only used when `log_path` is set; the same level applies. Omit `log_path` to have console-only logging.
 
 ---

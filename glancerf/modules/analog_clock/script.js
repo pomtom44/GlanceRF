@@ -4,7 +4,8 @@
     }
     function updateAnalogClocks() {
         var allSettings = window.GLANCERF_MODULE_SETTINGS || {};
-        document.querySelectorAll('.grid-cell-analog_clock').forEach(function(cell) {
+        var cells = document.querySelectorAll('.grid-cell-analog_clock, .grid-cell-analog-clock');
+        cells.forEach(function(cell) {
             var r = cell.getAttribute('data-row');
             var c = cell.getAttribute('data-col');
             var cellKey = (r != null && c != null) ? r + '_' + c : '';
@@ -36,6 +37,13 @@
             }
         });
     }
-    updateAnalogClocks();
-    setInterval(updateAnalogClocks, 1000);
+    function startAnalogClocks() {
+        updateAnalogClocks();
+        setInterval(updateAnalogClocks, 1000);
+    }
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', startAnalogClocks);
+    } else {
+        startAnalogClocks();
+    }
 })();

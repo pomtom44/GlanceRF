@@ -6,13 +6,13 @@
     <title>GlanceRF - Layout Configurator</title>
     <link rel="stylesheet" href="/static/css/layout.css">
     <style>
-        .grid-layout {{ {grid_css} }}
+        .grid-layout { __GRID_CSS__ }
     </style>
 </head>
 <body>
     <div id="aspect-container">
         <div class="grid-layout">
-            {grid_html}
+            __GRID_HTML__
         </div>
     </div>
 
@@ -21,17 +21,17 @@
     <script>
         (function() {
             var params = new URLSearchParams(window.location.search);
-            var desktop = params.get('desktop') === 'true' || /QtWebEngine/i.test(navigator.userAgent);
+            var desktop = params.get('desktop') === 'true' || navigator.userAgent.indexOf('QtWebEngine') !== -1;
             document.body.classList.add(desktop ? 'layout-desktop-mode' : 'layout-browser-mode');
             window._layoutIsDesktop = desktop;
         })();
         window.LAYOUT_CONFIG = {
-            grid_columns: {grid_columns},
-            grid_rows: {grid_rows},
-            module_settings_by_cell: {module_settings_by_cell_json},
-            modules_settings_schema: {modules_settings_schema_json},
-            setup_callsign: {setup_callsign_json},
-            setup_location: {setup_location_json}
+            "grid_columns": __GRID_COLUMNS__,
+            "grid_rows": __GRID_ROWS__,
+            "module_settings_by_cell": __MODULE_SETTINGS_BY_CELL_JSON__,
+            "modules_settings_schema": __MODULES_SETTINGS_SCHEMA_JSON__,
+            "setup_callsign": __SETUP_CALLSIGN_JSON__,
+            "setup_location": __SETUP_LOCATION_JSON__
         };
     </script>
     <script src="/static/js/layout.js"></script>

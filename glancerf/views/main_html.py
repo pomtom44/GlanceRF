@@ -30,7 +30,10 @@ def render_main_page(
     setup_location_json: str = '""',
 ) -> str:
     """Render the main clock page HTML with WebSocket and aspect-ratio support."""
+    module_css = module_css if module_css is not None else ""
+    module_js = module_js if module_js is not None else ""
     return _get_main_template().format(
+        aspect_ratio_css=aspect_ratio_css,
         grid_css=grid_css,
         grid_html=grid_html,
         module_css=module_css,

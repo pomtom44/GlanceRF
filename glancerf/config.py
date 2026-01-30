@@ -20,6 +20,20 @@ def _default_layout(rows: int, cols: int) -> list:
     return [["" for _ in range(cols)] for _ in range(rows)]
 
 
+def resize_layout_to_grid(layout: list, grid_columns: int, grid_rows: int) -> list:
+    """Resize layout to exactly grid_rows x grid_columns, preserving existing cells and filling with empty string."""
+    result = []
+    for row in range(grid_rows):
+        result_row = []
+        for col in range(grid_columns):
+            if layout and row < len(layout) and col < len(layout[row]):
+                result_row.append(layout[row][col] if isinstance(layout[row][col], str) else "")
+            else:
+                result_row.append("")
+        result.append(result_row)
+    return result
+
+
 DEFAULT_CONFIG: Dict[str, Any] = {
     "port": 8080,
     "readonly_port": 8081,

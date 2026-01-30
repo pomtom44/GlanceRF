@@ -655,7 +655,6 @@
             }
         }
         
-        {module_js}
         window.addEventListener('resize', enforceAspectRatio);
         
         document.addEventListener('visibilitychange', function() {

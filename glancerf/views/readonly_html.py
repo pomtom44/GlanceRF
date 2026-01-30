@@ -28,6 +28,8 @@ def render_readonly_page(
     module_settings_json: str = "{}",
 ) -> str:
     """Render the read-only clock page HTML (no interactions)."""
+    module_css = module_css if module_css is not None else ""
+    module_js = module_js if module_js is not None else ""
     return _get_readonly_template().format(
         grid_css=grid_css,
         grid_html=grid_html,

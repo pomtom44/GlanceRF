@@ -14,7 +14,7 @@ import httpx
 
 from glancerf import __version__
 from glancerf.config import get_config
-from glancerf.logging_config import get_logger
+from glancerf.logging_config import DETAILED_LEVEL, get_logger
 from glancerf.modules import get_modules
 
 _log = get_logger("telemetry")
@@ -100,30 +100,24 @@ def get_guid() -> Tuple[Optional[str], bool]:
         return None, True
 
 
-async def send_installation_event() -> bool:
+async def request_guid_only() -> bool:
     """
-    Send installation event to server during setup to get GUID and log installation.
-    This is called during first_run to register the installation with the server.
+    Request a GUID from the server without logging an installation event.
+    Used during first run so the client has a GUID before setup is complete.
+    Server returns a GUID and does not insert into telemetry or installations.
     
     Returns:
-        True if successful, False otherwise
+        True if GUID was received and saved, False otherwise
     """
     try:
         config = get_config()
-        
-        # Get GUID - should be None on first call
-        guid, is_first_checkin = get_guid()
-        
-        # Build installation payload
         payload = {
             "timestamp": datetime.utcnow().isoformat(),
-            "event_type": "installation",  # Special event type for setup
+            "event_type": "guid_request",
             "glancerf": get_glancerf_info(),
             "system": get_system_info(),
-            "guid": "",  # Always send empty GUID so server generates one
+            "guid": "",
         }
-        
-        # Send to server
         async with httpx.AsyncClient(timeout=10.0) as client:
             response = await client.post(
                 TELEMETRY_URL,
@@ -131,20 +125,16 @@ async def send_installation_event() -> bool:
                 headers={"Content-Type": "application/json"}
             )
             response.raise_for_status()
-            
-            # Server should return a GUID
             if response.status_code == 200:
                 try:
                     response_data = response.json()
                     if response_data.get("guid"):
-                        # Server provided a GUID, save it
                         config.set("telemetry_guid", response_data["guid"])
-                        _log.info("Telemetry installation event sent (GUID received)")
+                        _log.log(DETAILED_LEVEL, "Telemetry GUID received (guid_request)")
                         return True
                 except Exception as e:
                     _log.warning("Failed to parse GUID from response: %s", e)
-            
-            return True
+        return False
     except httpx.ConnectError as e:
         _log.error("Telemetry connection error: %s", e)
         return False
@@ -155,7 +145,7 @@ async def send_installation_event() -> bool:
         _log.error("Telemetry HTTP error %s: %s", e.response.status_code, e)
         return False
     except Exception as e:
-        _log.error("Telemetry send failed: %s", e, exc_info=True)
+        _log.error("Telemetry GUID request failed: %s", e, exc_info=True)
         return False
 
 
@@ -250,29 +240,26 @@ class TelemetrySender:
         """Background task: send periodic heartbeat telemetry."""
         try:
             config = get_config()
-            
-            # Check if this is first run and we need to register installation
             first_run = config.get("first_run")
             if first_run is None:
                 first_run = True
-            
+
+            # During first run: get a GUID immediately (no install log, just GUID)
             guid, _ = get_guid()
-            
-            # If first run and no GUID, send installation event to get GUID from server
-            if first_run and not guid:
-                await send_installation_event()
-            
-            # Wait for setup to complete before sending regular telemetry
+            if not guid:
+                await request_guid_only()
+
+            # Wait until setup is complete; no other telemetry while in setup
             while first_run:
-                await asyncio.sleep(60)  # Check every minute
+                await asyncio.sleep(60)
                 config = get_config()
                 first_run = config.get("first_run")
                 if first_run is None:
                     first_run = True
-            
-            # Setup is complete - send startup and start heartbeats
+
+            # Setup complete: send startup only (not an install event), then heartbeats
             await self.send_startup()
-            _log.info("Telemetry startup event sent")
+            _log.log(DETAILED_LEVEL, "Telemetry startup event sent")
 
             # Wait a bit before starting heartbeats
             await asyncio.sleep(300)  # 5 minutes
@@ -283,7 +270,7 @@ class TelemetrySender:
                     await send_telemetry("heartbeat", {
                         "uptime_seconds": uptime_seconds
                     })
-                    _log.info("Telemetry heartbeat sent (uptime %s s)", uptime_seconds)
+                    _log.log(DETAILED_LEVEL, "Telemetry heartbeat sent (uptime %s s)", uptime_seconds)
                     await asyncio.sleep(self.heartbeat_interval)
                 except asyncio.CancelledError:
                     raise

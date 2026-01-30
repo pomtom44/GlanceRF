@@ -4,7 +4,7 @@ API routes for GlanceRF
 
 from fastapi import FastAPI
 
-from glancerf.logging_config import get_logger
+from glancerf.logging_config import DETAILED_LEVEL, get_logger
 from glancerf.telemetry import send_telemetry
 from glancerf.time_utils import get_current_time
 
@@ -17,7 +17,7 @@ def register_api_routes(app: FastAPI):
     @app.get("/api/time")
     async def get_time():
         """API endpoint to get current time"""
-        _log.info("API: GET /api/time")
+        _log.log(DETAILED_LEVEL, "API: GET /api/time")
         return get_current_time()
     
     @app.post("/api/telemetry/test")

@@ -16,7 +16,7 @@ import httpx
 
 from glancerf import __version__
 from glancerf.config import get_config
-from glancerf.logging_config import get_logger
+from glancerf.logging_config import DETAILED_LEVEL, get_logger
 from glancerf.updater import perform_auto_update
 
 _log = get_logger("update_checker")
@@ -130,7 +130,7 @@ class UpdateChecker:
             latest = await check_for_updates()
             if latest:
                 self.last_check_result = latest
-                _log.info("Update check: version %s available (current %s)", latest, __version__)
+                _log.log(DETAILED_LEVEL, "Update check: version %s available (current %s)", latest, __version__)
 
                 if update_mode == "auto":
                     # Perform automatic update
@@ -149,7 +149,7 @@ class UpdateChecker:
                     await self.send_update_notification(latest, update_mode)
             else:
                 self.last_check_result = None
-                _log.info("Update check: no update available (current %s)", __version__)
+                _log.log(DETAILED_LEVEL, "Update check: no update available (current %s)", __version__)
         except Exception as e:
             _log.debug("Update check failed: %s", e, exc_info=True)
     

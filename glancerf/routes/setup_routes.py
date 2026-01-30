@@ -11,7 +11,7 @@ from pathlib import Path
 from fastapi import Depends, FastAPI, Form, Request
 from fastapi.responses import HTMLResponse, RedirectResponse
 
-from glancerf.config import get_config
+from glancerf.config import get_config, resize_layout_to_grid
 from glancerf.logging_config import get_logger
 from glancerf.rate_limit import rate_limit_dependency
 
@@ -34,7 +34,6 @@ def _get_setup_template() -> str:
 
 def register_setup_routes(app: FastAPI, connection_manager: ConnectionManager):
     """Register setup page and form submission routes."""
-    limiter = app.state.limiter
 
     @app.get("/setup")
     async def setup_page():
@@ -184,6 +183,12 @@ def register_setup_routes(app: FastAPI, connection_manager: ConnectionManager):
         config_instance.set("orientation", orientation)
         config_instance.set("grid_columns", grid_columns)
         config_instance.set("grid_rows", grid_rows)
+        # Ensure layout dimensions match grid (fix mismatch after first-run setup or grid size change)
+        current_layout = config_instance.get("layout") or []
+        rows_ok = len(current_layout) == grid_rows
+        cols_ok = (current_layout and len(current_layout[0]) == grid_columns) if current_layout else False
+        if not (rows_ok and cols_ok):
+            config_instance.set("layout", resize_layout_to_grid(current_layout, grid_columns, grid_rows))
         config_instance.set("setup_callsign", (setup_callsign or "").strip())
         config_instance.set("setup_location", (setup_location or "").strip())
         config_instance.set("update_mode", update_mode)
@@ -219,10 +224,6 @@ def register_setup_routes(app: FastAPI, connection_manager: ConnectionManager):
         except Exception as e:
             _log.debug("WebSocket broadcast failed: %s", e)
     
-        # Redirect based on whether layout exists
-        layout = config_instance.get("layout")
-        if layout is None:
-            return RedirectResponse(url="/layout", status_code=303)
-        else:
-            return RedirectResponse(url="/", status_code=303)
+        # After setup, always go to layout page so user can assign modules to cells
+        return RedirectResponse(url="/layout", status_code=303)
 

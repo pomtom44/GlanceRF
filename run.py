@@ -20,7 +20,7 @@ from glancerf.logging_config import setup_logging, get_logger
 def _graceful_shutdown(signum=None, frame=None):
     """Handle Ctrl+C / Cmd+C and SIGTERM with a clean message and normal shutdown."""
     log = get_logger("run")
-    log.warning("Shutting down GlanceRF...")
+    log.info("Shutting down GlanceRF...")
     raise KeyboardInterrupt()
 
 
@@ -58,7 +58,7 @@ def main():
 
     # Start read-only server in a separate thread (always)
     local_ip = get_local_ip()
-    log.warning("Starting read-only server on http://%s:%s", local_ip, readonly_port)
+    log.info("Starting read-only server on http://%s:%s", local_ip, readonly_port)
     readonly_thread = threading.Thread(
         target=run_readonly_server,
         args=("0.0.0.0", readonly_port, True),  # host, port, quiet
@@ -78,7 +78,7 @@ def main():
             
             # Start server in a separate thread
             local_ip = get_local_ip()
-            log.warning("Starting main server on http://%s:%s", local_ip, port)
+            log.info("Starting main server on http://%s:%s", local_ip, port)
             server_thread = threading.Thread(
                 target=run_server,
                 args=("127.0.0.1", port, True),  # host, port, quiet
@@ -103,7 +103,7 @@ def main():
                 log.error("Server did not start within %s seconds - desktop window may not load correctly", max_wait)
 
             # Run desktop application
-            log.warning("Starting desktop app")
+            log.info("Starting desktop app")
             run_desktop(port, server_thread)
             
         except ImportError as e:
@@ -114,7 +114,7 @@ def main():
     else:
         # Server-only mode
         local_ip = get_local_ip()
-        log.warning("Starting main server on http://%s:%s", local_ip, port)
+        log.info("Starting main server on http://%s:%s", local_ip, port)
         run_server(port=port, quiet=False)
 
 

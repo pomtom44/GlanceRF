@@ -7,6 +7,11 @@
     var gridColumns = Number(cfg.grid_columns) || 3;
     var gridRows = Number(cfg.grid_rows) || 3;
 
+    function stripTrailingSlash(s) {
+        var p = (s == null || s === '') ? '/' : String(s);
+        return (p.length > 1 && p.charAt(p.length - 1) === '/') ? p.slice(0, -1) : p;
+    }
+
 var currentDesktopWidth = 0;
             var currentDesktopHeight = 0;
 
@@ -558,14 +563,14 @@ var currentDesktopWidth = 0;
                             var incomingPath = (function() {
                                 try {
                                     var p = new URL(incomingUrl, window.location.origin).pathname;
-                                    return (p || '/').replace(/\\/$/, '') || '/';
+                                    return stripTrailingSlash(p) || '/';
                                 } catch (e) {
                                     var a = document.createElement('a');
                                     a.href = incomingUrl;
-                                    return (a.pathname || '/').replace(/\\/$/, '') || '/';
+                                    return stripTrailingSlash(a.pathname) || '/';
                                 }
                             })();
-                            var ourPath = (window.location.pathname || '/').replace(/\\/$/, '') || '/';
+                            var ourPath = stripTrailingSlash(window.location.pathname) || '/';
                             if (incomingPath !== ourPath) return;
                         
                             const parser = new DOMParser();
@@ -859,14 +864,14 @@ var currentDesktopWidth = 0;
                             var incomingPath = (function() {
                                 try {
                                     var p = new URL(incomingUrl, window.location.origin).pathname;
-                                    return (p || '/').replace(/\\/$/, '') || '/';
+                                    return stripTrailingSlash(p) || '/';
                                 } catch (e) {
                                     var a = document.createElement('a');
                                     a.href = incomingUrl;
-                                    return (a.pathname || '/').replace(/\\/$/, '') || '/';
+                                    return stripTrailingSlash(a.pathname) || '/';
                                 }
                             })();
-                            var ourPath = (window.location.pathname || '/').replace(/\\/$/, '') || '/';
+                            var ourPath = stripTrailingSlash(window.location.pathname) || '/';
                             if (incomingPath !== ourPath) return;
                         
                             const parser = new DOMParser();

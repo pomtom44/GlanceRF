@@ -3,6 +3,11 @@
     var currentAspectRatio = (cfg.current_ratio != null ? cfg.current_ratio : '16:9');
     var currentOrientation = (cfg.current_orientation != null ? cfg.current_orientation : 'landscape');
 
+    function stripTrailingSlash(s) {
+        var p = (s == null || s === '') ? '/' : String(s);
+        return (p.length > 1 && p.charAt(p.length - 1) === '/') ? p.slice(0, -1) : p;
+    }
+
 function isSubmitButton(el) { return el && (el.type === 'submit' || (el.tagName === 'BUTTON' && el.getAttribute('type') === 'submit')); };
             // Store current aspect ratio and orientation
             let targetRatio = 16 / 9; // Initial ratio (width/height)
@@ -220,8 +225,12 @@ function isSubmitButton(el) { return el && (el.type === 'submit' || (el.tagName 
                 updatePreview();
             }
         
-            // Initialize immediately
-            initializeSetup();
+            // Run once DOM is ready so #preview-square and sliders exist
+            if (document.readyState === 'loading') {
+                document.addEventListener('DOMContentLoaded', initializeSetup);
+            } else {
+                initializeSetup();
+            }
         
             // Connect to WebSocket for mirroring
             let ws = null;
@@ -245,7 +254,7 @@ function isSubmitButton(el) { return el && (el.type === 'submit' || (el.tagName 
                 
                     if (message.type === 'config_update') {
                         // Navigate to main so we don't reload /setup (redirect may not have completed yet)
-                        var path = (window.location.pathname || '/').replace(/\\/$/, '') || '/';
+                        var path = stripTrailingSlash(window.location.pathname) || '/';
                         if (path === '/setup') {
                             window.location.href = '/';
                         } else {
@@ -260,14 +269,14 @@ function isSubmitButton(el) { return el && (el.type === 'submit' || (el.tagName 
                             var incomingPath = (function() {
                                 try {
                                     var p = new URL(incomingUrl, window.location.origin).pathname;
-                                    return (p || '/').replace(/\\/$/, '') || '/';
+                                    return stripTrailingSlash(p) || '/';
                                 } catch (e) {
                                     var a = document.createElement('a');
                                     a.href = incomingUrl;
-                                    return (a.pathname || '/').replace(/\\/$/, '') || '/';
+                                    return stripTrailingSlash(a.pathname) || '/';
                                 }
                             })();
-                            var ourPath = (window.location.pathname || '/').replace(/\\/$/, '') || '/';
+                            var ourPath = stripTrailingSlash(window.location.pathname) || '/';
                             if (incomingPath !== ourPath) return;
                             if (message.data.formState) {
                                 if (isSubmitButton(document.activeElement)) return;
@@ -396,7 +405,7 @@ function isSubmitButton(el) { return el && (el.type === 'submit' || (el.tagName 
                 
                     if (message.type === 'config_update') {
                         // Navigate to main so we don't reload /setup (redirect may not have completed yet)
-                        var path = (window.location.pathname || '/').replace(/\\/$/, '') || '/';
+                        var path = stripTrailingSlash(window.location.pathname) || '/';
                         if (path === '/setup') {
                             window.location.href = '/';
                         } else {
@@ -411,14 +420,14 @@ function isSubmitButton(el) { return el && (el.type === 'submit' || (el.tagName 
                             var incomingPath = (function() {
                                 try {
                                     var p = new URL(incomingUrl, window.location.origin).pathname;
-                                    return (p || '/').replace(/\\/$/, '') || '/';
+                                    return stripTrailingSlash(p) || '/';
                                 } catch (e) {
                                     var a = document.createElement('a');
                                     a.href = incomingUrl;
-                                    return (a.pathname || '/').replace(/\\/$/, '') || '/';
+                                    return stripTrailingSlash(a.pathname) || '/';
                                 }
                             })();
-                            var ourPath = (window.location.pathname || '/').replace(/\\/$/, '') || '/';
+                            var ourPath = stripTrailingSlash(window.location.pathname) || '/';
                             if (incomingPath !== ourPath) return;
                             if (message.data.formState) {
                                 if (isSubmitButton(document.activeElement)) return;
