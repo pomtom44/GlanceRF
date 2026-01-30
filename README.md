@@ -1,72 +1,70 @@
 # GlanceRF (A Hamclock Modern Rebuild)
 
-### What is GlanceRF
-GlanceRF is a modern rebuild of the Original HamClock by Elwood WB0OEW
-During development of this project, early in Beta Versions, Elwood passed away.
-Originally, this project was to be a side project, and I was going to tell people
-"If you want a mature project with support, go use hamclock"
-Thoughts go to Elwood, and I thank him for the original project which so many use, and inspired the rebuild of this.
+## What is GlanceRF
 
-**Disclaimer:**
-This is a personal project, I have built it for my needs, but also designed it for ease of use for others.
-Once it's working how I want, support will be limited.
-However requests, bugs, etc, I will do my best to sort out.
+GlanceRF is a modern rebuild of the Original HamClock by Elwood WB0OEW. During development of this project, early in Beta, Elwood passed away. Originally this was a side project, and I was going to tell people: *"If you want a mature project with support, go use hamclock."* Thoughts go to Elwood, and I thank him for the original project which so many use and which inspired this rebuild.
 
+**Disclaimer:** This is a personal project. I built it for my needs but also designed it for ease of use for others. Once it's working how I want, support will be limited. However, requests, bugs, etc.—I will do my best to sort them out.
 
-## TLDR Setup Guide.
+---
 
-Download the Project
-Install python
-Open a terminal to your downloaded location
-Run `pip install -r requirements.txt`
-or `pip install -r requirements_headless.txt` if you are running on a server with no GUI
-(The default version has a pop up window with the main display showing, the headless runs in only a terminal for servers or no GUI popup, and is accessed via a web browser)
-Configuration is stored in **`glancerf_config.json`** in the same folder as `run.py` (the Project folder). Edit it to disable desktop mode if running headless.
-Run `python run.py` and then follow the setup guide
-(If headless, connect via a web browser to continue setup)
+## Quick start
 
+1. **Download** the project and open a terminal in the project folder.
+2. **Install Python** (3.8 or higher) if needed.
+3. **Install dependencies:**
+   - With desktop GUI:  
+     `pip install -r requirements.txt`
+   - Headless (server only, no GUI):  
+     `pip install -r requirements_headless.txt`
+4. **Optional (headless):** Edit `glancerf_config.json` in this folder to set `"use_desktop": false`.
+5. **Run:**  
+   `python run.py`  
+   Then follow the setup (in the app window, or in a browser if headless).
+
+Configuration is stored in **`glancerf_config.json`** in the same folder as `run.py`.
+
+---
 
 ## Documentation
 
-Guides in the **[docs/](docs/)** folder:
+| Guide | Description |
+|-------|-------------|
+| [USER_GUIDE.md](docs/USER_GUIDE.md) | First run, setup, keyboard shortcuts (S = Setup, L = Layout), layout editor, map and clock options. |
+| [MODULES.md](docs/MODULES.md) | Module system and available modules. |
+| [CREATING_A_MODULE.md](docs/CREATING_A_MODULE.md) | How to create a cell module: folder structure, `module.py`, `index.html`, `style.css`, `script.js`. |
+| [TELEMETRY.md](docs/TELEMETRY.md) | Telemetry and privacy: what is collected, what isn't, how to control it. |
 
-- **[docs/USER_GUIDE.md](docs/USER_GUIDE.md)** – How to use: first run, setup, keyboard shortcuts (S = Setup, L = Layout), layout editor, map center (Maidenhead or lat,lng), map and clock module options, and configuration.
-- **[docs/MODULES.md](docs/MODULES.md)** – Module system and available modules.
-- **[docs/CREATING_A_MODULE.md](docs/CREATING_A_MODULE.md)** – How to create a new cell module: folder structure, module.py, index.html, style.css, script.js, naming conventions, and settings.
-- **[docs/TELEMETRY.md](docs/TELEMETRY.md)** – Telemetry and privacy information: what data is collected, what isn't, and how to control it.
+---
 
 ## Requirements
 
-- Python 3.8 or higher
-- See `requirements.txt` for dependencies
+- **Python** 3.8 or higher
+- Dependencies in `requirements.txt` (full) or `requirements_headless.txt` (server only)
 
 **Installation options:**
-- **Full installation (with desktop GUI):** `pip install -r requirements.txt`
-- **Headless installation (server-only, no GUI):** `pip install -r requirements_headless.txt`
 
-**Note:** For desktop mode, PyQt5 and PyQtWebEngine are required. They are included in `requirements.txt` but not in `requirements_headless.txt`. The application will automatically skip GUI imports if desktop mode is disabled in the configuration.
+- **Full (with desktop GUI):** `pip install -r requirements.txt`  
+  Includes PyQt5 and PyQtWebEngine for the desktop window.
+- **Headless (server only):** `pip install -r requirements_headless.txt`  
+  No GUI; access via web browser. Set `"use_desktop": false` in `glancerf_config.json`.
+
+The app skips GUI imports if desktop mode is disabled in config.
+
+---
 
 ## Features
 
- - Desktop app for local use
- - Server only version with web based access
- - Read only mode for 'public' displays
- - Works with any size monitor, dynamic scaling
- - Choose your grid layout, no set grid size
- - Choose which modules go where, no fixed layout
- - Resize modules, have some small and some large
+- **Modes:** Desktop app, server-only (web), and read-only for public displays
+- **Layout:** Any grid size, any monitor; choose which modules go where and resize cells
+- **Built-in modules:** Clock (local, UTC, international), map (various base images), weather, countdown, and more
 
- - Clock with Local, UTC, and International Time
- - Map with various base images
+---
 
 ## Feature requests
 
-A list of requested features is in **[docs/FEATURE_REQUESTS.md](docs/FEATURE_REQUESTS.md)**.  
-To request a feature, open an Issue and it will be reviewed.
+See **[docs/FEATURE_REQUESTS.md](docs/FEATURE_REQUESTS.md)** for the list. To request a feature, open an Issue.
 
+---
 
-**Disclaimer:**
-This project was heavily assisted with AI.
-While I could program it all by myself, it would likely take a long time.
-The concepts, and code review are all mine, and I am still doing manual fixes and bug reviews.
-If you don't like this, each to their own, that is fine, however I would appreciate you keeping it to yourself
+**Disclaimer:** This project was heavily assisted with AI. The concepts and code review are mine, and I still do manual fixes and bug reviews. If you don't like that, each to their own—I'd appreciate you keeping it to yourself.
