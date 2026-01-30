@@ -41,11 +41,15 @@ def compare_versions(current: str, latest: str) -> bool:
     return latest_tuple > curr_tuple
 
 
+# GitHub API requires a User-Agent header (returns 403 without it)
+GITHUB_HEADERS = {"Accept": "application/vnd.github.v3+json", "User-Agent": "GlanceRF-update-checker"}
+
+
 async def check_github_release() -> Optional[str]:
     """Check GitHub releases API for latest version. Returns version string or None."""
     try:
         async with httpx.AsyncClient(timeout=10.0) as client:
-            response = await client.get(GITHUB_RELEASES_URL)
+            response = await client.get(GITHUB_RELEASES_URL, headers=GITHUB_HEADERS)
             if response.status_code == 200:
                 data = response.json()
                 tag = data.get("tag_name", "")
