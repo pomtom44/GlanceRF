@@ -2,5 +2,6 @@
   "port": 8080,
   "readonly_port": 8081,
   "use_desktop": true,
-  "first_run": false
+  "first_run": true,
+  "max_grid_scale": 10
 }
