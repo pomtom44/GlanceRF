@@ -65,9 +65,12 @@ The app skips GUI imports if desktop mode is disabled in config.
 
 ---
 
-## Feature requests
+## Feature requests & Bugs
 
-See **[docs/FEATURE_REQUESTS.md](docs/FEATURE_REQUESTS.md)** for the list. To request a feature, open an Issue.
+See **[docs/FEATURE_REQUESTS.md](docs/FEATURE_REQUESTS.md)** for the list. 
+To request a feature or raise a bug, open an Issue using the Github issues.
+If you don't have a github account, and still want to raise a bug, email me GlanceRF@zl4st.com
+
 
 ---
 
