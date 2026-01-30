@@ -2,52 +2,5 @@
   "port": 8080,
   "readonly_port": 8081,
   "use_desktop": true,
-  "first_run": false,
-  "max_grid_scale": 10,
-  "telemetry_guid": "4380d162-8624-35fd-dcad-7c64faebe5a3",
-  "desktop_window_width": 1820,
-  "desktop_window_height": 1023,
-  "desktop_window_x": 50,
-  "desktop_window_y": 88,
-  "grid_columns": 3,
-  "grid_rows": 3,
-  "aspect_ratio": "16:9",
-  "orientation": "landscape",
-  "layout": [
-    [
-      "callsign",
-      "",
-      "date"
-    ],
-    [
-      "",
-      "",
-      ""
-    ],
-    [
-      "",
-      "analog_clock",
-      ""
-    ]
-  ],
-  "setup_callsign": "",
-  "setup_location": "",
-  "update_mode": "auto",
-  "update_check_time": "03:00",
-  "telemetry_enabled": true,
-  "cell_spans": {},
-  "module_settings": {
-    "0_0": {
-      "callsign": "",
-      "grid": "",
-      "comment": ""
-    },
-    "0_2": {
-      "date_format": "dmy"
-    },
-    "2_1": {
-      "show_seconds": "1",
-      "timezone": "local"
-    }
-  }
+  "first_run": false
 }
