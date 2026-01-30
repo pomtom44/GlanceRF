@@ -21,7 +21,9 @@ Open a terminal to your downloaded location
 Run `pip install -r requirements.txt`
 or `pip install -r requirements_headless.txt` if you are running on a server with no GUI
 (The default version has a pop up window with the main display showing, the headless runs in only a terminal for servers or no GUI popup, and is accessed via a web browser)
-Configure and Run
+Configuration is stored in **`glancerf_config.json`** in the same folder as `run.py` (the Project folder). Edit it to disable desktop mode if running headless.
+Run `python run.py` and then follow the setup guide
+(If headless, connect via a web browser to continue setup)
 
 
 ## Documentation
@@ -30,6 +32,7 @@ Guides in the **[docs/](docs/)** folder:
 
 - **[docs/USER_GUIDE.md](docs/USER_GUIDE.md)** – How to use: first run, setup, keyboard shortcuts (S = Setup, L = Layout), layout editor, map center (Maidenhead or lat,lng), map and clock module options, and configuration.
 - **[docs/MODULES.md](docs/MODULES.md)** – Module system and available modules.
+- **[docs/CREATING_A_MODULE.md](docs/CREATING_A_MODULE.md)** – How to create a new cell module: folder structure, module.py, index.html, style.css, script.js, naming conventions, and settings.
 - **[docs/TELEMETRY.md](docs/TELEMETRY.md)** – Telemetry and privacy information: what data is collected, what isn't, and how to control it.
 
 ## Requirements
