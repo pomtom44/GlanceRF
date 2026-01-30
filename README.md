@@ -4,7 +4,8 @@
 
 GlanceRF is a modern rebuild of the Original HamClock by Elwood WB0OEW.
 
-During development of this project, early in Beta, Elwood passed away. Originally this was a side project, and I was going to tell people: *"If you want a mature project with support, go use hamclock."*
+During development of this project, early in Beta, Elwood passed away. Originally this was a side project, and I was going to tell people: <br>
+*"If you want a mature project with support, go use hamclock."*
 
 Thoughts go to Elwood, and I thank him for the original project which so many use and which inspired this rebuild.
 
@@ -67,9 +68,9 @@ The app skips GUI imports if desktop mode is disabled in config.
 
 ## Feature requests & Bugs
 
-See **[docs/FEATURE_REQUESTS.md](docs/FEATURE_REQUESTS.md)** for the list. 
-To request a feature or raise a bug, open an Issue using the Github issues.
-If you don't have a github account, and still want to raise a bug, email me GlanceRF@zl4st.com
+See **[docs/FEATURE_REQUESTS.md](docs/FEATURE_REQUESTS.md)** for the list.  <br>
+To request a feature or raise a bug, open an Issue using the Github issues. <br>
+If you don't have a github account, and still want to raise a bug, email me GlanceRF@zl4st.com <br>
 
 
 ---
