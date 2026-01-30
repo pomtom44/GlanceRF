@@ -33,13 +33,21 @@ Configuration is stored in **`glancerf_config.json`** in the same folder as `run
 
 ## Screenshots
 
-| Setup | Sample dashboard |
-|-------|------------------|
-| ![Setup](screenshots/Setup.png) | ![Sample Dash](screenshots/Sample%20Dash.png) |
+**Setup**
 
-| Layout editor | Layout with expanded cell |
-|---------------|----------------------------|
-| ![Layout Editor](screenshots/Layout%20Editor.png) | ![Layout Expanded](screenshots/Layout%20Expanded.png) |
+![Setup](screenshots/Setup.png)
+
+**Sample dashboard**
+
+![Sample Dash](screenshots/Sample%20Dash.png)
+
+**Layout editor**
+
+![Layout Editor](screenshots/Layout%20Editor.png)
+
+**Layout with expanded cell**
+
+![Layout Expanded](screenshots/Layout%20Expanded.png)
 
 ---
 
