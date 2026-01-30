@@ -2,7 +2,11 @@
 
 ## What is GlanceRF
 
-GlanceRF is a modern rebuild of the Original HamClock by Elwood WB0OEW. During development of this project, early in Beta, Elwood passed away. Originally this was a side project, and I was going to tell people: *"If you want a mature project with support, go use hamclock."* Thoughts go to Elwood, and I thank him for the original project which so many use and which inspired this rebuild.
+GlanceRF is a modern rebuild of the Original HamClock by Elwood WB0OEW.
+
+During development of this project, early in Beta, Elwood passed away. Originally this was a side project, and I was going to tell people: *"If you want a mature project with support, go use hamclock."*
+
+Thoughts go to Elwood, and I thank him for the original project which so many use and which inspired this rebuild.
 
 **Disclaimer:** This is a personal project. I built it for my needs but also designed it for ease of use for others. Once it's working how I want, support will be limited. However, requests, bugs, etc.—I will do my best to sort them out.
 

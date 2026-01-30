@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GlanceRF</title>
+    <link rel="stylesheet" href="/static/css/main.css">
+    <style>
+        .grid-layout {{ {grid_css} }}
+    </style>
+    <style>{module_css}</style>
+</head>
+<body>
+    <div id="update-notification">
+        <span class="update-close" onclick="this.parentElement.classList.remove('show')">&times;</span>
+        <div id="update-notification-content"></div>
+    </div>
+    <div id="aspect-container">
+        <div class="grid-layout">
+            {grid_html}
+        </div>
+    </div>
+    <script>
+        window.GLANCERF_MODULE_SETTINGS = {module_settings_json};
+        window.GLANCERF_SETUP_CALLSIGN = {setup_callsign_json};
+        window.GLANCERF_SETUP_LOCATION = {setup_location_json};
+    </script>
+    <script src="/static/js/main.js"></script>
+    <script>{module_js}</script>
+</body>
+</html>

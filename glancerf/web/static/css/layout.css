@@ -1,0 +1,188 @@
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+html, body {
+    height: 100%;
+    margin: 0;
+}
+body {
+    font-family: 'Courier New', monospace;
+    background-color: #000;
+    color: #fff;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+body.layout-browser-mode #aspect-container {
+    overflow: auto;
+}
+body.layout-desktop-mode #aspect-container {
+    overflow: hidden;
+}
+#aspect-container {
+    display: flex;
+    flex-direction: column;
+    flex: 1 1 0%;
+    min-height: 0;
+    width: 100%;
+}
+
+.grid-layout {
+    display: grid;
+    flex: 1 1 0%;
+    min-height: 0;
+    gap: 2px;
+    padding: 2px;
+    width: 100%;
+}
+
+.grid-cell {
+    background-color: #111;
+    border: 1px solid #0f0;
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-start;
+    padding: 5px;
+}
+
+
+.cell-widget-select {
+    width: auto;
+    min-width: 120px;
+    max-width: 90%;
+    height: auto;
+    background-color: #1a1a1a;
+    color: #0f0;
+    border: 1px solid #0f0;
+    border-radius: 4px;
+    padding: 4px 8px;
+    font-family: 'Courier New', monospace;
+    font-size: 12px;
+    cursor: pointer;
+    margin: 0;
+}
+
+.cell-widget-select:hover {
+    background-color: #222;
+    border-color: #0c0;
+}
+
+.cell-widget-select:focus {
+    outline: none;
+    border-color: #0f0;
+    box-shadow: 0 0 8px rgba(0, 255, 0, 0.3);
+}
+
+.cell-controls {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    z-index: 1;
+}
+
+.expand-btn, .contract-btn {
+    position: absolute;
+    background-color: #0f0;
+    color: #000;
+    border: 1px solid #0f0;
+    border-radius: 3px;
+    width: 20px;
+    height: 20px;
+    font-size: 12px;
+    font-weight: bold;
+    cursor: pointer;
+    pointer-events: all;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s;
+    z-index: 10;
+}
+
+
+.expand-right {
+    right: 2px;
+    top: 50%;
+    transform: translateY(-50%);
+}
+
+.expand-down {
+    bottom: 2px;
+    left: 50%;
+    transform: translateX(-50%);
+}
+
+.contract-left {
+    left: 2px;
+    top: 50%;
+    transform: translateY(-50%);
+}
+
+.contract-top {
+    top: 2px;
+    left: 50%;
+    transform: translateX(-50%);
+}
+
+.grid-cell.hidden {
+    display: none;
+}
+
+.save-button {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    background-color: #0f0;
+    color: #000;
+    border: 2px solid #0f0;
+    padding: 15px 30px;
+    font-family: 'Courier New', monospace;
+    font-size: 16px;
+    font-weight: bold;
+    cursor: pointer;
+    border-radius: 5px;
+    z-index: 1000;
+    transition: all 0.2s;
+}
+
+.save-button:hover {
+    background-color: #0c0;
+    box-shadow: 0 0 15px rgba(0, 255, 0, 0.5);
+    transform: scale(1.05);
+}
+
+.save-button:focus {
+    outline: 2px solid #0f0;
+}
+.save-button:active {
+    transform: scale(0.98);
+}
+
+.cell-module-settings {
+    width: 100%;
+    margin-top: 6px;
+    font-size: 12px;
+}
+.cell-module-settings .cell-setting-label {
+    display: block;
+    color: #888;
+    margin-bottom: 2px;
+    font-size: 12px;
+}
+.cell-module-settings .cell-setting-select {
+    width: 100%;
+    max-width: 100%;
+    background-color: #1a1a1a;
+    color: #0f0;
+    border: 1px solid #333;
+    padding: 4px 6px;
+    font-family: 'Courier New', monospace;
+    font-size: 12px;
+    border-radius: 4px;
+}

@@ -1,0 +1,85 @@
+"""
+Read-only root page for the secondary server (no WebSocket, no interactions)
+"""
+
+import json
+
+from fastapi import FastAPI
+from fastapi.responses import HTMLResponse
+
+from glancerf.config import get_config
+from glancerf.aspect_ratio import get_aspect_ratio_css
+from glancerf.view_utils import build_merged_cells_from_spans, build_grid_html
+from glancerf.views import render_readonly_page
+from glancerf.modules import get_module_assets
+
+
+def register_readonly_routes(readonly_app: FastAPI):
+    """Register the read-only root route on the given FastAPI app."""
+
+    @readonly_app.get("/")
+    async def readonly_root():
+        """Read-only version of main page - no interactions allowed."""
+        try:
+            current_config = get_config()
+        except (FileNotFoundError, IOError):
+            return HTMLResponse(
+                content="<h1>Configuration not found</h1>", status_code=404
+            )
+
+        aspect_ratio = current_config.get("aspect_ratio") or "16:9"
+        grid_columns = current_config.get("grid_columns")
+        grid_rows = current_config.get("grid_rows")
+
+        # Fallback to 3x3 if not configured
+        if grid_columns is None:
+            grid_columns = 3
+            current_config.set("grid_columns", 3)
+        if grid_rows is None:
+            grid_rows = 3
+            current_config.set("grid_rows", 3)
+        aspect_ratio_css = get_aspect_ratio_css(aspect_ratio)
+
+        cell_spans = current_config.get("cell_spans") or {}
+        merged_cells, _ = build_merged_cells_from_spans(cell_spans)
+        layout = current_config.get("layout")
+        if layout is None:
+            layout = [[""] * grid_columns for _ in range(grid_rows)]
+        grid_html = build_grid_html(
+            layout, cell_spans, merged_cells, grid_columns, grid_rows
+        )
+        grid_css = f"grid-template-columns: repeat({grid_columns}, 1fr); grid-template-rows: repeat({grid_rows}, 1fr);"
+        module_css, module_js = get_module_assets(layout)
+        module_settings = current_config.get("module_settings") or {}
+        module_settings_json = json.dumps(module_settings)
+
+        html_content = render_readonly_page(
+            aspect_ratio_css=aspect_ratio_css,
+            grid_css=grid_css,
+            grid_html=grid_html,
+            aspect_ratio=aspect_ratio,
+            module_css=module_css,
+            module_js=module_js,
+            module_settings_json=module_settings_json,
+        )
+        return HTMLResponse(content=html_content)
+
+
+def run_readonly_server(
+    host: str = "0.0.0.0", port: int = 8081, quiet: bool = False
+):
+    """Run the read-only FastAPI server (no WebSocket, no interactions)."""
+    from fastapi import FastAPI
+
+    readonly_app = FastAPI(title="GlanceRF (Read-Only)")
+    register_readonly_routes(readonly_app)
+
+
+    import uvicorn
+    uvicorn.run(
+        readonly_app,
+        host=host,
+        port=port,
+        log_level="error",
+        access_log=False,
+    )

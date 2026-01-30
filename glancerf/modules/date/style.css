@@ -1,0 +1,10 @@
+.grid-cell-date {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+.grid-cell-date .date_display {
+    font-size: clamp(14px, 2.5vw, 28px);
+    color: #ccc;
+    text-align: center;
+}

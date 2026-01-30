@@ -1,0 +1,27 @@
+.grid-cell-callsign {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+.grid-cell-callsign .callsign_display {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 0.2em;
+    text-align: center;
+}
+.grid-cell-callsign .callsign_line {
+    font-size: clamp(16px, 2.8vw, 32px);
+    font-weight: bold;
+    color: #fff;
+}
+.grid-cell-callsign .callsign_grid {
+    font-size: clamp(12px, 2vw, 20px);
+    color: #0f0;
+}
+.grid-cell-callsign .callsign_comment {
+    font-size: clamp(10px, 1.5vw, 14px);
+    color: #888;
+    font-style: italic;
+}

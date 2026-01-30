@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GlanceRF - Layout Configurator</title>
+    <link rel="stylesheet" href="/static/css/layout.css">
+    <style>
+        .grid-layout {{ {grid_css} }}
+    </style>
+</head>
+<body>
+    <div id="aspect-container">
+        <div class="grid-layout">
+            {grid_html}
+        </div>
+    </div>
+
+    <button class="save-button" id="save-button">Save Layout</button>
+
+    <script>
+        (function() {
+            var params = new URLSearchParams(window.location.search);
+            var desktop = params.get('desktop') === 'true' || /QtWebEngine/i.test(navigator.userAgent);
+            document.body.classList.add(desktop ? 'layout-desktop-mode' : 'layout-browser-mode');
+            window._layoutIsDesktop = desktop;
+        })();
+        window.LAYOUT_CONFIG = {
+            grid_columns: {grid_columns},
+            grid_rows: {grid_rows},
+            module_settings_by_cell: {module_settings_by_cell_json},
+            modules_settings_schema: {modules_settings_schema_json},
+            setup_callsign: {setup_callsign_json},
+            setup_location: {setup_location_json}
+        };
+    </script>
+    <script src="/static/js/layout.js"></script>
+</body>
+</html>

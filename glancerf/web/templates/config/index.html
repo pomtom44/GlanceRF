@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GlanceRF - Configuration</title>
+    <link rel="stylesheet" href="/static/css/config.css">
+</head>
+<body>
+    <div class="container">
+        <a href="/" class="back-link">Back to Main</a>
+        <h1>Configuration</h1>
+        <form id="config-form" method="POST" action="/config">
+            <div class="config-form">
+                {sections_html}
+            </div>
+            <div class="form-actions">
+                <a href="/" class="btn btn-secondary">Cancel</a>
+                <button type="submit" class="btn btn-primary">Save All Settings</button>
+            </div>
+        </form>
+    </div>
+    <script src="/static/js/config.js"></script>
+</body>
+</html>

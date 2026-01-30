@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GlanceRF - First Run Setup</title>
+    <link rel="stylesheet" href="/static/css/setup.css">
+</head>
+<body>
+    <div class="setup-container">
+        <h1>GlanceRF Setup</h1>
+
+        <div class="setup-tabs">
+            <button type="button" class="setup-tab active" id="tab-page-1" data-page="1">1. Layout</button>
+            <button type="button" class="setup-tab" id="tab-page-2" data-page="2">2. Station &amp; updates</button>
+            <button type="button" class="setup-tab" id="tab-page-3" data-page="3">3. Tips &amp; shortcuts</button>
+        </div>
+
+        <form id="setup-form" method="POST" action="/setup" onsubmit="if (window._setupFormSubmitting) return false; window._setupFormSubmitting = true; var btn = document.getElementById('setup-continue-btn'); if (btn) btn.disabled = true; return true;">
+            <div id="setup-page-1" class="setup-page active">
+            <div class="form-group">
+                <table class="setup-ratio-table">
+                    <tr>
+                        <td><label for="aspect_ratio">Screen Aspect Ratio</label></td>
+                        <td><select id="aspect_ratio" name="aspect_ratio" class="setup-ratio-select" required>
+                            {ratio_options}
+                        </select></td>
+                    </tr>
+                    <tr>
+                        <td><label for="orientation">Orientation</label></td>
+                        <td><select id="orientation" name="orientation" class="setup-ratio-select" required>
+                            <option value="landscape"{orientation_landscape_selected}>Landscape</option>
+                            <option value="portrait"{orientation_portrait_selected}>Portrait</option>
+                        </select></td>
+                    </tr>
+                    <tr class="setup-ratio-note-row">
+                        <td colspan="2"><span class="setup-ratio-note">This is just a guide to get your layout looking right, this does not lock the project to that aspect ratio.</span></td>
+                    </tr>
+                </table>
+            </div>
+
+            <div class="form-group">
+                <div class="preview-with-sliders">
+                    <div class="slider-container">
+                        <div class="slider-container-inner">
+                            <div class="slider-label">
+                                <span id="columns-value">{current_columns}</span>
+                            </div>
+                            <input type="range" id="grid_columns" name="grid_columns" min="1" max="{max_grid_scale}" value="{current_columns}" class="slider" orient="horizontal">
+                        </div>
+                    </div>
+
+                    <div class="preview-wrapper">
+                        <div class="slider-vertical-wrapper">
+                            <div class="slider-vertical-container">
+                                <div class="slider-vertical-label">
+                                    <span id="rows-value">{current_rows}</span>
+                                </div>
+                                <div class="slider-vertical-rotated">
+                                    <input type="range" id="grid_rows" name="grid_rows" min="1" max="{max_grid_scale}" value="{current_rows}" class="slider-vertical" orient="vertical">
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="preview-container">
+                            <div class="preview-square" id="preview-square">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="button-group">
+                <button type="button" id="setup-next-btn">Next</button>
+            </div>
+            </div>
+
+            <div id="setup-page-2" class="setup-page">
+            <div class="form-group">
+                <label for="setup_callsign">Callsign</label>
+                <input type="text" id="setup_callsign" name="setup_callsign" value="{current_callsign_esc}" placeholder="e.g. ZL4ST" maxlength="32">
+                <span style="font-size:12px;">Used as default by modules (e.g. Callsign / QTH) unless overridden per cell.</span>
+            </div>
+            <div class="form-group">
+                <label for="setup_location">Default location</label>
+                <input type="text" id="setup_location" name="setup_location" value="{current_location_esc}" placeholder="Grid square (e.g. RE78hk) or lat,lng (e.g. -43.5,172.6)" maxlength="64">
+                <span style="font-size:12px;">Default for modules that use a location (e.g. Weather, Sunrise/Sunset) unless overridden per cell.</span>
+            </div>
+            <div class="form-group">
+                <label for="update_mode">Updates</label>
+                <select id="update_mode" name="update_mode">
+                    <option value="none"{update_mode_none_selected}>Don't update</option>
+                    <option value="notify"{update_mode_notify_selected}>Notify only</option>
+                    <option value="auto"{update_mode_auto_selected}>Auto update</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="update_check_time">Time to check for updates</label>
+                <input type="time" id="update_check_time" name="update_check_time" value="{current_update_check_time}">
+                <span style="font-size:12px;">Local time (only used when Updates is Notify or Auto update).</span>
+            </div>
+            <div class="form-group">
+                <label for="telemetry_enabled">Telemetry</label>
+                <select id="telemetry_enabled" name="telemetry_enabled">
+                    <option value="1"{telemetry_enabled_selected}>Enabled</option>
+                    <option value="0"{telemetry_disabled_selected}>Disabled (Opt-out)</option>
+                </select>
+                <span style="font-size:12px;">Help improve GlanceRF by sending anonymous usage data (version, system info, module counts). No personal information, callsigns, or locations are collected. You can opt-out at any time. <a href="https://github.com/pomtom44/GlanceRF/blob/main/Project/docs/TELEMETRY.md" target="_blank" rel="noopener noreferrer" style="color:#0f0;">Review the telemetry policy on GitHub</a>.</span>
+            </div>
+            <div class="button-row">
+                <button type="button" id="setup-back-btn">Back</button>
+                <button type="button" id="setup-next-btn-2">Next</button>
+            </div>
+            </div>
+            <div id="setup-page-3" class="setup-page">
+            <div class="form-group setup-tips-content">
+                <h2 style="color:#0f0; font-size:20px; margin-bottom:16px;">Keyboard shortcuts</h2>
+                <p style="color:#ccc; font-size:14px; line-height:1.6; margin-bottom:12px;">On the main dashboard you can press:</p>
+                <ul style="color:#ccc; font-size:14px; line-height:1.8; margin-left:20px; margin-bottom:16px;">
+                    <li><strong style="color:#0f0;">S</strong> – Open Setup (return here anytime)</li>
+                    <li><strong style="color:#0f0;">L</strong> – Open Layout editor (add or rearrange cells)</li>
+                    <li><strong style="color:#0f0;">M</strong> – Open Modules page</li>
+                    <li><strong style="color:#0f0;">C</strong> – Open Config page</li>
+                </ul>
+                <p style="color:#ccc; font-size:14px; line-height:1.6; margin-bottom:12px;">Shortcuts are ignored when the cursor is in a text field, so you can type normally in inputs.</p>
+                <p style="color:#ccc; font-size:14px; line-height:1.6; margin-bottom:16px;">To get back to Setup later, just press <strong style="color:#0f0;">S</strong> from the main view.</p>
+                <h2 style="color:#0f0; font-size:20px; margin-bottom:16px;">Report problems</h2>
+                <p style="color:#ccc; font-size:14px; line-height:1.6;">Found a bug or have a suggestion? <a href="https://github.com/pomtom44/GlanceRF/issues" target="_blank" rel="noopener noreferrer" style="color:#0f0;">Open an issue on GitHub</a> to report it.</p>
+            </div>
+            <div class="button-row">
+                <button type="button" id="setup-back-btn-3">Back</button>
+                <button type="submit" id="setup-continue-btn">Continue</button>
+            </div>
+            </div>
+        </form>
+    </div>
+
+    <script>
+        window.SETUP_CONFIG = {setup_config_json};
+    </script>
+    <script src="/static/js/setup.js"></script>
+</body>
+</html>

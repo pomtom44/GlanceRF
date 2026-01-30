@@ -1,0 +1,27 @@
+.grid-cell-countdown {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+.grid-cell-countdown .countdown_display {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 0.2em;
+    text-align: center;
+}
+.grid-cell-countdown .countdown_label {
+    font-size: clamp(10px, 1.4vw, 14px);
+    color: #888;
+}
+.grid-cell-countdown .countdown_value {
+    font-size: clamp(16px, 2.8vw, 32px);
+    font-weight: bold;
+    color: #0f0;
+    font-variant-numeric: tabular-nums;
+}
+.grid-cell-countdown .countdown_message {
+    font-size: clamp(12px, 1.8vw, 18px);
+    color: #888;
+}
