@@ -13,6 +13,12 @@ Thoughts go to Elwood, and I thank him for the original project which so many us
 
 ---
 
+## What is GitHub, what do I do?
+
+If you don't know how to use GitHub, run projects from the command line, or where to start—that's fine. **[Click here for a step-by-step how-to guide](https://glancerf.zl4st.com/quickstart.html)** that walks you through downloading, installing, and running GlanceRF.
+
+---
+
 ## Quick start
 
 1. **Download** the project and open a terminal in the project folder.
