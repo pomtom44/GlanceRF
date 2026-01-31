@@ -8,19 +8,20 @@ import time
 from pathlib import Path
 
 from fastapi import FastAPI, Request
+from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
 
 from glancerf.config import get_config
 from glancerf.logging_config import get_logger, setup_logging
 from glancerf.rate_limit import RateLimitExceeded, rate_limit_exceeded_handler
 from glancerf.websocket_manager import ConnectionManager
-from glancerf.update_checker import UpdateChecker
+from glancerf import __version__
+from glancerf.update_checker import UpdateChecker, check_for_updates, get_latest_release_info, compare_versions
 from glancerf.telemetry import TelemetrySender
 from glancerf.routes import api, websocket, layout_routes, setup_routes
 from glancerf.routes.root import register_root
 from glancerf.routes.readonly import run_readonly_server
 from glancerf.routes.modules_routes import register_modules_routes
-from glancerf.routes.config_routes import register_config_routes
 
 # Initialize FastAPI app
 app = FastAPI(title="GlanceRF")
@@ -90,10 +91,70 @@ telemetry_sender = TelemetrySender()
 register_root(app)
 layout_routes.register_layout_routes(app, connection_manager)
 setup_routes.register_setup_routes(app, connection_manager)
-register_modules_routes(app)
-register_config_routes(app, connection_manager)
+register_modules_routes(app, connection_manager)
 api.register_api_routes(app)
 websocket.register_websocket_routes(app, connection_manager)
+
+_UPDATES_TEMPLATE_PATH = Path(__file__).resolve().parent / "web" / "templates" / "updates" / "index.html"
+_updates_template_cache = None
+
+
+@app.get("/updates", response_class=HTMLResponse)
+async def updates_page():
+    """Updates page: check for updates, show current/latest version and release notes, trigger update."""
+    global _updates_template_cache
+    if _updates_template_cache is None and _UPDATES_TEMPLATE_PATH.is_file():
+        _updates_template_cache = _UPDATES_TEMPLATE_PATH.read_text(encoding="utf-8")
+    if _updates_template_cache is None:
+        return HTMLResponse(content="<h1>Updates</h1><p>Template not found.</p>", status_code=500)
+    return HTMLResponse(content=_updates_template_cache)
+
+
+@app.get("/api/update-status")
+async def get_update_status():
+    """Return current version, latest version (if any), update_available, and release_notes. No broadcast."""
+    info = await get_latest_release_info()
+    current = __version__
+    if not info:
+        return {"current_version": current, "latest_version": None, "update_available": False, "release_notes": ""}
+    latest = info["version"]
+    release_notes = info.get("release_notes") or ""
+    update_available = compare_versions(current, latest)
+    return {
+        "current_version": current,
+        "latest_version": latest,
+        "update_available": update_available,
+        "release_notes": release_notes,
+    }
+
+
+@app.post("/api/check-updates")
+async def manual_check_updates():
+    """Trigger a manual update check. Returns JSON; if update available also broadcasts via WebSocket."""
+    latest = await check_for_updates()
+    if latest:
+        await update_checker.send_update_notification(latest, "notify")
+        return {"update_available": True, "current_version": __version__, "latest_version": latest}
+    return {"update_available": False, "current_version": __version__}
+
+
+@app.post("/api/apply-update")
+async def trigger_apply_update():
+    """If an update is available, download and apply it (then restart). Returns JSON status."""
+    from glancerf.updater import perform_auto_update
+
+    latest = await check_for_updates()
+    if not latest:
+        return {"success": False, "message": "No update available", "current_version": __version__}
+    success, message = await perform_auto_update(latest)
+    if success:
+        await update_checker.schedule_restart(delay_seconds=10)
+    return {
+        "success": success,
+        "message": message,
+        "current_version": __version__,
+        "latest_version": latest,
+    }
 
 
 @app.on_event("startup")

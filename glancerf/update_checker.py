@@ -10,7 +10,7 @@ import re
 import subprocess
 import sys
 from datetime import datetime, time as dt_time
-from typing import Optional, Tuple
+from typing import Optional, Tuple, Dict, Any
 
 import httpx
 
@@ -47,16 +47,22 @@ GITHUB_HEADERS = {"Accept": "application/vnd.github.v3+json", "User-Agent": "Gla
 
 async def check_github_release() -> Optional[str]:
     """Check GitHub releases API for latest version. Returns version string or None."""
+    info = await get_latest_release_info()
+    return info.get("version") if info else None
+
+
+async def get_latest_release_info() -> Optional[Dict[str, Any]]:
+    """Fetch latest release from GitHub. Returns dict with version, release_notes, or None."""
     try:
         async with httpx.AsyncClient(timeout=10.0) as client:
             response = await client.get(GITHUB_RELEASES_URL, headers=GITHUB_HEADERS)
             if response.status_code == 200:
                 data = response.json()
                 tag = data.get("tag_name", "")
-                # Remove 'v' prefix if present (e.g. "v0.2.0" -> "0.2.0")
                 version = tag.lstrip("v") if tag else None
                 if version and re.match(r"^\d+\.\d+\.\d+", version):
-                    return version
+                    body = data.get("body") or ""
+                    return {"version": version, "release_notes": (body.strip() if body else "")}
     except Exception as e:
         _log.debug("GitHub release check failed: %s", e)
     return None

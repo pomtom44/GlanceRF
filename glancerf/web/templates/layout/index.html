@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>GlanceRF - Layout Configurator</title>
     <link rel="stylesheet" href="/static/css/layout.css">
+    <link rel="stylesheet" href="/static/css/menu.css">
     <style>
         .grid-layout { __GRID_CSS__ }
     </style>
@@ -17,6 +18,19 @@
     </div>
 
     <button class="save-button" id="save-button">Save Layout</button>
+
+    <div id="glancerf-menu" role="dialog" aria-modal="true" aria-label="Menu">
+        <div class="glancerf-menu-overlay" id="glancerf-menu-overlay"></div>
+        <div class="glancerf-menu-panel">
+            <h2>Menu</h2>
+            <ul class="glancerf-menu-list">
+                <li><a href="/setup">Setup</a></li>
+                <li><a href="/layout">Layout editor</a></li>
+                <li><a href="/modules">Modules</a></li>
+                <li><a href="/updates">Updates</a></li>
+            </ul>
+        </div>
+    </div>
 
     <script>
         (function() {

@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>com.glancerf</string>
+    <key>ProgramArguments</key>
+    <array>
+        <string>YOUR_PYTHON3_PATH</string>
+        <string>run.py</string>
+    </array>
+    <key>WorkingDirectory</key>
+    <string>YOUR_PROJECT_PATH</string>
+    <key>RunAtLoad</key>
+    <true/>
+    <key>KeepAlive</key>
+    <true/>
+    <key>StandardOutPath</key>
+    <string>YOUR_PROJECT_PATH/glancerf.log</string>
+    <key>StandardErrorPath</key>
+    <string>YOUR_PROJECT_PATH/glancerf.log</string>
+</dict>
+</plist>

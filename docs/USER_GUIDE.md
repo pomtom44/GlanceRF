@@ -1,6 +1,6 @@
 # GlanceRF – User Guide
 
-This guide explains how to use GlanceRF: first run, setup, keyboard shortcuts, the layout editor, and module options (including the map and clock).
+This guide explains how to use GlanceRF: first run, setup, the menu (press M), the layout editor, and module options (including the map and clock).
 
 ---
 
@@ -38,7 +38,7 @@ This guide explains how to use GlanceRF: first run, setup, keyboard shortcuts, t
   If running desktop, a popup should appear where you can configure everything.
   If running headless, open a browser on another PC and connect to the IP:Port to start the setup.
 
-### Setup page (first run or via S key)
+### Setup page (first run or via menu)
 
 On the Setup page you can:
 
@@ -46,30 +46,28 @@ On the Setup page you can:
 2. **Grid size** – Use the sliders to set the number of **columns** (1–8) and **rows** (1–8). The preview shows the resulting grid.
 3. **Continue** – Click to save and continue. You will be sent to the **Layout** page to choose what appears in each cell.
 
-You can open Setup again anytime with the **S** keyboard shortcut.
+You can open Setup again anytime by pressing **M** to open the menu, then choosing Setup.
 
 Once that is done, you will be taken to **Layout** where you can:
 
 1. **Pick Modules** - Pick which modules you want to go where.
-2. **Configure Modules** - Each module has its own configuration you can edit.
+2. **Configure Modules** - On the **Modules** page (menu > Modules), expand a module to edit its settings and click Save for that module.
 3. **Resize Modules** - Each module can be resized to take up other module spaces.
 
-You can open the Layout Editor again anytime with the **L** keyboard shortcut.
+You can open the Layout Editor again anytime by pressing **M** to open the menu, then choosing Layout editor.
 
 ---
 
-## Keyboard shortcuts
+## Menu (keyboard shortcut)
 
-These work on the **main dashboard** (not when the cursor is in a text field):
+Press **M** on the main dashboard (or on Setup, Layout, or Modules pages) to open the **menu**. The menu lets you go to:
 
-| Key | Action |
-|-----|--------|
-| **S** | Open **Setup** |
-| **L** | Open **Layout editor** |
-| **M** | Open **Modules** page |
-| **C** | Open **Config** page |
+- **Setup** – First-run setup, aspect ratio, grid, station & updates, telemetry
+- **Layout editor** – Add or rearrange cells, resize modules
+- **Modules** – View all modules and their status; expand a module to edit its settings and use Save
+- **Updates** – Open the Updates page to see current and latest version, release notes, and trigger an update
 
-Shortcuts are ignored when typing in an input, so you can use these shortcuts after closing any dialogs or leaving input fields.
+The shortcut is ignored when the cursor is in a text field.
 
 ---
 

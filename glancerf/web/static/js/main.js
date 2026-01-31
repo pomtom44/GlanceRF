@@ -535,46 +535,41 @@
             };
         }
         
-        // Keyboard shortcuts (use capture phase and stop propagation to ensure they work)
+        // Keyboard shortcut: M opens menu (Setup, Layout editor, Modules, Manual Updates)
         document.addEventListener('keydown', function(event) {
-            // Only trigger if not typing in an input field
             const isInputFocused = document.activeElement && (
                 document.activeElement.tagName === 'INPUT' ||
                 document.activeElement.tagName === 'TEXTAREA' ||
                 document.activeElement.isContentEditable
             );
-            
             if (isInputFocused) return;
-            
-            // Check for S key to go to setup menu
-            if (event.key === 's' || event.key === 'S') {
-                event.preventDefault();
-                event.stopPropagation(); // Stop propagation to prevent WebSocket handlers from interfering
-                window.location.href = '/setup';
-                return false;
-            }
-            // Check for L key to open layout editor
-            if (event.key === 'l' || event.key === 'L') {
-                event.preventDefault();
-                event.stopPropagation(); // Stop propagation to prevent WebSocket handlers from interfering
-                window.location.href = '/layout';
-                return false;
-            }
-            // Check for M key to open modules page
+
             if (event.key === 'm' || event.key === 'M') {
                 event.preventDefault();
                 event.stopPropagation();
-                window.location.href = '/modules';
+                var menu = document.getElementById('glancerf-menu');
+                if (menu) menu.classList.toggle('open');
                 return false;
             }
-            // Check for C key to open config page
-            if (event.key === 'c' || event.key === 'C') {
-                event.preventDefault();
-                event.stopPropagation();
-                window.location.href = '/config';
-                return false;
+            if (event.key === 'Escape') {
+                var menu = document.getElementById('glancerf-menu');
+                if (menu && menu.classList.contains('open')) {
+                    menu.classList.remove('open');
+                    event.preventDefault();
+                }
             }
-        }, true); // Use capture phase to intercept before other handlers
+        }, true);
+
+        // Menu: overlay click closes
+        (function() {
+            var overlay = document.getElementById('glancerf-menu-overlay');
+            if (overlay) {
+                overlay.addEventListener('click', function() {
+                    var menu = document.getElementById('glancerf-menu');
+                    if (menu) menu.classList.remove('open');
+                });
+            }
+        })();
         
         // If desktop is connected, match its aspect ratio; otherwise fill viewport
         function enforceAspectRatio() {

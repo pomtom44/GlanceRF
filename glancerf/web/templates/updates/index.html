@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GlanceRF - Updates</title>
+    <link rel="stylesheet" href="/static/css/updates.css">
+    <link rel="stylesheet" href="/static/css/menu.css">
+</head>
+<body>
+    <div id="glancerf-menu" role="dialog" aria-modal="true" aria-label="Menu">
+        <div class="glancerf-menu-overlay" id="glancerf-menu-overlay"></div>
+        <div class="glancerf-menu-panel">
+            <h2>Menu</h2>
+            <ul class="glancerf-menu-list">
+                <li><a href="/setup">Setup</a></li>
+                <li><a href="/layout">Layout editor</a></li>
+                <li><a href="/modules">Modules</a></li>
+                <li><a href="/updates">Updates</a></li>
+            </ul>
+        </div>
+    </div>
+    <div class="container">
+        <a href="/" class="back-link">Back to Main</a>
+        <h1>Updates</h1>
+        <p class="update-versions" id="update-versions">Checking for updates...</p>
+        <div class="update-notes" id="update-release-notes"></div>
+        <button type="button" class="btn btn-primary" id="update-btn" disabled>Check for updates</button>
+        <p class="update-result" id="update-result" style="display:none;"></p>
+    </div>
+    <script>
+        (function() {
+            var versionsEl = document.getElementById('update-versions');
+            var notesEl = document.getElementById('update-release-notes');
+            var btn = document.getElementById('update-btn');
+            var resultEl = document.getElementById('update-result');
+
+            function loadStatus() {
+                if (!versionsEl || !btn) return;
+                versionsEl.textContent = 'Checking for updates...';
+                if (notesEl) notesEl.textContent = '';
+                btn.disabled = true;
+                if (resultEl) { resultEl.style.display = 'none'; resultEl.textContent = ''; }
+                fetch('/api/update-status')
+                    .then(function(r) { return r.json(); })
+                    .then(function(data) {
+                        var cur = data.current_version || '—';
+                        var lat = data.latest_version;
+                        var avail = data.update_available;
+                        if (lat != null) {
+                            versionsEl.textContent = 'Current: ' + cur + (avail ? '  |  Latest: ' + lat : '  |  Latest: ' + lat + ' (you\'re up to date)');
+                        } else {
+                            versionsEl.textContent = 'Current: ' + cur + '  |  Latest: —';
+                        }
+                        if (notesEl && data.release_notes) notesEl.textContent = data.release_notes;
+                        btn.textContent = avail ? 'Update now' : 'Check for updates';
+                        btn.disabled = false;
+                        btn._updateAvailable = !!avail;
+                    })
+                    .catch(function() {
+                        versionsEl.textContent = 'Current: —  |  Check failed.';
+                        btn.textContent = 'Check for updates';
+                        btn.disabled = false;
+                        btn._updateAvailable = false;
+                    });
+            }
+
+            if (btn && resultEl) {
+                btn.addEventListener('click', function() {
+                    if (btn._updateAvailable) {
+                        btn.disabled = true;
+                        resultEl.style.display = 'block';
+                        resultEl.textContent = 'Updating...';
+                        fetch('/api/apply-update', { method: 'POST' })
+                            .then(function(r) { return r.json(); })
+                            .then(function(data) {
+                                resultEl.textContent = data.success ? 'Update applied. Restarting in 10s...' : ('Failed: ' + (data.message || ''));
+                                btn.disabled = false;
+                                if (data.success) loadStatus();
+                            })
+                            .catch(function() {
+                                resultEl.textContent = 'Update request failed.';
+                                btn.disabled = false;
+                            });
+                    } else {
+                        loadStatus();
+                    }
+                });
+            }
+
+            document.addEventListener('keydown', function(event) {
+                var isInputFocused = document.activeElement && (document.activeElement.tagName === 'INPUT' || document.activeElement.tagName === 'TEXTAREA' || document.activeElement.isContentEditable);
+                if (isInputFocused) return;
+                if (event.key === 'm' || event.key === 'M') {
+                    event.preventDefault();
+                    var menu = document.getElementById('glancerf-menu');
+                    if (menu) menu.classList.toggle('open');
+                }
+                if (event.key === 'Escape') {
+                    var menu = document.getElementById('glancerf-menu');
+                    if (menu && menu.classList.contains('open')) { menu.classList.remove('open'); event.preventDefault(); }
+                }
+            });
+            var o = document.getElementById('glancerf-menu-overlay');
+            if (o) o.addEventListener('click', function() { var m = document.getElementById('glancerf-menu'); if (m) m.classList.remove('open'); });
+
+            loadStatus();
+        })();
+    </script>
+</body>
+</html>

@@ -5,8 +5,21 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>GlanceRF - First Run Setup</title>
     <link rel="stylesheet" href="/static/css/setup.css">
+    <link rel="stylesheet" href="/static/css/menu.css">
 </head>
 <body>
+    <div id="glancerf-menu" role="dialog" aria-modal="true" aria-label="Menu">
+        <div class="glancerf-menu-overlay" id="glancerf-menu-overlay"></div>
+        <div class="glancerf-menu-panel">
+            <h2>Menu</h2>
+            <ul class="glancerf-menu-list">
+                <li><a href="/setup">Setup</a></li>
+                <li><a href="/layout">Layout editor</a></li>
+                <li><a href="/modules">Modules</a></li>
+                <li><a href="/updates">Updates</a></li>
+            </ul>
+        </div>
+    </div>
     <div class="setup-container">
         <h1>GlanceRF Setup</h1>
 
@@ -114,16 +127,9 @@
             </div>
             <div id="setup-page-3" class="setup-page">
             <div class="form-group setup-tips-content">
-                <h2 style="color:#0f0; font-size:20px; margin-bottom:16px;">Keyboard shortcuts</h2>
-                <p style="color:#ccc; font-size:14px; line-height:1.6; margin-bottom:12px;">On the main dashboard you can press:</p>
-                <ul style="color:#ccc; font-size:14px; line-height:1.8; margin-left:20px; margin-bottom:16px;">
-                    <li><strong style="color:#0f0;">S</strong> – Open Setup (return here anytime)</li>
-                    <li><strong style="color:#0f0;">L</strong> – Open Layout editor (add or rearrange cells)</li>
-                    <li><strong style="color:#0f0;">M</strong> – Open Modules page</li>
-                    <li><strong style="color:#0f0;">C</strong> – Open Config page</li>
-                </ul>
-                <p style="color:#ccc; font-size:14px; line-height:1.6; margin-bottom:12px;">Shortcuts are ignored when the cursor is in a text field, so you can type normally in inputs.</p>
-                <p style="color:#ccc; font-size:14px; line-height:1.6; margin-bottom:16px;">To get back to Setup later, just press <strong style="color:#0f0;">S</strong> from the main view.</p>
+                <h2 style="color:#0f0; font-size:20px; margin-bottom:16px;">Menu</h2>
+                <p style="color:#ccc; font-size:14px; line-height:1.6; margin-bottom:12px;">Press <strong style="color:#0f0;">M</strong> to open the menu. From the menu you can go to Setup, Layout editor, Modules, or run Manual Updates.</p>
+                <p style="color:#ccc; font-size:14px; line-height:1.6; margin-bottom:16px;">The shortcut is ignored when the cursor is in a text field, so you can type normally in inputs.</p>
                 <h2 style="color:#0f0; font-size:20px; margin-bottom:16px;">Report problems</h2>
                 <p style="color:#ccc; font-size:14px; line-height:1.6;">Found a bug or have a suggestion? <a href="https://github.com/pomtom44/GlanceRF/issues" target="_blank" rel="noopener noreferrer" style="color:#0f0;">Open an issue on GitHub</a> to report it.</p>
             </div>
@@ -137,6 +143,23 @@
 
     <script>
         window.SETUP_CONFIG = {setup_config_json};
+    </script>
+    <script>
+        document.addEventListener('keydown', function(event) {{
+            var isInputFocused = document.activeElement && (document.activeElement.tagName === 'INPUT' || document.activeElement.tagName === 'SELECT' || document.activeElement.tagName === 'TEXTAREA' || document.activeElement.isContentEditable);
+            if (isInputFocused) return;
+            if (event.key === 'm' || event.key === 'M') {{
+                event.preventDefault();
+                var menu = document.getElementById('glancerf-menu');
+                if (menu) menu.classList.toggle('open');
+            }}
+            if (event.key === 'Escape') {{
+                var menu = document.getElementById('glancerf-menu');
+                if (menu && menu.classList.contains('open')) {{ menu.classList.remove('open'); event.preventDefault(); }}
+            }}
+        }});
+        var o = document.getElementById('glancerf-menu-overlay');
+        if (o) o.addEventListener('click', function() {{ var m = document.getElementById('glancerf-menu'); if (m) m.classList.remove('open'); }});
     </script>
     <script src="/static/js/setup.js?v=2"></script>
 </body>

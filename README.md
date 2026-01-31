@@ -61,7 +61,8 @@ Configuration is stored in **`glancerf_config.json`** in the same folder as `run
 
 | Guide | Description |
 |-------|-------------|
-| [USER_GUIDE.md](docs/USER_GUIDE.md) | First run, setup, keyboard shortcuts (S = Setup, L = Layout), layout editor, map and clock options. |
+| [USER_GUIDE.md](docs/USER_GUIDE.md) | First run, setup, menu (M = open menu: Setup, Layout, Modules, Updates), layout editor, module settings, map and clock options. |
+| [STARTUP_GUIDE.md](docs/STARTUP_GUIDE.md) | Run GlanceRF at startup or logon on Windows, Ubuntu/Linux, macOS, and Raspberry Pi. |
 | [MODULES.md](docs/MODULES.md) | Module system and available modules. |
 | [CREATING_A_MODULE.md](docs/CREATING_A_MODULE.md) | How to create a cell module: folder structure, `module.py`, `index.html`, `style.css`, `script.js`. |
 | [TELEMETRY.md](docs/TELEMETRY.md) | Telemetry and privacy: what is collected, what isn't, how to control it. |
