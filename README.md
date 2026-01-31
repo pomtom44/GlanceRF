@@ -1,5 +1,8 @@
 # GlanceRF (A Hamclock Modern Rebuild)
 
+Note: This project is still early in development, there will be bugs, errors, things missing.<br>
+Please let me know what you come across so I can fix them as I want to make this project usable by anyone.<br>
+
 ## What is GlanceRF
 
 GlanceRF is a modern rebuild of the Original HamClock by Elwood WB0OEW.
