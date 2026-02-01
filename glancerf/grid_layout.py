@@ -3,7 +3,7 @@ Grid layout utilities for GlanceRF
 Defines different layout options for arranging UI elements
 """
 
-from typing import Dict, Optional
+from typing import Dict, List, Optional, Tuple
 
 
 # Available grid layouts: name -> description
@@ -26,12 +26,12 @@ GRID_LAYOUTS: Dict[str, str] = {
 }
 
 
-def get_grid_layout_list() -> list[str]:
+def get_grid_layout_list() -> List[str]:
     """Get list of available grid layout names"""
     return list(GRID_LAYOUTS.keys())
 
 
-def get_grid_layouts_for_aspect_ratio(aspect_ratio: str) -> list[str]:
+def get_grid_layouts_for_aspect_ratio(aspect_ratio: str) -> List[str]:
     """
     Get grid layouts suitable for a given aspect ratio
     
@@ -82,7 +82,7 @@ def get_grid_layout_name(layout_name: str) -> Optional[str]:
     return GRID_LAYOUTS.get(layout_name)
 
 
-def get_grid_layout_css(layout_name: str) -> tuple[str, str]:
+def get_grid_layout_css(layout_name: str) -> Tuple[str, str]:
     """
     Generate CSS grid template and HTML structure for a grid layout
     

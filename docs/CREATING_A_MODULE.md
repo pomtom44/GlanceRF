@@ -16,18 +16,19 @@ This guide explains how to add a new **cell module** to GlanceRF. A module is a 
 8. [How the core uses your module](#8-how-the-core-uses-your-module)
 9. [Settings in JavaScript](#9-settings-in-javascript)
 10. [Global variables (callsign and location)](#10-global-variables-callsign-and-location)
-11. [Checklist](#11-checklist)
+11. [Custom modules (survive updates)](#11-custom-modules-survive-updates)
+12. [Checklist](#12-checklist)
 
 ---
 
 ## 1. Quick start
 
-1. Copy the **`_example`** folder (inside `glancerf/modules/`).
-2. Rename the copy to your module **id** (e.g. `my_timer`). Use letters, numbers, and underscores only. Do **not** start the folder name with `_` (those folders are ignored).
-3. Edit **module.py**: set `id`, `name`, and `color` to match your module.
-4. Edit **index.html**: put the HTML structure for one cell, using classes that start with your module id + underscore (e.g. `my_timer_label`).
-5. Edit **style.css**: scope all rules under `.grid-cell-{id}` and use the same class names.
-6. Edit **script.js**: use `document.querySelectorAll('.grid-cell-{id}')` to find your cells, and `cell.querySelector('.my_timer_label')` (etc.) to update content.
+1. Copy the **`example`** folder (inside `glancerf/modules/_custom/`). This is the template; it lives under the modules folder so it survives updates.
+3. Rename the folder to your module **id** (e.g. `my_timer`). Use letters, numbers, and underscores only. Do **not** start the folder name with `_` (those folders are ignored).
+4. Edit **module.py**: set `id`, `name`, and `color` to match your module.
+5. Edit **index.html**: put the HTML structure for one cell, using classes that start with your module id + underscore (e.g. `my_timer_label`).
+6. Edit **style.css**: scope all rules under `.grid-cell-{id}` and use the same class names.
+7. Edit **script.js**: use `document.querySelectorAll('.grid-cell-{id}')` to find your cells, and `cell.querySelector('.my_timer_label')` (etc.) to update content.
 
 Restart the app (or reload the page). Your module appears in the layout editor’s module list and can be placed in any cell.
 
@@ -35,7 +36,12 @@ Restart the app (or reload the page). Your module appears in the layout editor�
 
 ## 2. Folder structure and files
 
-Each module is a **folder** under `glancerf/modules/`. The folder name must **not** start with `_` (e.g. `_example` is a template and is never loaded).
+Each module is a **folder** that can live in:
+
+- **`glancerf/modules/`** – Built-in location. Works for testing, but this folder is replaced when you run an app update, so any modules you add here can be overwritten or lost.
+- **Custom modules folder** – The **`glancerf/modules/_custom/`** folder. The app always loads modules from here; on update, only built-in modules are overwritten, so your custom modules survive. If a custom module has the same **id** as a built-in one, the custom version is used. See [Custom modules (survive updates)](#11-custom-modules-survive-updates).
+
+The folder name must **not** start with `_` (folders starting with `_` are skipped and not loaded as modules).
 
 Required file:
 
@@ -257,13 +263,29 @@ The **callsign**, **weather**, and **sun_times** modules use these globals; see 
 
 ---
 
-## 11. Checklist
+## 11. Custom modules (survive updates)
 
-- [ ] Copied **`_example`** and renamed the folder to your module id (no leading `_`).
+If you create your own modules, put them in a **custom modules folder** so that:
+
+- They are **not removed or overwritten** when you run an app update (the updater only replaces files inside the `glancerf` package).
+- If a future GlanceRF release adds a built-in module with the **same id** as yours, your custom version **takes precedence** (custom overrides built-in).
+
+**Setup:**
+
+1. The **`glancerf/modules/_custom/`** folder contains an **`example`** module as a template. Put all your custom module folders inside **`glancerf/modules/_custom/`**. On update, the app merges the modules folder so _custom/ is preserved.
+2. To create a new module: copy **`glancerf/modules/_custom/example/`**, rename the copy to your module id (e.g. `my_timer`), then edit `module.py`, `index.html`, `style.css`, and `script.js`. Folder names must not start with `_`.
+3. Restart the app. Custom modules are loaded after built-in ones; any module id that appears in both uses your custom version.
+
+---
+
+## 12. Checklist
+
+- [ ] Copied **`glancerf/modules/_custom/example/`** and renamed the folder to your module id (no leading `_`).
 - [ ] **module.py**: Set `id`, `name`, `color`; add `settings` if needed.
 - [ ] **index.html**: Inner content only; all classes use **`{id}_`** prefix (e.g. `my_timer_label`).
 - [ ] **style.css**: All rules scoped under **`.grid-cell-{id}`**; same class names as in HTML.
 - [ ] **script.js**: Find cells with **`querySelectorAll('.grid-cell-{id}')`**; query inside cells with your class names; read per-cell settings from **`window.GLANCERF_MODULE_SETTINGS[cellKey]`** if you have settings; use **`window.GLANCERF_SETUP_CALLSIGN`** or **`window.GLANCERF_SETUP_LOCATION`** as fallbacks if your module uses callsign/location.
 - [ ] Restart the app (or reload the page) and pick your module in the layout editor.
+- [ ] Put your module in **`glancerf/modules/_custom/`** so it survives updates (see [Custom modules (survive updates)](#11-custom-modules-survive-updates)).
 
-For a minimal, commented reference, see the **`_example`** module in `glancerf/modules/_example/` (module.py, index.html, style.css, script.js).
+For a minimal, commented reference, see the **`example`** module in `glancerf/modules/_custom/example/`.

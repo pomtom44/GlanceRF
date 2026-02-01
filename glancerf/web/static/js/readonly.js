@@ -1,3 +1,4 @@
+// Read-only view: no WebSocket, no desktop/browser sync. Sizing is viewport-only (no shared state with main).
 document.addEventListener('keydown', function(e) {
     e.preventDefault();
     e.stopPropagation();

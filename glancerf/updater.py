@@ -204,40 +204,71 @@ def backup_current_installation(backup_dir: Path) -> bool:
         return False
 
 
+def _merge_glancerf_dir(src: Path, dst: Path) -> None:
+    """
+    Copy src (extracted glancerf/) to dst (app glancerf/).
+    For glancerf/modules/ we merge: copy each built-in module from src over dst,
+    but do not delete dst/modules subfolders that are not in src (e.g. _custom/).
+    """
+    for entry in src.iterdir():
+        dst_entry = dst / entry.name
+        if entry.is_file():
+            if dst_entry.exists():
+                dst_entry.unlink()
+            shutil.copy2(entry, dst_entry)
+        elif entry.is_dir():
+            if entry.name == "modules":
+                # Merge modules: copy each subdir from update over existing; preserve _custom/
+                dst.mkdir(parents=True, exist_ok=True)
+                modules_dst = dst / "modules"
+                modules_dst.mkdir(parents=True, exist_ok=True)
+                for sub in entry.iterdir():
+                    if sub.is_dir():
+                        sub_dst = modules_dst / sub.name
+                        if sub_dst.exists():
+                            shutil.rmtree(sub_dst)
+                        shutil.copytree(sub, sub_dst)
+            else:
+                if dst_entry.exists():
+                    shutil.rmtree(dst_entry)
+                shutil.copytree(entry, dst_entry)
+
+
 def apply_update(extracted_root: Path) -> Tuple[bool, str]:
     """
     Apply the update by copying files from extracted update to app root.
-    
-    Args:
-        extracted_root: Root of extracted update (Modern/ directory)
-    
-    Returns:
-        (success, error_message)
+    For glancerf/, merges modules/ so glancerf/modules/_custom/ (user modules) is preserved.
     """
     try:
         app_root = get_app_root()
-        
-        # Copy each item to update
+
         for item in ITEMS_TO_UPDATE:
             src = extracted_root / item
             dst = app_root / item
-            
+
             if not src.exists():
                 continue
-            
-            # Remove destination if it exists
+
+            if item == "glancerf" and src.is_dir():
+                if dst.exists() and dst.is_dir():
+                    _merge_glancerf_dir(src, dst)
+                else:
+                    if dst.exists():
+                        shutil.rmtree(dst) if dst.is_dir() else dst.unlink()
+                    shutil.copytree(src, dst)
+                continue
+
             if dst.exists():
                 if dst.is_dir():
                     shutil.rmtree(dst)
                 else:
                     dst.unlink()
-            
-            # Copy from extracted source
+
             if src.is_dir():
                 shutil.copytree(src, dst)
             else:
                 shutil.copy2(src, dst)
-        
+
         return True, ""
     except Exception as e:
         _log.error("Update apply failed: %s", e, exc_info=True)
@@ -276,10 +307,10 @@ async def perform_auto_update(version: str) -> Tuple[bool, str]:
         if not extract_zip(zip_path, extract_dir):
             return False, "Failed to extract update"
         
-        # Step 4: Find Modern/ directory in extracted files
+        # Step 4: Find Project/ directory in extracted files
         extracted_root = get_extracted_root(extract_dir)
         if not extracted_root:
-            return False, "Could not find Modern directory in update"
+            return False, "Could not find Project directory in update"
         
         # Step 5: Backup current installation
         if not backup_current_installation(backup_dir):

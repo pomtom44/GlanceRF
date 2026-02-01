@@ -75,8 +75,7 @@ The shortcut is ignored when the cursor is in a text field.
 
 - **Location** – `glancerf_config.json` in the same directory as `run.py` (typically the Project folder).
 
-Most of the settings in here you shouldn't need to touch.
-However, everything that is configured is stored in here, so you can back this up and replace with any changes to go back to a previous version.
+Most of the settings in here you shouldn't need to touch. If you create your own modules, put them in **`glancerf/modules/_custom/`** so they survive app updates; see [CREATING_A_MODULE.md](CREATING_A_MODULE.md). Everything that is configured is stored in here, so you can back this up and replace with any changes to go back to a previous version.
 
 ---
 
@@ -98,7 +97,6 @@ The values you may want to change are:
 | **port** | Main app port (e.g. 8080). |
 | **readonly_port** | Read-only mirror port (e.g. 8081). |
 | **use_desktop** | `true` = open desktop window; `false` = server only. |
-
 ---
 
 ## Desktop, browser, and read-only view

@@ -7,7 +7,13 @@
     <link rel="stylesheet" href="/static/css/main.css">
     <link rel="stylesheet" href="/static/css/menu.css">
     <style>
-        #aspect-container {{ aspect-ratio: {aspect_ratio_css}; }}
+        #aspect-container {{
+            width: 100%;
+            max-width: 100vw;
+            max-height: 100vh;
+            height: auto;
+            aspect-ratio: {aspect_ratio_css};
+        }}
         .grid-layout {{ {grid_css} }}
     </style>
     <style>{module_css}</style>

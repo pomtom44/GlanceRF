@@ -3,9 +3,11 @@ Read-only root page for the secondary server (no WebSocket, no interactions)
 """
 
 import json
+from pathlib import Path
 
 from fastapi import FastAPI
 from fastapi.responses import HTMLResponse
+from fastapi.staticfiles import StaticFiles
 
 from glancerf.config import get_config
 from glancerf.aspect_ratio import get_aspect_ratio_css
@@ -52,6 +54,8 @@ def register_readonly_routes(readonly_app: FastAPI):
         module_css, module_js = get_module_assets(layout)
         module_settings = current_config.get("module_settings") or {}
         module_settings_json = json.dumps(module_settings)
+        setup_callsign_json = json.dumps(current_config.get("setup_callsign") or "")
+        setup_location_json = json.dumps(current_config.get("setup_location") or "")
 
         html_content = render_readonly_page(
             aspect_ratio_css=aspect_ratio_css,
@@ -61,6 +65,8 @@ def register_readonly_routes(readonly_app: FastAPI):
             module_css=module_css,
             module_js=module_js,
             module_settings_json=module_settings_json,
+            setup_callsign_json=setup_callsign_json,
+            setup_location_json=setup_location_json,
         )
         return HTMLResponse(content=html_content)
 
@@ -69,11 +75,12 @@ def run_readonly_server(
     host: str = "0.0.0.0", port: int = 8081, quiet: bool = False
 ):
     """Run the read-only FastAPI server (no WebSocket, no interactions)."""
-    from fastapi import FastAPI
-
     readonly_app = FastAPI(title="GlanceRF (Read-Only)")
     register_readonly_routes(readonly_app)
 
+    _web_static = Path(__file__).resolve().parent.parent / "web" / "static"
+    if _web_static.is_dir():
+        readonly_app.mount("/static", StaticFiles(directory=str(_web_static)), name="static")
 
     import uvicorn
     uvicorn.run(

@@ -6,7 +6,7 @@ Each module is a folder (e.g. clock/) containing:
   - style.css   -> CSS injected once per page (optional)
   - script.js   -> JS injected once per page (optional)
 
-Folders whose names start with _ (e.g. _example) are skipped and not loaded as modules.
+Folders whose names start with _ are skipped and not loaded as modules.
 """
 
 import importlib.util
@@ -15,6 +15,8 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
 _MODULES_DIR = Path(__file__).resolve().parent
+# User modules live under glancerf/modules/_custom/; updater merges modules/ so this survives updates
+_CUSTOM_MODULES_DIR = _MODULES_DIR / "_custom"
 _loaded: Optional[List[Dict[str, Any]]] = None
 _by_id: Optional[Dict[str, Dict[str, Any]]] = None
 _folder_by_id: Optional[Dict[str, Path]] = None
@@ -30,14 +32,14 @@ EMPTY_MODULE: Dict[str, Any] = {
 }
 
 
-def _load_module_from_folder(folder: Path) -> Optional[Dict[str, Any]]:
+def _load_module_from_folder(folder: Path, spec_prefix: str = "glancerf.modules") -> Optional[Dict[str, Any]]:
     """Load MODULE from folder/module.py and inject inner_html, css, js from files."""
     module_py = folder / "module.py"
     if not module_py.is_file():
         return None
     try:
         spec = importlib.util.spec_from_file_location(
-            f"glancerf.modules.{folder.name}", module_py
+            f"{spec_prefix}.{folder.name}", module_py
         )
         if spec is None or spec.loader is None:
             return None
@@ -66,21 +68,41 @@ def _load_module_from_folder(folder: Path) -> Optional[Dict[str, Any]]:
 
 
 def _discover_modules() -> List[Dict[str, Any]]:
-    """Scan modules directory for folder modules (folders with module.py; names starting with _ are skipped)."""
+    """Scan built-in modules dir, then static glancerf/modules/_custom/. Custom overrides built-in when same id."""
     global _loaded
     if _loaded is not None:
         return _loaded
 
     result: List[Dict[str, Any]] = [dict(EMPTY_MODULE)]
     seen_ids: set = {""}
+    by_id_temp: Dict[str, int] = {}  # id -> index in result (for override)
 
     for folder in sorted(_MODULES_DIR.iterdir()):
         if not folder.is_dir() or folder.name.startswith("_"):
             continue
         m = _load_module_from_folder(folder)
-        if m and m["id"] not in seen_ids:
-            result.append(m)
-            seen_ids.add(m["id"])
+        if m:
+            if m["id"] in seen_ids:
+                idx = by_id_temp[m["id"]]
+                result[idx] = m
+            else:
+                result.append(m)
+                seen_ids.add(m["id"])
+                by_id_temp[m["id"]] = len(result) - 1
+
+    if _CUSTOM_MODULES_DIR.is_dir():
+        for folder in sorted(_CUSTOM_MODULES_DIR.iterdir()):
+            if not folder.is_dir() or folder.name.startswith("_"):
+                continue
+            m = _load_module_from_folder(folder, spec_prefix="glancerf.custom")
+            if m:
+                if m["id"] in seen_ids:
+                    idx = by_id_temp[m["id"]]
+                    result[idx] = m
+                else:
+                    result.append(m)
+                    seen_ids.add(m["id"])
+                    by_id_temp[m["id"]] = len(result) - 1
 
     result.sort(key=lambda m: (m["id"] != "", m["id"]))
     global _by_id, _folder_by_id

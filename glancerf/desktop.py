@@ -17,8 +17,9 @@ _existing = os.environ.get("QTWEBENGINE_CHROMIUM_FLAGS", "")
 if "--disable-gpu-sandbox" not in _existing and "--disable-gpu" not in _existing:
     os.environ["QTWEBENGINE_CHROMIUM_FLAGS"] = (_existing + " --disable-gpu-sandbox").strip()
 
-from PyQt5.QtCore import QUrl, QTimer, QPoint
-from PyQt5.QtWidgets import QApplication, QMainWindow
+from PyQt5.QtCore import QUrl, QTimer, QPoint, QEvent, Qt
+from PyQt5.QtGui import QKeySequence
+from PyQt5.QtWidgets import QApplication, QMainWindow, QShortcut, QSizePolicy
 from PyQt5.QtWebEngineWidgets import QWebEngineView
 
 from glancerf.config import get_config
@@ -36,17 +37,32 @@ class GlanceRFWindow(QMainWindow):
         self.orientation = self.config.get("orientation") or "landscape"
         self.initial_position_set = False
         self._resize_save_timer = None
+        self._was_maximized_before_fullscreen = False
         self.init_ui()
 
     def init_ui(self):
         """Initialize the user interface"""
+        self.setWindowFlags(
+            Qt.Window
+            | Qt.WindowCloseButtonHint
+            | Qt.WindowMinimizeButtonHint
+            | Qt.WindowMaximizeButtonHint
+        )
         self.browser = QWebEngineView()
         self.browser.setUrl(QUrl(f"http://localhost:{self.port}?desktop=true"))
         self.browser.page().settings().setAttribute(
             self.browser.page().settings().WebAttribute.JavascriptEnabled, True
         )
+        self.browser.installEventFilter(self)
+        self.browser.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
+        self.browser.setMinimumSize(0, 0)
+        self.browser.setMaximumSize(16777215, 16777215)
         self.setCentralWidget(self.browser)
         self.setWindowTitle("GlanceRF")
+
+        f11_shortcut = QShortcut(QKeySequence(Qt.Key_F11), self)
+        f11_shortcut.setContext(Qt.ApplicationShortcut)
+        f11_shortcut.activated.connect(self._toggle_fullscreen)
 
         screen = QApplication.primaryScreen().geometry()
         max_width = screen.width() - 100
@@ -55,8 +71,8 @@ class GlanceRFWindow(QMainWindow):
         saved_w = self.config.get("desktop_window_width")
         saved_h = self.config.get("desktop_window_height")
         if isinstance(saved_w, (int, float)) and isinstance(saved_h, (int, float)) and saved_w > 0 and saved_h > 0:
-            width = min(int(saved_w), max_width)
-            height = min(int(saved_h), max_height)
+            width = int(saved_w)
+            height = int(saved_h)
             saved_x = self.config.get("desktop_window_x")
             saved_y = self.config.get("desktop_window_y")
             if isinstance(saved_x, (int, float)) and isinstance(saved_y, (int, float)):
@@ -76,13 +92,33 @@ class GlanceRFWindow(QMainWindow):
         self.initial_position_set = True
 
         self.setMinimumSize(400, 300)
-        self.setMaximumSize(max_width, max_height)
-
+        self.setMaximumSize(16777215, 16777215)
         self.show()
+
+        # Re-apply max size after show; some platforms apply limits at show time
+        self.setMaximumSize(16777215, 16777215)
+        self.browser.setMaximumSize(16777215, 16777215)
 
         self.config_timer = QTimer()
         self.config_timer.timeout.connect(self.check_config_changes)
         self.config_timer.start(2000)
+
+    def eventFilter(self, obj, event):
+        """Capture F11 for fullscreen toggle even when browser has focus."""
+        if obj is self.browser and event.type() == QEvent.KeyPress and event.key() == Qt.Key_F11:
+            self._toggle_fullscreen()
+            return True
+        return super().eventFilter(obj, event)
+
+    def _toggle_fullscreen(self):
+        """Toggle between fullscreen and normal window. F11."""
+        if self.isFullScreen():
+            self.showNormal()
+            if self._was_maximized_before_fullscreen:
+                self.showMaximized()
+        else:
+            self._was_maximized_before_fullscreen = self.isMaximized()
+            self.showFullScreen()
 
     def _get_height_ratio(self) -> float:
         """Get height/width ratio for current aspect ratio"""
@@ -165,8 +201,10 @@ class GlanceRFWindow(QMainWindow):
         if screen is None:
             screen = QApplication.primaryScreen()
         sg = screen.geometry()
-        max_w = sg.width() - 100
-        max_h = sg.height() - 100
+        screen_w = sg.width()
+        screen_h = sg.height()
+        max_w = screen_w - 100
+        max_h = screen_h - 100
 
         if new_height > max_h:
             new_height = max_h
@@ -177,9 +215,10 @@ class GlanceRFWindow(QMainWindow):
 
         self.setGeometry(x, y, width, new_height)
         self.setMinimumSize(400, 300)
-        self.setMaximumSize(max_w, max_h)
+        self.setMaximumSize(16777215, 16777215)
+        self.browser.setMaximumSize(16777215, 16777215)
         self._save_window_geometry_and_ratio()
-    
+
     def closeEvent(self, event):
         """Handle window close event"""
         # Allow normal close

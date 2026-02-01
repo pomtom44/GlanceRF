@@ -45,7 +45,7 @@ def _check_rate_limit(ip: str) -> bool:
 
 async def rate_limit_dependency(request: Request) -> None:
     """
-    FastAPI dependency for POST /layout, /setup, /config.
+    FastAPI dependency for POST /layout, /setup, /modules/save-settings.
     Raises 429 JSONResponse if the client has exceeded the limit.
     """
     ip = _get_client_ip(request)

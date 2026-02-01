@@ -81,7 +81,7 @@ def main():
             log.info("Starting main server on http://%s:%s", local_ip, port)
             server_thread = threading.Thread(
                 target=run_server,
-                args=("127.0.0.1", port, True),  # host, port, quiet
+                args=("0.0.0.0", port, True),  # host, port, quiet - bind all interfaces so IP access works
                 daemon=True
             )
             server_thread.start()

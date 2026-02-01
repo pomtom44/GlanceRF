@@ -2,6 +2,8 @@
 WebSocket connection manager for real-time mirroring
 """
 
+from typing import List
+
 from fastapi import WebSocket
 
 
@@ -9,7 +11,7 @@ class ConnectionManager:
     """Manages WebSocket connections for desktop mirroring"""
     def __init__(self):
         self.desktop_connection: WebSocket = None
-        self.browser_connections: list[WebSocket] = []
+        self.browser_connections: List[WebSocket] = []
         self.desktop_state = {}
     
     async def connect_desktop(self, websocket: WebSocket):
@@ -35,10 +37,6 @@ class ConnectionManager:
         """Remove connection"""
         if websocket == self.desktop_connection:
             self.desktop_connection = None
-            # Clear desktop size so browsers go back to full viewport
-            self.desktop_state.pop("desktop_width", None)
-            self.desktop_state.pop("desktop_height", None)
-            # Notify browsers
             for conn in list(self.browser_connections):
                 try:
                     await conn.send_json({"type": "state", "data": dict(self.desktop_state)})

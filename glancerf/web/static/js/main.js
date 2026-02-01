@@ -1,7 +1,4 @@
-        // When desktop is connected, browsers use its aspect ratio; otherwise fill viewport
-        let currentDesktopWidth = 0;
-        let currentDesktopHeight = 0;
-
+        // Each view uses its own viewport sizing; no desktop/browser size sync.
         let ws = null;
         const urlParams = new URLSearchParams(window.location.search);
         const isDesktop = urlParams.get('desktop') === 'true' || window.navigator.userAgent.includes('QtWebEngine');
@@ -11,16 +8,6 @@
             const path = window.location.pathname;
             // Only sync on main dashboard page (/)
             return path === '/' || path === '';
-        }
-        
-        function sendDesktopSize() {
-            if (ws && ws.readyState === WebSocket.OPEN && shouldSyncPage()) {
-                ws.send(JSON.stringify({
-                    type: 'desktop_size',
-                    width: window.innerWidth,
-                    height: window.innerHeight
-                }));
-            }
         }
         
         if (isDesktop) {
@@ -89,9 +76,9 @@
                             window.scrollTo(message.data.scrollState.x, message.data.scrollState.y);
                         }
                         
-                        // Re-run aspect ratio enforcement if on main page
+                        // Re-apply viewport sizing if on main page
                         if (currentUrl.includes('/') && !currentUrl.includes('/setup')) {
-                            enforceAspectRatio();
+                            applyViewportSize();
                         }
                         
                         // Restore focus to active element
@@ -139,12 +126,6 @@
             
             ws.onopen = function() {
                 console.log('Desktop app connected to mirroring server');
-                sendDesktopSize();
-                var desktopResizeTimeout;
-                window.addEventListener('resize', function() {
-                    clearTimeout(desktopResizeTimeout);
-                    desktopResizeTimeout = setTimeout(sendDesktopSize, 100);
-                });
                 sendDesktopState();
                 
                 // Monitor DOM changes and send updates (throttled with requestAnimationFrame)
@@ -428,9 +409,9 @@
                             window.scrollTo(message.data.scrollState.x, message.data.scrollState.y);
                         }
                         
-                        // Re-run aspect ratio enforcement if on main page
+                        // Re-apply viewport sizing if on main page
                         if (currentUrl.includes('/') && !currentUrl.includes('/setup')) {
-                            enforceAspectRatio();
+                            applyViewportSize();
                         }
                         
                         // Restore focus to active element
@@ -469,14 +450,6 @@
                         }
                     }
                 } else if (message.type === 'state') {
-                    if (message.data.desktop_width !== undefined && message.data.desktop_height !== undefined) {
-                        currentDesktopWidth = message.data.desktop_width || 0;
-                        currentDesktopHeight = message.data.desktop_height || 0;
-                    } else {
-                        currentDesktopWidth = 0;
-                        currentDesktopHeight = 0;
-                    }
-                    enforceAspectRatio();
                     if (message.data.grid_columns !== undefined || message.data.grid_rows !== undefined) {
                         location.reload();
                     }
@@ -571,31 +544,15 @@
             }
         })();
         
-        // If desktop is connected, match its aspect ratio; otherwise fill viewport
-        function enforceAspectRatio() {
+        // Size container to viewport only; no sync with desktop or other clients.
+        function applyViewportSize() {
             const container = document.getElementById('aspect-container');
             if (!container) return;
-            const vw = window.innerWidth;
-            const vh = window.innerHeight;
-            if (currentDesktopWidth > 0 && currentDesktopHeight > 0) {
-                const targetRatio = currentDesktopWidth / currentDesktopHeight;
-                const viewportRatio = vw / vh;
-                container.style.maxWidth = '';
-                container.style.maxHeight = '';
-                if (viewportRatio > targetRatio) {
-                    container.style.width = (vh * targetRatio) + 'px';
-                    container.style.height = vh + 'px';
-                } else {
-                    container.style.width = vw + 'px';
-                    container.style.height = (vw / targetRatio) + 'px';
-                }
-            } else {
-                container.style.width = '100vw';
-                container.style.height = '100vh';
-            }
+            container.style.width = '100vw';
+            container.style.height = '100vh';
         }
         
-        window.addEventListener('load', enforceAspectRatio);
+        window.addEventListener('load', applyViewportSize);
 
                 function showUpdateNotification(data) {
             var notif = document.getElementById('update-notification');
@@ -650,8 +607,8 @@
             }
         }
         
-        window.addEventListener('resize', enforceAspectRatio);
+        window.addEventListener('resize', applyViewportSize);
         
         document.addEventListener('visibilitychange', function() {
-            if (!document.hidden) enforceAspectRatio();
+            if (!document.hidden) applyViewportSize();
         });

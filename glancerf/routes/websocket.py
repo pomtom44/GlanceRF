@@ -21,20 +21,6 @@ def register_websocket_routes(app: FastAPI, connection_manager: ConnectionManage
                 if msg_type in ["state", "update", "dom"]:
                     await connection_manager.broadcast_from_desktop(data)
                     connection_manager.desktop_state = data.get("data", {})
-                elif msg_type == "desktop_size":
-                    # Desktop window size: store and broadcast so browsers match this aspect ratio
-                    w = data.get("width")
-                    h = data.get("height")
-                    if w is not None and h is not None and w > 0 and h > 0:
-                        connection_manager.desktop_state["desktop_width"] = int(w)
-                        connection_manager.desktop_state["desktop_height"] = int(h)
-                    else:
-                        connection_manager.desktop_state.pop("desktop_width", None)
-                        connection_manager.desktop_state.pop("desktop_height", None)
-                    await connection_manager.broadcast_from_desktop({
-                        "type": "state",
-                        "data": dict(connection_manager.desktop_state)
-                    })
         except WebSocketDisconnect:
             await connection_manager.disconnect(websocket)
         except Exception:

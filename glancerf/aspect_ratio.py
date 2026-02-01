@@ -2,7 +2,7 @@
 Aspect ratio utilities for GlanceRF
 """
 
-from typing import Dict, Tuple, Optional
+from typing import Dict, List, Tuple, Optional
 
 
 # Available aspect ratios: name -> (width, height)
@@ -16,7 +16,7 @@ ASPECT_RATIOS: Dict[str, Tuple[int, int]] = {
 }
 
 
-def get_aspect_ratio_list() -> list[str]:
+def get_aspect_ratio_list() -> List[str]:
     """Get list of available aspect ratio names"""
     return list(ASPECT_RATIOS.keys())
 
