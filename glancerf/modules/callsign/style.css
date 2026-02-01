@@ -1,27 +1,33 @@
+/* Absolutely fill the cell and center content; base font-size set by JS to scale with cell */
 .grid-cell-callsign {
-    display: flex;
-    align-items: center;
-    justify-content: center;
+    position: relative;
 }
 .grid-cell-callsign .callsign_display {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
     gap: 0.2em;
     text-align: center;
+    font-size: 12px;
+    font-size: 12cqmin;
 }
 .grid-cell-callsign .callsign_line {
-    font-size: clamp(16px, 2.8vw, 32px);
+    font-size: 1.1em;
     font-weight: bold;
     color: #fff;
 }
 .grid-cell-callsign .callsign_grid {
-    font-size: clamp(12px, 2vw, 20px);
+    font-size: 0.65em;
     color: #0f0;
 }
 .grid-cell-callsign .callsign_comment {
-    font-size: clamp(10px, 1.5vw, 14px);
+    font-size: 0.5em;
     color: #888;
     font-style: italic;
 }

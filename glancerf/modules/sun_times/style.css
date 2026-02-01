@@ -1,29 +1,26 @@
-.grid-cell-sun_times {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-        .grid-cell-sun_times .sun_times_display {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            gap: 0.25em;
-            text-align: center;
-        }
-        .grid-cell-sun_times .sun_times_sunrise,
-        .grid-cell-sun_times .sun_times_sunset,
-        .grid-cell-sun_times .sun_times_moonrise,
-        .grid-cell-sun_times .sun_times_moonset {
-            font-size: clamp(14px, 2.2vw, 22px);
-            color: #ccc;
-        }
-        .grid-cell-sun_times .sun_times_moonrise,
-        .grid-cell-sun_times .sun_times_moonset {
-            color: #aaa;
-        }
-        .grid-cell-sun_times .sun_times_error,
-        .grid-cell-sun_times .sun_times_loading {
-            font-size: clamp(11px, 1.5vw, 14px);
-            color: #888;
-        }
+.grid-cell-sun_times .sun_times_display {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 0.25em;
+    text-align: center;
+}
+.grid-cell-sun_times .sun_times_sunrise,
+.grid-cell-sun_times .sun_times_sunset,
+.grid-cell-sun_times .sun_times_moonrise,
+.grid-cell-sun_times .sun_times_moonset {
+    font-size: 9cqmin;
+    color: #ccc;
+}
+.grid-cell-sun_times .sun_times_moonrise,
+.grid-cell-sun_times .sun_times_moonset {
+    color: #aaa;
+}
+.grid-cell-sun_times .sun_times_error,
+.grid-cell-sun_times .sun_times_loading {
+    font-size: 6cqmin;
+    color: #888;
+}

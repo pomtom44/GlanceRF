@@ -12,8 +12,14 @@ class ConnectionManager:
     def __init__(self):
         self.desktop_connection: WebSocket = None
         self.browser_connections: List[WebSocket] = []
+        self.readonly_connections: List[WebSocket] = []
         self.desktop_state = {}
-    
+
+    async def connect_readonly(self, websocket: WebSocket):
+        """Register read-only portal connection (receives config_update only)."""
+        await websocket.accept()
+        self.readonly_connections.append(websocket)
+
     async def connect_desktop(self, websocket: WebSocket):
         """Register desktop app connection"""
         await websocket.accept()
@@ -44,6 +50,8 @@ class ConnectionManager:
                     pass
         elif websocket in self.browser_connections:
             self.browser_connections.remove(websocket)
+        elif websocket in self.readonly_connections:
+            self.readonly_connections.remove(websocket)
     
     async def broadcast_from_desktop(self, message: dict):
         """Broadcast message from desktop to all browsers"""

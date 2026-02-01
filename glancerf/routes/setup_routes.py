@@ -202,25 +202,29 @@ def register_setup_routes(app: FastAPI, connection_manager: ConnectionManager):
         if is_first_run:
             config_instance.set("first_run", False)
     
-        # Broadcast config_update to browser clients only (not desktop)
+        # Broadcast config_update to browser and readonly clients (not desktop)
         # Desktop will reload from the redirect, so we don't need to notify it
-        # This ensures browsers pick up the config change immediately
         try:
-            # Broadcast to all browser connections only
+            msg = {
+                "type": "config_update",
+                "data": {
+                    "aspect_ratio": aspect_ratio,
+                    "orientation": orientation,
+                    "grid_columns": grid_columns,
+                    "grid_rows": grid_rows,
+                    "reload": True
+                }
+            }
             for connection in connection_manager.browser_connections:
                 try:
-                    await connection.send_json({
-                        "type": "config_update",
-                        "data": {
-                            "aspect_ratio": aspect_ratio,
-                            "orientation": orientation,
-                            "grid_columns": grid_columns,
-                            "grid_rows": grid_rows,
-                            "reload": True
-                        }
-                    })
+                    await connection.send_json(msg)
                 except Exception as e:
                     _log.debug("WebSocket send failed: %s", e)
+            for connection in list(connection_manager.readonly_connections):
+                try:
+                    await connection.send_json(msg)
+                except Exception as e:
+                    _log.debug("WebSocket send failed (readonly): %s", e)
         except Exception as e:
             _log.debug("WebSocket broadcast failed: %s", e)
     

@@ -5,6 +5,7 @@ Template and static assets: glancerf/web/templates/layout/, glancerf/web/static/
 
 import json as _json
 import re
+import time
 from pathlib import Path
 
 from fastapi import Depends, FastAPI, Request
@@ -96,7 +97,7 @@ def register_layout_routes(app: FastAPI, connection_manager: ConnectionManager):
             cell_spans = filtered_spans
     
         # Generate grid CSS
-        grid_css = f"grid-template-columns: repeat({grid_columns}, 1fr); grid-template-rows: repeat({grid_rows}, 1fr);"
+        grid_css = f"grid-template-columns: repeat({grid_columns}, minmax(0, 1fr)); grid-template-rows: repeat({grid_rows}, minmax(0, 1fr));"
 
         merged_cells, primary_cells = build_merged_cells_from_spans(cell_spans)
 
@@ -122,8 +123,11 @@ def register_layout_routes(app: FastAPI, connection_manager: ConnectionManager):
                     f'<option value="{m["id"]}" {"selected" if cell_value == m["id"] else ""}>{m["name"]}</option>'
                     for m in get_modules()
                 )
+                cell_extra_class = ""
+                contract_left_disabled = " contract-disabled" if colspan <= 1 else ""
+                contract_top_disabled = " contract-disabled" if rowspan <= 1 else ""
                 grid_html += f'''
-                <div class="grid-cell" data-row="{row}" data-col="{col}" data-colspan="{colspan}" data-rowspan="{rowspan}" style="background-color: {cell_bg_color};">
+                <div class="grid-cell{cell_extra_class}" data-row="{row}" data-col="{col}" data-colspan="{colspan}" data-rowspan="{rowspan}" style="background-color: {cell_bg_color};">
                     <select class="cell-widget-select" data-row="{row}" data-col="{col}" name="cell_{row}_{col}">
                         {options_html}
                     </select>
@@ -131,8 +135,8 @@ def register_layout_routes(app: FastAPI, connection_manager: ConnectionManager):
                     <div class="cell-controls">
                         <button class="expand-btn expand-right" data-row="{row}" data-col="{col}" data-direction="right" title="Expand Right">→</button>
                         <button class="expand-btn expand-down" data-row="{row}" data-col="{col}" data-direction="down" title="Expand Down">↓</button>
-                        <button class="contract-btn contract-left" data-row="{row}" data-col="{col}" data-direction="left" title="Contract Left" style="display: none;">←</button>
-                        <button class="contract-btn contract-top" data-row="{row}" data-col="{col}" data-direction="top" title="Contract Top" style="display: none;">↑</button>
+                        <button class="contract-btn contract-left{contract_left_disabled}" data-row="{row}" data-col="{col}" data-direction="left" title="Contract Left">←</button>
+                        <button class="contract-btn contract-top{contract_top_disabled}" data-row="{row}" data-col="{col}" data-direction="top" title="Contract Top">↑</button>
                     </div>
                 </div>
                 '''
@@ -163,7 +167,9 @@ def register_layout_routes(app: FastAPI, connection_manager: ConnectionManager):
         setup_callsign_json = _json.dumps(current_config.get("setup_callsign") or "")
         setup_location_json = _json.dumps(current_config.get("setup_location") or "")
 
+        cache_bust = str(int(time.time() * 1000))
         html_content = _get_layout_template()
+        html_content = html_content.replace("__CACHE_BUST__", cache_bust)
         html_content = html_content.replace("__GRID_CSS__", grid_css)
         html_content = html_content.replace("__GRID_HTML__", grid_html)
         html_content = html_content.replace("__GRID_COLUMNS__", str(grid_columns))
@@ -293,10 +299,16 @@ def register_layout_routes(app: FastAPI, connection_manager: ConnectionManager):
 
             current_config.set("layout", layout)
             current_config.set("cell_spans", spans or {})
-            if module_settings is not None and isinstance(module_settings, dict):
-                current_config.set("module_settings", module_settings)
 
-            # Notify all clients (desktop + browsers) so they reload with new layout
+            # Merge in-cell module settings from layout form so changes in the layout editor are saved
+            if module_settings is not None and isinstance(module_settings, dict):
+                current = dict(current_config.get("module_settings") or {})
+                for cell_key, settings in module_settings.items():
+                    if isinstance(settings, dict):
+                        current[cell_key] = {**(current.get(cell_key) or {}), **settings}
+                current_config.set("module_settings", current)
+
+            # Notify all clients (desktop, browsers, readonly portal) so they reload with new layout
             try:
                 msg = {"type": "config_update", "data": {"reload": True}}
                 if connection_manager.desktop_connection:
@@ -305,6 +317,11 @@ def register_layout_routes(app: FastAPI, connection_manager: ConnectionManager):
                     except Exception:
                         connection_manager.desktop_connection = None
                 for conn in list(connection_manager.browser_connections):
+                    try:
+                        await conn.send_json(msg)
+                    except Exception:
+                        pass
+                for conn in list(connection_manager.readonly_connections):
                     try:
                         await conn.send_json(msg)
                     except Exception:

@@ -1,16 +1,23 @@
+/* Absolutely fill the cell so content can center; text scales with cell size */
 .grid-cell-clock {
-    display: flex;
-    align-items: center;
-    justify-content: center;
+    position: relative;
 }
 .grid-cell-clock .clock_display {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
     gap: 0.25em;
-    font-size: clamp(12px, 2.5vw, 24px);
     color: #ccc;
+    text-align: center;
+    /* Fallback until JS scales; keep small so small cells are not huge */
+    font-size: 12px;
+    font-size: 12cqmin;
 }
 .grid-cell-clock .clock_date { color: #888; font-size: 0.85em; }
 .grid-cell-clock .clock_local,

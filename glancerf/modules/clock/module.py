@@ -24,9 +24,9 @@ MODULE = {
     "name": "Clock",
     "color": "#0d1117",
     "settings": [
-        {"id": "show_date", "label": "Show date", "type": "select", "options": ON_OFF_OPTIONS, "default": "0"},
         {"id": "show_local", "label": "Local time", "type": "select", "options": ON_OFF_OPTIONS, "default": "1"},
         {"id": "show_utc", "label": "UTC time", "type": "select", "options": ON_OFF_OPTIONS, "default": "1"},
         {"id": "third_timezone", "label": "Third time (timezone or city)", "type": "select", "options": THIRD_TIMEZONE_OPTIONS, "default": ""},
+        {"id": "show_date", "label": "Show date", "type": "select", "options": ON_OFF_OPTIONS, "default": "0"},
     ],
 }

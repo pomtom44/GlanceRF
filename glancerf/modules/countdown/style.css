@@ -1,9 +1,6 @@
-.grid-cell-countdown {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-}
 .grid-cell-countdown .countdown_display {
+    width: 100%;
+    height: 100%;
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -12,16 +9,16 @@
     text-align: center;
 }
 .grid-cell-countdown .countdown_label {
-    font-size: clamp(10px, 1.4vw, 14px);
+    font-size: 6cqmin;
     color: #888;
 }
 .grid-cell-countdown .countdown_value {
-    font-size: clamp(16px, 2.8vw, 32px);
+    font-size: 12cqmin;
     font-weight: bold;
     color: #0f0;
     font-variant-numeric: tabular-nums;
 }
 .grid-cell-countdown .countdown_message {
-    font-size: clamp(12px, 1.8vw, 18px);
+    font-size: 8cqmin;
     color: #888;
 }

@@ -2,6 +2,25 @@
     function isOn(val) {
         return val === '1' || val === 1 || val === true || val === 'true';
     }
+    function scaleClockToCell() {
+        document.querySelectorAll('.grid-cell-clock').forEach(function(cell) {
+            var display = cell.querySelector('.clock_display');
+            if (!display) return;
+            var w = cell.clientWidth;
+            var h = cell.clientHeight;
+            if (w <= 0 || h <= 0) return;
+            var minDim = Math.min(w, h);
+            var size = minDim * 0.16;
+            size = Math.max(8, Math.min(80, size));
+            display.style.fontSize = size + 'px';
+        });
+    }
+    function runScaleWhenReady() {
+        scaleClockToCell();
+        requestAnimationFrame(function() { scaleClockToCell(); });
+        setTimeout(scaleClockToCell, 150);
+        setTimeout(scaleClockToCell, 450);
+    }
     function updateClocks() {
         var now = new Date();
         var localStr = now.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false });
@@ -64,4 +83,23 @@
     }
     updateClocks();
     setInterval(updateClocks, 1000);
+    runScaleWhenReady();
+    window.addEventListener('load', runScaleWhenReady);
+    window.addEventListener('resize', scaleClockToCell);
+    if (typeof ResizeObserver !== 'undefined') {
+        document.querySelectorAll('.grid-cell-clock').forEach(function(cell) {
+            var ro = new ResizeObserver(function() { scaleClockToCell(); });
+            ro.observe(cell);
+        });
+        var checkNewClocks = setInterval(function() {
+            document.querySelectorAll('.grid-cell-clock').forEach(function(cell) {
+                if (!cell._clockResizeObserved) {
+                    cell._clockResizeObserved = true;
+                    var ro = new ResizeObserver(function() { scaleClockToCell(); });
+                    ro.observe(cell);
+                }
+            });
+        }, 500);
+        setTimeout(function() { clearInterval(checkNewClocks); }, 5000);
+    }
 })();

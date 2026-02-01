@@ -1,4 +1,23 @@
 (function() {
+    function scaleCallsignToCell() {
+        document.querySelectorAll('.grid-cell-callsign').forEach(function(cell) {
+            var display = cell.querySelector('.callsign_display');
+            if (!display) return;
+            var w = cell.clientWidth;
+            var h = cell.clientHeight;
+            if (w <= 0 || h <= 0) return;
+            var minDim = Math.min(w, h);
+            var size = minDim * 0.16;
+            size = Math.max(8, Math.min(80, size));
+            display.style.fontSize = size + 'px';
+        });
+    }
+    function runScaleWhenReady() {
+        scaleCallsignToCell();
+        requestAnimationFrame(function() { scaleCallsignToCell(); });
+        setTimeout(scaleCallsignToCell, 150);
+        setTimeout(scaleCallsignToCell, 450);
+    }
     function updateCallsigns() {
         var allSettings = window.GLANCERF_MODULE_SETTINGS || {};
         document.querySelectorAll('.grid-cell-callsign').forEach(function(cell) {
@@ -27,4 +46,23 @@
         });
     }
     updateCallsigns();
+    runScaleWhenReady();
+    window.addEventListener('load', runScaleWhenReady);
+    window.addEventListener('resize', scaleCallsignToCell);
+    if (typeof ResizeObserver !== 'undefined') {
+        document.querySelectorAll('.grid-cell-callsign').forEach(function(cell) {
+            var ro = new ResizeObserver(function() { scaleCallsignToCell(); });
+            ro.observe(cell);
+        });
+        var checkNewCallsigns = setInterval(function() {
+            document.querySelectorAll('.grid-cell-callsign').forEach(function(cell) {
+                if (!cell._callsignResizeObserved) {
+                    cell._callsignResizeObserved = true;
+                    var ro = new ResizeObserver(function() { scaleCallsignToCell(); });
+                    ro.observe(cell);
+                }
+            });
+        }, 500);
+        setTimeout(function() { clearInterval(checkNewCallsigns); }, 5000);
+    }
 })();

@@ -1,38 +1,35 @@
-.grid-cell-weather {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-        .grid-cell-weather .weather_display {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            gap: 0.15em;
-            text-align: center;
-        }
-        .grid-cell-weather .weather_place {
-            font-size: clamp(10px, 1.4vw, 14px);
-            color: #888;
-        }
-        .grid-cell-weather .weather_conditions {
-            font-size: clamp(12px, 1.8vw, 18px);
-            color: #ccc;
-        }
-        .grid-cell-weather .weather_temp {
-            font-size: clamp(18px, 3vw, 28px);
-            font-weight: bold;
-            color: #fff;
-        }
-        .grid-cell-weather .weather_feels,
-        .grid-cell-weather .weather_humidity,
-        .grid-cell-weather .weather_wind,
-        .grid-cell-weather .weather_pressure {
-            font-size: clamp(10px, 1.4vw, 14px);
-            color: #aaa;
-        }
-        .grid-cell-weather .weather_error,
-        .grid-cell-weather .weather_loading {
-            font-size: clamp(11px, 1.5vw, 14px);
-            color: #888;
-        }
+.grid-cell-weather .weather_display {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 0.15em;
+    text-align: center;
+}
+.grid-cell-weather .weather_place {
+    font-size: 6cqmin;
+    color: #888;
+}
+.grid-cell-weather .weather_conditions {
+    font-size: 8cqmin;
+    color: #ccc;
+}
+.grid-cell-weather .weather_temp {
+    font-size: 12cqmin;
+    font-weight: bold;
+    color: #fff;
+}
+.grid-cell-weather .weather_feels,
+.grid-cell-weather .weather_humidity,
+.grid-cell-weather .weather_wind,
+.grid-cell-weather .weather_pressure {
+    font-size: 6cqmin;
+    color: #aaa;
+}
+.grid-cell-weather .weather_error,
+.grid-cell-weather .weather_loading {
+    font-size: 6cqmin;
+    color: #888;
+}

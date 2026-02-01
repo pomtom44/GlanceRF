@@ -50,7 +50,7 @@ def register_root(app):
         grid_html = build_grid_html(
             layout, cell_spans, merged_cells, grid_columns, grid_rows
         )
-        grid_css = f"grid-template-columns: repeat({grid_columns}, 1fr); grid-template-rows: repeat({grid_rows}, 1fr);"
+        grid_css = f"grid-template-columns: repeat({grid_columns}, minmax(0, 1fr)); grid-template-rows: repeat({grid_rows}, minmax(0, 1fr));"
         module_css, module_js = get_module_assets(layout)
         module_settings = current_config.get("module_settings") or {}
         module_settings_json = json.dumps(module_settings)

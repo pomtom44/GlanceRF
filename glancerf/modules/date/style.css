@@ -1,10 +1,18 @@
+/* Absolutely fill the cell and center content; base font-size set by JS to scale with cell */
 .grid-cell-date {
+    position: relative;
+}
+.grid-cell-date .date_display {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
     display: flex;
     align-items: center;
     justify-content: center;
-}
-.grid-cell-date .date_display {
-    font-size: clamp(14px, 2.5vw, 28px);
+    font-size: 12px;
+    font-size: 12cqmin;
     color: #ccc;
     text-align: center;
 }

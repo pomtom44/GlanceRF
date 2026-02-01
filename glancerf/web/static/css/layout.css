@@ -16,18 +16,13 @@ body {
     flex-direction: column;
     overflow: hidden;
 }
-body.layout-browser-mode #aspect-container {
-    overflow: auto;
-}
-body.layout-desktop-mode #aspect-container {
-    overflow: hidden;
-}
 #aspect-container {
     display: flex;
     flex-direction: column;
     flex: 1 1 0%;
     min-height: 0;
     width: 100%;
+    overflow: auto;
 }
 
 .grid-layout {
@@ -47,9 +42,8 @@ body.layout-desktop-mode #aspect-container {
     flex-direction: column;
     align-items: center;
     justify-content: flex-start;
-    padding: 5px;
+    padding: 0;
 }
-
 
 .cell-widget-select {
     width: auto;
@@ -65,6 +59,7 @@ body.layout-desktop-mode #aspect-container {
     font-size: 12px;
     cursor: pointer;
     margin: 0;
+    margin-top: 28px;
 }
 
 .cell-widget-select:hover {
@@ -105,29 +100,41 @@ body.layout-desktop-mode #aspect-container {
     z-index: 10;
 }
 
+.contract-btn.contract-disabled {
+    background-color: #2a2a2a;
+    color: #888;
+    border-color: #555;
+    cursor: not-allowed;
+    pointer-events: none;
+}
+
 
 .expand-right {
     right: 2px;
     top: 50%;
     transform: translateY(-50%);
+    margin: 3px;
 }
 
 .expand-down {
     bottom: 2px;
     left: 50%;
     transform: translateX(-50%);
+    margin: 3px;
 }
 
 .contract-left {
     left: 2px;
     top: 50%;
     transform: translateY(-50%);
+    margin: 3px;
 }
 
 .contract-top {
     top: 2px;
     left: 50%;
     transform: translateX(-50%);
+    margin: 3px;
 }
 
 .grid-cell.hidden {

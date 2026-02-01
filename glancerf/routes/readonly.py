@@ -50,13 +50,16 @@ def register_readonly_routes(readonly_app: FastAPI):
         grid_html = build_grid_html(
             layout, cell_spans, merged_cells, grid_columns, grid_rows
         )
-        grid_css = f"grid-template-columns: repeat({grid_columns}, 1fr); grid-template-rows: repeat({grid_rows}, 1fr);"
+        grid_css = f"grid-template-columns: repeat({grid_columns}, minmax(0, 1fr)); grid-template-rows: repeat({grid_rows}, minmax(0, 1fr));"
         module_css, module_js = get_module_assets(layout)
         module_settings = current_config.get("module_settings") or {}
         module_settings_json = json.dumps(module_settings)
         setup_callsign_json = json.dumps(current_config.get("setup_callsign") or "")
         setup_location_json = json.dumps(current_config.get("setup_location") or "")
 
+        main_port = current_config.get("port")
+        if main_port is None or not isinstance(main_port, int):
+            main_port = 8080
         html_content = render_readonly_page(
             aspect_ratio_css=aspect_ratio_css,
             grid_css=grid_css,
@@ -67,6 +70,7 @@ def register_readonly_routes(readonly_app: FastAPI):
             module_settings_json=module_settings_json,
             setup_callsign_json=setup_callsign_json,
             setup_location_json=setup_location_json,
+            main_port=main_port,
         )
         return HTMLResponse(content=html_content)
 

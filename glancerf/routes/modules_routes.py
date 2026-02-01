@@ -340,6 +340,11 @@ def register_modules_routes(app: FastAPI, connection_manager=None):
                         await connection_manager.desktop_connection.send_json(msg)
                     except Exception:
                         connection_manager.desktop_connection = None
+                for conn in list(connection_manager.readonly_connections):
+                    try:
+                        await conn.send_json(msg)
+                    except Exception:
+                        pass
             except Exception:
                 pass
 

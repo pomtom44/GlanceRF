@@ -28,6 +28,7 @@ def render_readonly_page(
     module_settings_json: str = "{}",
     setup_callsign_json: str = '""',
     setup_location_json: str = '""',
+    main_port: int = 8080,
 ) -> str:
     """Render the read-only clock page HTML (same structure as main, no interactions)."""
     module_css = module_css if module_css is not None else ""
@@ -41,4 +42,5 @@ def render_readonly_page(
         module_settings_json=module_settings_json,
         setup_callsign_json=setup_callsign_json,
         setup_location_json=setup_location_json,
+        main_port=main_port,
     )

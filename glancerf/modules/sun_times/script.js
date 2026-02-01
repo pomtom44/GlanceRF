@@ -31,7 +31,7 @@
             function parseLocation(s) {
                 s = (s || '').toString().trim();
                 if (!s) return null;
-                var m = s.match(/^\\s*(-?\\d+\\.?\\d*)\\s*,\\s*(-?\\d+\\.?\\d*)\\s*$/);
+                var m = s.match(/^\s*(-?\d+\.?\d*)\s*,\s*(-?\d+\.?\d*)\s*$/);
                 if (m) {
                     var la = parseFloat(m[1]), lo = parseFloat(m[2]);
                     if (!isNaN(la) && !isNaN(lo) && la >= -90 && la <= 90 && lo >= -180 && lo <= 180)
@@ -44,7 +44,7 @@
                 var idx = isoStr.indexOf('T');
                 if (idx === -1) return '';
                 var timePart = isoStr.slice(idx + 1);
-                var match = timePart.match(/^(\\d{1,2}):(\\d{2})/);
+                var match = timePart.match(/^(\d{1,2}):(\d{2})/);
                 return match ? match[1].padStart(2, '0') + ':' + match[2] : '';
             }
             function showElements(cell, data, ms) {
@@ -103,21 +103,31 @@
             }
             function fetchSunTimes(cell, cellKey, ms, coord, cb) {
                 showLoading(cell, true);
-                var url = 'https://api.open-meteo.com/v1/forecast?latitude=' + coord.lat + '&longitude=' + coord.lng +
-                    '&daily=sunrise,sunset,moonrise,moonset&timezone=auto';
-                fetch(url).then(function(r) { return r.json(); }).then(function(data) {
+                var url = 'https://api.open-meteo.com/v1/forecast?latitude=' + encodeURIComponent(coord.lat) + '&longitude=' + encodeURIComponent(coord.lng) +
+                    '&daily=sunrise,sunset&timezone=auto';
+                fetch(url).then(function(r) {
+                    return r.json().then(function(data) {
+                        return { ok: r.ok, status: r.status, data: data };
+                    });
+                }).then(function(result) {
                     showLoading(cell, false);
-                    if (data && data.daily) {
+                    var data = result.data;
+                    if (result.ok && data && data.daily) {
                         cb(data);
                         try {
                             window['sun_times_cache_' + cellKey] = { data: data, ts: Date.now() };
                         } catch (e) {}
                     } else {
-                        cb(null);
+                        var msg = 'Sun times unavailable';
+                        if (data && typeof data.reason === 'string') msg = data.reason;
+                        else if (data && typeof data.error === 'string') msg = data.error;
+                        else if (!result.ok && result.status) msg = 'Sun times unavailable (' + result.status + ')';
+                        cb(null, msg);
                     }
-                }).catch(function() {
+                }).catch(function(err) {
                     showLoading(cell, false);
-                    cb(null);
+                    var msg = (err && err.message) ? err.message : 'Network error';
+                    cb(null, msg);
                 });
             }
             function updateCell(cell, cellKey, ms) {
@@ -136,11 +146,11 @@
                         return;
                     }
                 } catch (e) {}
-                fetchSunTimes(cell, cellKey, ms, coord, function(data) {
+                fetchSunTimes(cell, cellKey, ms, coord, function(data, errorMsg) {
                     if (data) {
                         showElements(cell, data, ms);
                     } else {
-                        showError(cell, 'Sun times unavailable');
+                        showError(cell, errorMsg || 'Sun times unavailable');
                     }
                 });
             }

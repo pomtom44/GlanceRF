@@ -41,136 +41,12 @@
                 }
                 
                 if (message.type === 'dom') {
-                    // Only apply DOM updates on main dashboard page
-                    if (!shouldSyncPage()) return;
-                    
-                    // Update DOM from browser state
-                    if (message.data && message.data.html) {
-                        // Store current URL to detect navigation
-                        const currentUrl = window.location.href;
-                        const newUrl = message.data.url;
-                        
-                        // Parse and apply HTML updates
-                        const parser = new DOMParser();
-                        const newDoc = parser.parseFromString(message.data.html, 'text/html');
-                        
-                        // Update current document
-                        document.documentElement.innerHTML = newDoc.documentElement.innerHTML;
-                        
-                        // Restore form element values
-                        if (message.data.formState) {
-                            for (const [id, value] of Object.entries(message.data.formState)) {
-                                const el = document.getElementById(id) || document.querySelector(`[name="${id}"]`);
-                                if (el) {
-                                    if (el.type === 'checkbox' || el.type === 'radio') {
-                                        el.checked = value;
-                                    } else {
-                                        el.value = value;
-                                    }
-                                }
-                            }
-                        }
-                        
-                        // Restore scroll position
-                        if (message.data.scrollState) {
-                            window.scrollTo(message.data.scrollState.x, message.data.scrollState.y);
-                        }
-                        
-                        // Re-apply viewport sizing if on main page
-                        if (currentUrl.includes('/') && !currentUrl.includes('/setup')) {
-                            applyViewportSize();
-                        }
-                        
-                        // Restore focus to active element
-                        if (message.data.activeElement) {
-                            const ae = message.data.activeElement;
-                            let element = null;
-                            if (ae.id) {
-                                element = document.getElementById(ae.id);
-                            } else if (ae.name) {
-                                element = document.querySelector(`[name="${ae.name}"]`);
-                            }
-                            
-                            if (element) {
-                                // Restore value if it's an input
-                                if (ae.value !== null && element.value !== undefined) {
-                                    element.value = ae.value;
-                                }
-                                if (ae.checked !== null && element.checked !== undefined) {
-                                    element.checked = ae.checked;
-                                }
-                                // For select elements, restore selected index
-                                if (element.tagName === 'SELECT' && ae.selectedIndex !== null) {
-                                    element.selectedIndex = ae.selectedIndex;
-                                }
-                                // Focus the element
-                                setTimeout(function() {
-                                    element.focus();
-                                    // For select elements, show dropdown by setting size
-                                    if (element.tagName === 'SELECT' && ae.size !== null && ae.size > 1) {
-                                        element.size = Math.min(ae.size, element.options.length);
-                                        element.style.position = 'relative';
-                                        element.style.zIndex = '9999';
-                                    }
-                                }, 10);
-                            }
-                        }
-                        
-                        // Re-initialize event listeners after DOM update
-                        setTimeout(function() {
-                            sendDesktopState();
-                        }, 100);
-                    }
+                    return;
                 }
             };
             
             ws.onopen = function() {
                 console.log('Desktop app connected to mirroring server');
-                sendDesktopState();
-                
-                // Monitor DOM changes and send updates (throttled with requestAnimationFrame)
-                let updateScheduled = false;
-                const observer = new MutationObserver(function(mutations) {
-                    if (!updateScheduled) {
-                        updateScheduled = true;
-                        requestAnimationFrame(function() {
-                            sendDesktopState();
-                            updateScheduled = false;
-                        });
-                    }
-                });
-                
-                // Only set up DOM observers and event listeners on main dashboard page
-                if (shouldSyncPage()) {
-                    observer.observe(document.body, {
-                        childList: true,
-                        subtree: true,
-                        attributes: true,
-                        attributeOldValue: true
-                    });
-                    
-                    // Use event delegation and requestAnimationFrame for better performance
-                    let interactionScheduled = false;
-                    function scheduleUpdate() {
-                        if (!interactionScheduled) {
-                            interactionScheduled = true;
-                            requestAnimationFrame(function() {
-                                sendDesktopState();
-                                interactionScheduled = false;
-                            });
-                        }
-                    }
-                    
-                    // Send state on any user interaction (using delegation)
-                    document.addEventListener('click', scheduleUpdate, true);
-                    document.addEventListener('input', scheduleUpdate, true);
-                    document.addEventListener('change', scheduleUpdate, true);
-                    document.addEventListener('focus', scheduleUpdate, true);
-                    document.addEventListener('mousedown', scheduleUpdate, true);
-                    document.addEventListener('mouseup', scheduleUpdate, true);
-                    document.addEventListener('keydown', scheduleUpdate, true);
-                    document.addEventListener('keyup', scheduleUpdate, true);
-                }
             };
             
             // Cache last sent state to avoid sending duplicates
@@ -374,82 +250,9 @@
                 }
                 
                 if (message.type === 'dom') {
-                    // Only apply DOM updates on main dashboard page
-                    if (!shouldSyncPage()) return;
-                    
-                    // Update DOM from other client (desktop or browser)
-                    if (message.data && message.data.html) {
-                        // Store current URL to detect navigation
-                        const currentUrl = window.location.href;
-                        const newUrl = message.data.url;
-                        
-                        // Parse and apply HTML updates
-                        const parser = new DOMParser();
-                        const newDoc = parser.parseFromString(message.data.html, 'text/html');
-                        
-                        // Update current document
-                        document.documentElement.innerHTML = newDoc.documentElement.innerHTML;
-                        
-                        // Restore form element values
-                        if (message.data.formState) {
-                            for (const [id, value] of Object.entries(message.data.formState)) {
-                                const el = document.getElementById(id) || document.querySelector(`[name="${id}"]`);
-                                if (el) {
-                                    if (el.type === 'checkbox' || el.type === 'radio') {
-                                        el.checked = value;
-                                    } else {
-                                        el.value = value;
-                                    }
-                                }
-                            }
-                        }
-                        
-                        // Restore scroll position
-                        if (message.data.scrollState) {
-                            window.scrollTo(message.data.scrollState.x, message.data.scrollState.y);
-                        }
-                        
-                        // Re-apply viewport sizing if on main page
-                        if (currentUrl.includes('/') && !currentUrl.includes('/setup')) {
-                            applyViewportSize();
-                        }
-                        
-                        // Restore focus to active element
-                        if (message.data.activeElement) {
-                            const ae = message.data.activeElement;
-                            let element = null;
-                            if (ae.id) {
-                                element = document.getElementById(ae.id);
-                            } else if (ae.name) {
-                                element = document.querySelector(`[name="${ae.name}"]`);
-                            }
-                            
-                            if (element) {
-                                // Restore value if it's an input
-                                if (ae.value !== null && element.value !== undefined) {
-                                    element.value = ae.value;
-                                }
-                                if (ae.checked !== null && element.checked !== undefined) {
-                                    element.checked = ae.checked;
-                                }
-                                // For select elements, restore selected index
-                                if (element.tagName === 'SELECT' && ae.selectedIndex !== null) {
-                                    element.selectedIndex = ae.selectedIndex;
-                                }
-                                // Focus the element
-                                setTimeout(function() {
-                                    element.focus();
-                                    // For select elements, show dropdown by setting size
-                                    if (element.tagName === 'SELECT' && ae.size !== null && ae.size > 1) {
-                                        element.size = Math.min(ae.size, element.options.length);
-                                        element.style.position = 'relative';
-                                        element.style.zIndex = '9999';
-                                    }
-                                }, 10);
-                            }
-                        }
-                    }
-                } else if (message.type === 'state') {
+                    return;
+                }
+                if (message.type === 'state') {
                     if (message.data.grid_columns !== undefined || message.data.grid_rows !== undefined) {
                         location.reload();
                     }
@@ -458,53 +261,6 @@
             
             ws.onopen = function() {
                 console.log('Browser connected to mirroring server');
-                
-                // Send initial state
-                sendBrowserState();
-                
-                // Monitor DOM changes and send updates (throttled with requestAnimationFrame)
-                let updateScheduled = false;
-                const observer = new MutationObserver(function(mutations) {
-                    if (!updateScheduled) {
-                        updateScheduled = true;
-                        requestAnimationFrame(function() {
-                            sendBrowserState();
-                            updateScheduled = false;
-                        });
-                    }
-                });
-                
-                // Only set up DOM observers and event listeners on main dashboard page
-                if (shouldSyncPage()) {
-                    observer.observe(document.body, {
-                        childList: true,
-                        subtree: true,
-                        attributes: true,
-                        attributeOldValue: true
-                    });
-                    
-                    // Use event delegation and requestAnimationFrame for better performance
-                    let interactionScheduled = false;
-                    function scheduleUpdate() {
-                        if (!interactionScheduled) {
-                            interactionScheduled = true;
-                            requestAnimationFrame(function() {
-                                sendBrowserState();
-                                interactionScheduled = false;
-                            });
-                        }
-                    }
-                    
-                    // Send state on any user interaction (using delegation)
-                    document.addEventListener('click', scheduleUpdate, true);
-                    document.addEventListener('input', scheduleUpdate, true);
-                    document.addEventListener('change', scheduleUpdate, true);
-                    document.addEventListener('focus', scheduleUpdate, true);
-                    document.addEventListener('mousedown', scheduleUpdate, true);
-                    document.addEventListener('mouseup', scheduleUpdate, true);
-                    document.addEventListener('keydown', scheduleUpdate, true);
-                    document.addEventListener('keyup', scheduleUpdate, true);
-                }
             };
         }
         

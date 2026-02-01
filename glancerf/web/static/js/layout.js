@@ -84,46 +84,13 @@ var currentDesktopWidth = 0;
                 document.querySelectorAll('.grid-cell:not(.hidden)').forEach(updateCellSettings);
             }
         
-            // If desktop is connected, match its aspect ratio; otherwise fill viewport
             function enforceAspectRatio() {
                 const container = document.getElementById('aspect-container');
                 if (!container) return;
-                const vw = window.innerWidth;
-                const vh = window.innerHeight;
-                if (currentDesktopWidth > 0 && currentDesktopHeight > 0) {
-                    const targetRatio = currentDesktopWidth / currentDesktopHeight;
-                    const viewportRatio = vw / vh;
-                    container.style.maxWidth = '';
-                    container.style.maxHeight = '';
-                    if (viewportRatio > targetRatio) {
-                        container.style.width = (vh * targetRatio) + 'px';
-                        container.style.height = vh + 'px';
-                    } else {
-                        container.style.width = vw + 'px';
-                        container.style.height = (vw / targetRatio) + 'px';
-                    }
-                } else {
-                    container.style.width = '';
-                    container.style.height = '';
-                    container.style.maxWidth = '';
-                    container.style.maxHeight = '';
-                }
-                if (window._layoutIsDesktop) updateLayoutDesktopCompact();
-            }
-        
-            function updateLayoutDesktopCompact() {
-                if (!window._layoutIsDesktop) return;
-                var container = document.getElementById('aspect-container');
-                var grid = document.querySelector('.grid-layout');
-                if (!container || !grid) return;
-                var cw = container.clientWidth;
-                var ch = container.clientHeight;
-                if (cw <= 0 || ch <= 0) return;
-                var sw = grid.scrollWidth;
-                var sh = grid.scrollHeight;
-                if (sw <= 0 || sh <= 0) return;
-                var scale = Math.min(cw / sw, ch / sh, 1);
-                grid.style.zoom = scale;
+                container.style.width = '';
+                container.style.height = '';
+                container.style.maxWidth = '';
+                container.style.maxHeight = '';
             }
         
             // Enforce on load and resize (with debounce for resize)
@@ -137,7 +104,6 @@ var currentDesktopWidth = 0;
                 enforceAspectRatio();
                 updateAllCellSettings();
                 setTimeout(function() { enforceAspectRatio(); updateAllCellSettings(); }, 100);
-                if (window._layoutIsDesktop) setTimeout(updateLayoutDesktopCompact, 250);
             });
             document.addEventListener('change', function(e) {
                 if (e.target && e.target.classList && e.target.classList.contains('cell-widget-select')) {
@@ -253,9 +219,9 @@ var currentDesktopWidth = 0;
                 const expandRight = cell.querySelector('.expand-right');
                 const expandDown = cell.querySelector('.expand-down');
             
-                contractLeft.style.display = colspan > 1 ? 'flex' : 'none';
-                contractTop.style.display = rowspan > 1 ? 'flex' : 'none';
-            
+                contractLeft.classList.toggle('contract-disabled', colspan <= 1);
+                contractTop.classList.toggle('contract-disabled', rowspan <= 1);
+
                 // Hide expand buttons if at grid edge
                 const maxCol = gridColumns;
                 const maxRow = gridRows;
@@ -374,6 +340,7 @@ var currentDesktopWidth = 0;
                     }
                 } else if (event.target.classList.contains('contract-btn')) {
                     const btn = event.target;
+                    if (btn.classList.contains('contract-disabled')) return;
                     const row = parseInt(btn.dataset.row);
                     const col = parseInt(btn.dataset.col);
                     const direction = btn.dataset.direction;

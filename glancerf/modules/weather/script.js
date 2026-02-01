@@ -31,7 +31,7 @@
             function parseLocation(s) {
                 s = (s || '').toString().trim();
                 if (!s) return null;
-                var m = s.match(/^\\s*(-?\\d+\\.?\\d*)\\s*,\\s*(-?\\d+\\.?\\d*)\\s*$/);
+                var m = s.match(/^\s*(-?\d+\.?\d*)\s*,\s*(-?\d+\.?\d*)\s*$/);
                 if (m) {
                     var la = parseFloat(m[1]), lo = parseFloat(m[2]);
                     if (!isNaN(la) && !isNaN(lo) && la >= -90 && la <= 90 && lo >= -180 && lo <= 180)
@@ -138,19 +138,35 @@
             function fetchWeather(cell, cellKey, ms, coord, cb) {
                 showLoading(cell, true);
                 var imperial = (ms.units || 'metric').toLowerCase() === 'imperial';
-                var url = 'https://api.open-meteo.com/v1/forecast?latitude=' + coord.lat + '&longitude=' + coord.lng +
+                var url = 'https://api.open-meteo.com/v1/forecast?latitude=' + encodeURIComponent(coord.lat) + '&longitude=' + encodeURIComponent(coord.lng) +
                     '&current=temperature_2m,relative_humidity_2m,apparent_temperature,weather_code,wind_speed_10m,wind_direction_10m,surface_pressure&timezone=auto' +
                     '&temperature_unit=' + (imperial ? 'fahrenheit' : 'celsius') +
-                    '&wind_speed_unit=' + (imperial ? 'mph' : 'km_h');
-                fetch(url).then(function(r) { return r.json(); }).then(function(data) {
-                    if (data.current) {
+                    '&wind_speed_unit=' + (imperial ? 'mph' : 'kmh');
+                fetch(url).then(function(r) {
+                    return r.json().then(function(data) {
+                        return { ok: r.ok, status: r.status, data: data };
+                    });
+                }).then(function(result) {
+                    showLoading(cell, false);
+                    var data = result.data;
+                    if (result.ok && data && data.current) {
                         data.temp_unit = (data.current_units && data.current_units.temperature_2m) || (imperial ? 'F' : 'C');
                         data.wind_unit = (data.current_units && data.current_units.wind_speed_10m) || (imperial ? 'mph' : 'km/h');
                         data.pressure_unit = imperial ? 'inHg' : 'hPa';
                         data.locationLabel = '';
+                        cb(data);
+                    } else {
+                        var msg = 'Weather unavailable';
+                        if (data && typeof data.reason === 'string') msg = data.reason;
+                        else if (data && typeof data.error === 'string') msg = data.error;
+                        else if (!result.ok && result.status) msg = 'Weather unavailable (' + result.status + ')';
+                        cb(null, msg);
                     }
-                    cb(data);
-                }).catch(function() { cb(null); });
+                }).catch(function(err) {
+                    showLoading(cell, false);
+                    var msg = (err && err.message) ? err.message : 'Network error';
+                    cb(null, msg);
+                });
             }
             function updateCell(cell, cellKey, ms) {
                 getCoord(ms, function(coord, errMsg) {
@@ -158,8 +174,7 @@
                         showError(cell, errMsg || 'Set grid or lat,lng');
                         return;
                     }
-                    fetchWeather(cell, cellKey, ms, coord, function(data) {
-                        showLoading(cell, false);
+                    fetchWeather(cell, cellKey, ms, coord, function(data, errorMsg) {
                         if (data && data.current) {
                             showElements(cell, data, ms);
                             var cacheKey = 'weather_cache_' + cellKey;
@@ -167,7 +182,7 @@
                                 window[cacheKey] = { data: data, ts: Date.now() };
                             } catch (e) {}
                         } else {
-                            showError(cell, 'Weather unavailable');
+                            showError(cell, errorMsg || 'Weather unavailable');
                         }
                     });
                 });
