@@ -43,7 +43,7 @@ When telemetry is enabled, the following data may be sent to the telemetry serve
 - To prioritize fixes and features (e.g. platform-specific issues, module usage)
 - To approximate install base and version distribution
 
-Data is sent over HTTPS to the telemetry endpoint and handled according to the server operator’s policy.
+Data is sent over HTTPS to the telemetry endpoint and handled according to the server operator's policy.
 
 ## How to control telemetry
 

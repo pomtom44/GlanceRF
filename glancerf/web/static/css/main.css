@@ -93,3 +93,29 @@ body {
 #update-notification .update-close:hover {
     opacity: 0.7;
 }
+
+#ws-lost-warning {
+    position: fixed;
+    top: 10px;
+    left: 10px;
+    background-color: rgba(180, 60, 60, 0.95);
+    color: #fff;
+    padding: 8px 12px;
+    border-radius: 4px;
+    font-size: 12px;
+    font-weight: bold;
+    z-index: 9999;
+    display: none;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+}
+#ws-lost-warning.show {
+    display: block;
+}
+#ws-lost-warning .ws-lost-label {
+    display: block;
+    margin-bottom: 2px;
+}
+#ws-lost-warning #ws-lost-timer {
+    font-size: 11px;
+    opacity: 0.95;
+}

@@ -2,6 +2,8 @@
 
 This guide explains how to add a new **cell module** to GlanceRF. A module is a self-contained block that can be placed in any grid cell (e.g. Clock, Weather, Map). You provide a folder with four files; the app discovers it automatically and injects its HTML, CSS, and JS into the page.
 
+**Where to put your module:** Put your module in **`glancerf/modules/_custom/`**. Modules in `_custom/` are **not overwritten** when you update GlanceRF. Modules you add directly under `glancerf/modules/` (outside `_custom/`) **can be overwritten or removed** during an update, so use `_custom/` for anything you want to keep. See [Custom modules (survive updates)](#11-custom-modules-survive-updates) for details.
+
 ---
 
 ## Table of contents
@@ -23,25 +25,27 @@ This guide explains how to add a new **cell module** to GlanceRF. A module is a 
 
 ## 1. Quick start
 
-1. Copy the **`example`** folder (inside `glancerf/modules/_custom/`). This is the template; it lives under the modules folder so it survives updates.
-3. Rename the folder to your module **id** (e.g. `my_timer`). Use letters, numbers, and underscores only. Do **not** start the folder name with `_` (those folders are ignored).
-4. Edit **module.py**: set `id`, `name`, and `color` to match your module.
-5. Edit **index.html**: put the HTML structure for one cell, using classes that start with your module id + underscore (e.g. `my_timer_label`).
-6. Edit **style.css**: scope all rules under `.grid-cell-{id}` and use the same class names.
-7. Edit **script.js**: use `document.querySelectorAll('.grid-cell-{id}')` to find your cells, and `cell.querySelector('.my_timer_label')` (etc.) to update content.
+1. Copy the **`example`** folder from **`glancerf/modules/_custom/example/`**. Keep your copy inside **`glancerf/modules/_custom/`** (e.g. `glancerf/modules/_custom/my_timer/`) so it is not overwritten when you update GlanceRF.
+2. Rename the folder to your module **id** (e.g. `my_timer`). Use letters, numbers, and underscores only. Do **not** start the folder name with `_` (those folders are ignored).
+3. Edit **module.py**: set `id`, `name`, and `color` to match your module.
+4. Edit **index.html**: put the HTML structure for one cell, using classes that start with your module id + underscore (e.g. `my_timer_label`).
+5. Edit **style.css**: scope all rules under `.grid-cell-{id}` and use the same class names.
+6. Edit **script.js**: use `document.querySelectorAll('.grid-cell-{id}')` to find your cells, and `cell.querySelector('.my_timer_label')` (etc.) to update content.
 
-Restart the app (or reload the page). Your module appears in the layout editor’s module list and can be placed in any cell.
+Restart the app (or reload the page). Your module appears in the layout editor's module list and can be placed in any cell.
 
 ---
 
 ## 2. Folder structure and files
 
-Each module is a **folder** that can live in:
+Each module is a **folder**. You can put it in one of two places:
 
-- **`glancerf/modules/`** – Built-in location. Works for testing, but this folder is replaced when you run an app update, so any modules you add here can be overwritten or lost.
-- **Custom modules folder** – The **`glancerf/modules/_custom/`** folder. The app always loads modules from here; on update, only built-in modules are overwritten, so your custom modules survive. If a custom module has the same **id** as a built-in one, the custom version is used. See [Custom modules (survive updates)](#11-custom-modules-survive-updates).
+| Location | Behaviour on GlanceRF updates |
+|----------|-------------------------------|
+| **`glancerf/modules/`** (outside `_custom/`) | **May be overwritten or removed.** This is where built-in modules (clock, weather, map, etc.) live. When you update the app, this tree can be replaced, so any module you add here might be lost. Use this only for quick local testing. |
+| **`glancerf/modules/_custom/`** | **Not overwritten.** The updater preserves `_custom/`, so modules you put here survive updates. The app loads modules from both locations; if a custom module has the same **id** as a built-in one, the custom version is used. **Always use `_custom/` for your own modules.** See [Custom modules (survive updates)](#11-custom-modules-survive-updates). |
 
-The folder name must **not** start with `_` (folders starting with `_` are skipped and not loaded as modules).
+The folder name must **not** start with `_` (folders starting with `_` are skipped and not loaded as modules; the `_custom` folder itself is the single exception).
 
 Required file:
 
@@ -55,7 +59,7 @@ Optional files (if present, the loader uses them; otherwise the module has no HT
 |------------|---------|
 | **index.html** | HTML fragment injected **inside** each grid cell that uses this module. |
 | **style.css**  | CSS for this module. Loaded once per page; scope under `.grid-cell-{id}`. |
-| **script.js**  | JavaScript for this module. Loaded once per page; finds and updates this module’s cells. |
+| **script.js**  | JavaScript for this module. Loaded once per page; finds and updates this module's cells. |
 
 The loader reads `module.py` first, then overlays `inner_html`, `css`, and `js` from the files above. You do **not** put HTML/CSS/JS strings inside `module.py` when using the folder structure.
 
@@ -66,7 +70,7 @@ The loader reads `module.py` first, then overlays `inner_html`, `css`, and `js` 
 You must define a single dict named **`MODULE`** with at least:
 
 - **`id`** (str) – Unique identifier. Use lowercase letters, numbers, underscores (e.g. `my_timer`). This is the value stored in the layout grid and used to form the CSS class `grid-cell-{id}`.
-- **`name`** (str) – Label shown in the UI (e.g. “My Timer”).
+- **`name`** (str) – Label shown in the UI (e.g. "My Timer").
 - **`color`** (str) – Background colour for the cell (e.g. `"#333333"`).
 
 Optional:
@@ -130,7 +134,7 @@ Use the same class names in **style.css** and **script.js**.
 
 ## 5. style.css – module styles
 
-- Your CSS is included **once per page**, but you must **scope** it so it only affects your module’s cells.
+- Your CSS is included **once per page**, but you must **scope** it so it only affects your module's cells.
 - The core adds the class **`.grid-cell-{id}`** to each cell (e.g. `.grid-cell-my_timer`). Always scope your rules under this class.
 - Use the **same** class names you used in index.html (with the `ModuleName_` prefix).
 
@@ -153,7 +157,7 @@ Example:
 }
 ```
 
-If you don’t scope under `.grid-cell-{id}`, your styles could affect other cells or the rest of the page.
+If you don't scope under `.grid-cell-{id}`, your styles could affect other cells or the rest of the page.
 
 ---
 
@@ -191,8 +195,8 @@ If your module has **settings**, read them from **`window.GLANCERF_MODULE_SETTIN
 | **Cell wrapper class** | Added by core: **`grid-cell-{id}`** | `.grid-cell-my_timer` |
 | **Your classes** | **`{id}_`** + name, underscores only | `.my_timer_display`, `.my_timer_value` |
 
-- The **core** adds `grid-cell` and `grid-cell-{id}` to the cell div. You **use** this in CSS and JS; you don’t define it.
-- **You** define all other classes used in your HTML/CSS/JS and **prefix** them with your module id + underscore so they don’t clash with the core or other modules (e.g. `clock_display`, `weather_temp`, `my_timer_value`).
+- The **core** adds `grid-cell` and `grid-cell-{id}` to the cell div. You **use** this in CSS and JS; you don't define it.
+- **You** define all other classes used in your HTML/CSS/JS and **prefix** them with your module id + underscore so they don't clash with the core or other modules (e.g. `clock_display`, `weather_temp`, `my_timer_value`).
 
 ---
 
@@ -205,8 +209,8 @@ If your module has **settings**, read them from **`window.GLANCERF_MODULE_SETTIN
   When building the main or read-only page, the core calls `build_grid_html` in `view_utils.py`. For each cell it:
   - Looks up the module by the cell value (module id).
   - Gets `color` and `inner_html` from the module dict.
-  - Builds a **safe id** from the module id (alphanumeric and `_`, then ` ` → `-`) and sets the cell’s class to **`grid-cell grid-cell-{safe_id}`** (e.g. `grid-cell-my_timer`).
-  - Injects your **inner_html** inside that div and sets the cell’s background colour.
+  - Builds a **safe id** from the module id (alphanumeric and `_`, then ` ` → `-`) and sets the cell's class to **`grid-cell grid-cell-{safe_id}`** (e.g. `grid-cell-my_timer`).
+  - Injects your **inner_html** inside that div and sets the cell's background colour.
 
 - **CSS and JS**  
   The app collects the `css` and `js` of every module that appears in the current layout and injects them into the page (once per module). Your CSS/JS use `.grid-cell-{id}` to scope or find your cells.
@@ -242,10 +246,10 @@ The core exposes two **global** values from Setup (stored in config as `setup_ca
 
 | Variable | Description |
 |----------|-------------|
-| **`window.GLANCERF_SETUP_CALLSIGN`** | The user’s callsign from Setup. Empty string if not set. |
-| **`window.GLANCERF_SETUP_LOCATION`** | The user’s default location from Setup (e.g. grid square like `RE78hk` or `lat,lng` like `-43.5,172.6`). Empty string if not set. |
+| **`window.GLANCERF_SETUP_CALLSIGN`** | The user's callsign from Setup. Empty string if not set. |
+| **`window.GLANCERF_SETUP_LOCATION`** | The user's default location from Setup (e.g. grid square like `RE78hk` or `lat,lng` like `-43.5,172.6`). Empty string if not set. |
 
-Use these as **fallbacks** when your module has a per-cell setting for callsign or location: if the user leaves the cell setting blank, use the global value so they don’t have to re-enter it in every cell.
+Use these as **fallbacks** when your module has a per-cell setting for callsign or location: if the user leaves the cell setting blank, use the global value so they don't have to re-enter it in every cell.
 
 Example (callsign with per-cell override):
 
@@ -265,14 +269,19 @@ The **callsign**, **weather**, and **sun_times** modules use these globals; see 
 
 ## 11. Custom modules (survive updates)
 
-If you create your own modules, put them in a **custom modules folder** so that:
+**Custom modules path:** **`glancerf/modules/_custom/`**
 
-- They are **not removed or overwritten** when you run an app update (the updater only replaces files inside the `glancerf` package).
+- **Modules inside `_custom/`** – The updater does **not** overwrite or remove the `_custom/` folder. Anything you put here (e.g. `glancerf/modules/_custom/my_timer/`) is preserved when you install a new GlanceRF version.
+- **Modules outside `_custom/`** – The rest of `glancerf/modules/` (clock, weather, map, etc.) is part of the built-in app. When you update, that tree can be replaced, so any module you add there **might be overwritten or removed**. Do not rely on it for your own modules.
+
+Put your own modules in **`glancerf/modules/_custom/`** so that:
+
+- They are **not overwritten** when you run an app update.
 - If a future GlanceRF release adds a built-in module with the **same id** as yours, your custom version **takes precedence** (custom overrides built-in).
 
 **Setup:**
 
-1. The **`glancerf/modules/_custom/`** folder contains an **`example`** module as a template. Put all your custom module folders inside **`glancerf/modules/_custom/`**. On update, the app merges the modules folder so _custom/ is preserved.
+1. The **`glancerf/modules/_custom/`** folder contains an **`example`** module as a template. Put all your custom module folders inside **`glancerf/modules/_custom/`**. On update, the app merges the modules folder so `_custom/` is preserved.
 2. To create a new module: copy **`glancerf/modules/_custom/example/`**, rename the copy to your module id (e.g. `my_timer`), then edit `module.py`, `index.html`, `style.css`, and `script.js`. Folder names must not start with `_`.
 3. Restart the app. Custom modules are loaded after built-in ones; any module id that appears in both uses your custom version.
 

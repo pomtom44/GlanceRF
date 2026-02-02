@@ -27,6 +27,8 @@ var currentDesktopWidth = 0;
                 var schema = MODULES_SETTINGS_SCHEMA[moduleId];
                 if (!schema || schema.length === 0) return;
                 var vals = MODULE_SETTINGS_BY_CELL[cellKey] || {};
+                var inner = document.createElement('div');
+                inner.className = 'cell-module-settings-inner';
                 schema.forEach(function(s) {
                     var cur = vals[s.id] !== undefined ? vals[s.id] : (s.default !== undefined ? s.default : '');
                     if (!cur || cur === '') {
@@ -39,7 +41,7 @@ var currentDesktopWidth = 0;
                     var label = document.createElement('label');
                     label.className = 'cell-setting-label';
                     label.textContent = s.label;
-                    container.appendChild(label);
+                    inner.appendChild(label);
                     if (s.type === 'select') {
                         var opts = s.options || [];
                         if (s.optionsBySource && s.parentSettingId) {
@@ -64,7 +66,7 @@ var currentDesktopWidth = 0;
                             if (String(opt.value) === String(cur)) op.selected = true;
                             sel.appendChild(op);
                         });
-                        container.appendChild(sel);
+                        inner.appendChild(sel);
                     } else if (s.type === 'number' || s.type === 'text') {
                         var inp = document.createElement('input');
                         inp.type = s.type;
@@ -75,9 +77,30 @@ var currentDesktopWidth = 0;
                             if (s.min !== undefined) inp.min = s.min;
                             if (s.max !== undefined) inp.max = s.max;
                         }
-                        container.appendChild(inp);
+                        inner.appendChild(inp);
+                    } else if (s.type === 'range') {
+                        var wrap = document.createElement('div');
+                        wrap.className = 'cell-setting-range-wrap';
+                        wrap.style.display = 'flex';
+                        wrap.style.alignItems = 'center';
+                        wrap.style.gap = '8px';
+                        var inp = document.createElement('input');
+                        inp.type = 'range';
+                        inp.className = 'cell-setting-select';
+                        inp.setAttribute('name', 'ms_' + row + '_' + col + '__' + s.id);
+                        inp.value = cur;
+                        if (s.min !== undefined) inp.min = s.min;
+                        if (s.max !== undefined) inp.max = s.max;
+                        var valSpan = document.createElement('span');
+                        valSpan.style.minWidth = '2.5em';
+                        valSpan.textContent = inp.value + (s.unit || '');
+                        inp.addEventListener('input', function() { valSpan.textContent = inp.value + (s.unit || ''); });
+                        wrap.appendChild(inp);
+                        wrap.appendChild(valSpan);
+                        inner.appendChild(wrap);
                     }
                 });
+                container.appendChild(inner);
             }
 
             function updateAllCellSettings() {

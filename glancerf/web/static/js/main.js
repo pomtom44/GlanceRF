@@ -10,44 +10,81 @@
             return path === '/' || path === '';
         }
         
+        // WebSocket lost warning and timer (top-left); reconnect every 10s
+        let wsDisconnectedAt = null;
+        let wsLostIntervalId = null;
+        let wsReconnectIntervalId = null;
+        function formatDisconnectedTime(ms) {
+            var s = Math.floor(ms / 1000);
+            var m = Math.floor(s / 60);
+            s = s % 60;
+            return m + 'm ' + s + 's';
+        }
+        function updateWsLostTimer() {
+            if (!wsDisconnectedAt) return;
+            var el = document.getElementById('ws-lost-timer');
+            if (el) el.textContent = 'Disconnected: ' + formatDisconnectedTime(Date.now() - wsDisconnectedAt);
+        }
+        function showWsLostStartTimer(reconnectFn) {
+            var el = document.getElementById('ws-lost-warning');
+            if (el) { el.classList.add('show'); el.style.display = 'block'; }
+            wsDisconnectedAt = Date.now();
+            if (!wsLostIntervalId) wsLostIntervalId = setInterval(updateWsLostTimer, 1000);
+            updateWsLostTimer();
+            if (reconnectFn && !wsReconnectIntervalId) {
+                wsReconnectIntervalId = setInterval(reconnectFn, 10000);
+                setTimeout(reconnectFn, 10000);
+            }
+        }
+        function hideWsLostStopTimer() {
+            var el = document.getElementById('ws-lost-warning');
+            if (el) { el.classList.remove('show'); el.style.display = 'none'; }
+            wsDisconnectedAt = null;
+            if (wsLostIntervalId) { clearInterval(wsLostIntervalId); wsLostIntervalId = null; }
+            if (wsReconnectIntervalId) { clearInterval(wsReconnectIntervalId); wsReconnectIntervalId = null; }
+        }
+        
         if (isDesktop) {
             const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
             const wsUrl = `${protocol}//${window.location.host}/ws/desktop`;
             console.log('Desktop connecting to WebSocket:', wsUrl);
+            
+            function attachDesktopHandlers() {
+                ws.onerror = function(error) {
+                    console.error('Desktop WebSocket error:', error);
+                    showWsLostStartTimer(desktopReconnect);
+                };
+                ws.onclose = function(event) {
+                    console.log('Desktop WebSocket closed:', event.code, event.reason);
+                    showWsLostStartTimer(desktopReconnect);
+                };
+                ws.onmessage = function(event) {
+                    const message = JSON.parse(event.data);
+                    if (message.type === 'config_update') {
+                        console.log('Config updated, reloading page...');
+                        window.location.reload();
+                        return;
+                    }
+                    if (message.type === 'update_available') {
+                        showUpdateNotification(message.data);
+                        return;
+                    }
+                    if (message.type === 'dom') return;
+                };
+                ws.onopen = function() {
+                    console.log('Desktop app connected to mirroring server');
+                    hideWsLostStopTimer();
+                };
+            }
+            function desktopReconnect() {
+                if (ws && ws.readyState === WebSocket.OPEN) return;
+                console.log('Attempting to reconnect desktop WebSocket...');
+                ws = new WebSocket(wsUrl);
+                attachDesktopHandlers();
+            }
+            
             ws = new WebSocket(wsUrl);
-            
-            ws.onerror = function(error) {
-                console.error('Desktop WebSocket error:', error);
-            };
-            
-            ws.onclose = function(event) {
-                console.log('Desktop WebSocket closed:', event.code, event.reason);
-            };
-            
-            // Desktop receives updates from browsers (main page)
-            ws.onmessage = function(event) {
-                const message = JSON.parse(event.data);
-                
-                if (message.type === 'config_update') {
-                    // Config was updated, reload the page to reflect changes
-                    console.log('Config updated, reloading page...');
-                    window.location.reload();
-                    return;
-                }
-                
-                if (message.type === 'update_available') {
-                    showUpdateNotification(message.data);
-                    return;
-                }
-                
-                if (message.type === 'dom') {
-                    return;
-                }
-            };
-            
-            ws.onopen = function() {
-                console.log('Desktop app connected to mirroring server');
-            };
+            attachDesktopHandlers();
             
             // Cache last sent state to avoid sending duplicates
             let lastSentHtml = '';
@@ -130,28 +167,9 @@
             }
         } else {
             // Web browser connects to /ws/browser for two-way mirroring
-            // Use ws:// for HTTP, wss:// for HTTPS
             const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
             const wsUrl = `${protocol}//${window.location.host}/ws/browser`;
             console.log('Browser connecting to WebSocket:', wsUrl);
-            ws = new WebSocket(wsUrl);
-            
-            ws.onerror = function(error) {
-                console.error('Browser WebSocket error:', error);
-            };
-            
-            ws.onclose = function(event) {
-                console.log('Browser WebSocket closed:', event.code, event.reason);
-                // Attempt to reconnect after 3 seconds
-                setTimeout(function() {
-                    if (ws.readyState === WebSocket.CLOSED) {
-                        console.log('Attempting to reconnect browser WebSocket...');
-                        ws = new WebSocket(wsUrl);
-                        // Re-attach all handlers
-                        setupBrowserWebSocket();
-                    }
-                }, 3000);
-            };
             
             // Cache last sent state to avoid sending duplicates
             let lastSentHtml = '';
@@ -234,34 +252,47 @@
                 }
             }
             
-            ws.onmessage = function(event) {
-                const message = JSON.parse(event.data);
-                
-                if (message.type === 'config_update') {
-                    // Config was updated, reload the page to reflect changes
-                    console.log('Config updated, reloading page...');
-                    window.location.reload();
-                    return;
-                }
-                
-                if (message.type === 'update_available') {
-                    showUpdateNotification(message.data);
-                    return;
-                }
-                
-                if (message.type === 'dom') {
-                    return;
-                }
-                if (message.type === 'state') {
-                    if (message.data.grid_columns !== undefined || message.data.grid_rows !== undefined) {
-                        location.reload();
+            function attachBrowserHandlers() {
+                ws.onerror = function(error) {
+                    console.error('Browser WebSocket error:', error);
+                    showWsLostStartTimer(browserReconnect);
+                };
+                ws.onclose = function(event) {
+                    console.log('Browser WebSocket closed:', event.code, event.reason);
+                    showWsLostStartTimer(browserReconnect);
+                };
+                ws.onmessage = function(event) {
+                    const message = JSON.parse(event.data);
+                    if (message.type === 'config_update') {
+                        console.log('Config updated, reloading page...');
+                        window.location.reload();
+                        return;
                     }
-                }
-            };
+                    if (message.type === 'update_available') {
+                        showUpdateNotification(message.data);
+                        return;
+                    }
+                    if (message.type === 'dom') return;
+                    if (message.type === 'state') {
+                        if (message.data.grid_columns !== undefined || message.data.grid_rows !== undefined) {
+                            location.reload();
+                        }
+                    }
+                };
+                ws.onopen = function() {
+                    console.log('Browser connected to mirroring server');
+                    hideWsLostStopTimer();
+                };
+            }
+            function browserReconnect() {
+                if (ws && ws.readyState === WebSocket.OPEN) return;
+                console.log('Attempting to reconnect browser WebSocket...');
+                ws = new WebSocket(wsUrl);
+                attachBrowserHandlers();
+            }
             
-            ws.onopen = function() {
-                console.log('Browser connected to mirroring server');
-            };
+            ws = new WebSocket(wsUrl);
+            attachBrowserHandlers();
         }
         
         // Keyboard shortcut: M opens menu (Setup, Layout editor, Modules, Manual Updates)

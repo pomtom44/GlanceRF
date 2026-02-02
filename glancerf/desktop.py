@@ -18,8 +18,18 @@ if "--disable-gpu-sandbox" not in _existing and "--disable-gpu" not in _existing
     os.environ["QTWEBENGINE_CHROMIUM_FLAGS"] = (_existing + " --disable-gpu-sandbox").strip()
 
 from PyQt5.QtCore import QUrl, QTimer, QPoint, QEvent, Qt
-from PyQt5.QtGui import QKeySequence
-from PyQt5.QtWidgets import QApplication, QMainWindow, QShortcut, QSizePolicy
+from PyQt5.QtGui import QKeySequence, QFont
+from PyQt5.QtWidgets import (
+    QApplication,
+    QMainWindow,
+    QShortcut,
+    QSizePolicy,
+    QStackedWidget,
+    QWidget,
+    QVBoxLayout,
+    QLabel,
+    QProgressBar,
+)
 from PyQt5.QtWebEngineWidgets import QWebEngineView
 
 from glancerf.config import get_config
@@ -49,15 +59,23 @@ class GlanceRFWindow(QMainWindow):
             | Qt.WindowMaximizeButtonHint
         )
         self.browser = QWebEngineView()
+        self.browser.setStyleSheet("background-color: #0d1117;")
         self.browser.setUrl(QUrl(f"http://localhost:{self.port}?desktop=true"))
         self.browser.page().settings().setAttribute(
             self.browser.page().settings().WebAttribute.JavascriptEnabled, True
         )
+        self.browser.loadFinished.connect(self._on_page_loaded)
         self.browser.installEventFilter(self)
         self.browser.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
         self.browser.setMinimumSize(0, 0)
         self.browser.setMaximumSize(16777215, 16777215)
-        self.setCentralWidget(self.browser)
+
+        self._loading_widget = self._make_loading_widget()
+        self._stack = QStackedWidget()
+        self._stack.addWidget(self._loading_widget)
+        self._stack.addWidget(self.browser)
+        self._stack.setCurrentIndex(0)
+        self.setCentralWidget(self._stack)
         self.setWindowTitle("GlanceRF")
 
         f11_shortcut = QShortcut(QKeySequence(Qt.Key_F11), self)
@@ -102,6 +120,34 @@ class GlanceRFWindow(QMainWindow):
         self.config_timer = QTimer()
         self.config_timer.timeout.connect(self.check_config_changes)
         self.config_timer.start(2000)
+
+    def _make_loading_widget(self):
+        """Build loading overlay so user sees something instead of a white box."""
+        w = QWidget()
+        w.setStyleSheet("background-color: #0d1117;")
+        layout = QVBoxLayout(w)
+        layout.setAlignment(Qt.AlignCenter)
+        layout.setSpacing(24)
+        label = QLabel("Loading GlanceRF...")
+        label.setStyleSheet("color: #c9d1d9; font-size: 18px;")
+        font = QFont("Segoe UI", 18)
+        if font.exactMatch():
+            label.setFont(font)
+        layout.addWidget(label, 0, Qt.AlignHCenter)
+        bar = QProgressBar()
+        bar.setRange(0, 0)
+        bar.setFixedWidth(200)
+        bar.setStyleSheet(
+            "QProgressBar { border: 1px solid #30363d; border-radius: 4px; background: #161b22; }"
+            "QProgressBar::chunk { background: #238636; border-radius: 3px; }"
+        )
+        layout.addWidget(bar, 0, Qt.AlignHCenter)
+        return w
+
+    def _on_page_loaded(self, ok):
+        """Switch from loading overlay to browser when page has loaded."""
+        if ok and self._stack.currentIndex() == 0:
+            self._stack.setCurrentIndex(1)
 
     def eventFilter(self, obj, event):
         """Capture F11 for fullscreen toggle even when browser has focus."""

@@ -7,6 +7,7 @@ import asyncio
 import json
 import os
 import shutil
+import subprocess
 import sys
 import time
 import zipfile
@@ -242,6 +243,39 @@ def apply_update(extracted_root: Path) -> Tuple[bool, str]:
         return False, str(e)
 
 
+def install_requirements(app_root: Path) -> Tuple[bool, str]:
+    """
+    Run pip install -r requirements.txt from app_root so new dependencies
+    (e.g. feedparser) are installed after an update.
+    Uses the same Python executable that is running the app.
+    """
+    req_file = app_root / "requirements.txt"
+    if not req_file.is_file():
+        _log.debug("No requirements.txt at %s, skipping pip install", req_file)
+        return True, ""
+    _log.debug("Installing requirements from %s", req_file)
+    try:
+        result = subprocess.run(
+            [sys.executable, "-m", "pip", "install", "-r", str(req_file)],
+            cwd=str(app_root),
+            capture_output=True,
+            text=True,
+            timeout=300,
+        )
+        if result.returncode == 0:
+            _log.debug("pip install -r requirements.txt succeeded")
+            return True, ""
+        err = (result.stderr or result.stdout or "").strip() or "pip install failed"
+        _log.warning("pip install -r requirements.txt failed: %s", err[:500])
+        return False, err[:500]
+    except subprocess.TimeoutExpired:
+        _log.warning("pip install -r requirements.txt timed out")
+        return False, "pip install timed out"
+    except Exception as e:
+        _log.warning("pip install -r requirements.txt error: %s", e)
+        return False, str(e)
+
+
 async def perform_auto_update(version: str) -> Tuple[bool, str]:
     """Perform automatic update: download, extract, backup, and apply."""
     _log.log(DETAILED_LEVEL, "Auto-update started: %s (current %s)", version, __version__)
@@ -289,6 +323,16 @@ async def perform_auto_update(version: str) -> Tuple[bool, str]:
             _log.debug("Apply failed, restoring from backup")
             restore_from_backup(backup_dir)
             return False, f"Failed to apply update: {error}"
+
+        # Step 6b: Install/upgrade dependencies from new requirements.txt
+        app_root = get_app_root()
+        pip_ok, pip_err = install_requirements(app_root)
+        if not pip_ok:
+            _log.warning("Dependency install failed after update: %s", pip_err)
+            return True, (
+                f"Update to {version} installed successfully. Restart required. "
+                "Dependency install failed; run manually: pip install -r requirements.txt"
+            )
 
         # Step 7: Clean up staging
         try:

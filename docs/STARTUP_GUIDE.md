@@ -11,26 +11,39 @@ Before you start:
 
 ## Contents
 
-1. [Windows](#windows)
-2. [Ubuntu and other Linux](#ubuntu-and-other-linux)
-3. [macOS](#macos)
-4. [Raspberry Pi](#raspberry-pi)
-5. [Headless vs desktop mode](#headless-vs-desktop-mode)
+1. [Easiest: use the installer](#easiest-use-the-installer)
+2. [Windows (manual)](#windows-manual)
+3. [Ubuntu and other Linux (manual)](#ubuntu-and-other-linux-manual)
+4. [macOS (manual)](#macos-manual)
+5. [Raspberry Pi](#raspberry-pi)
+6. [Headless vs desktop mode](#headless-vs-desktop-mode)
 
 ---
 
-## Windows
+## Easiest: use the installer
 
-You can start GlanceRF at logon in two ways: **Startup folder** (simplest) or **Task Scheduler** (more control, no visible window if you want).
+The simplest way to get GlanceRF running at logon is to run the **installer** for your OS. It will ask whether to run at startup and create the task/service for you.
+
+| Platform | From Project folder |
+|----------|---------------------|
+| **Windows** | Double‑click `installers\install-windows.bat` (or run `powershell -ExecutionPolicy Bypass -File installers\install-windows.ps1`). When prompted “Run GlanceRF at Windows logon? (Y/N)”, choose **Y**. |
+| **Linux** | `chmod +x installers/install-linux.sh` then `./installers/install-linux.sh`. When prompted “Run GlanceRF at logon? (y/n)”, choose **y**. |
+| **macOS** | `chmod +x installers/install-mac.sh` then `./installers/install-mac.sh`. When prompted “Run GlanceRF at logon? (y/n)”, choose **y**. |
+
+The installer also handles Python, requirements, desktop/headless config, and an optional desktop shortcut.
+
+---
+
+## Windows (manual)
+
+You can start GlanceRF at logon in two ways: **Startup folder** (simplest) or **Task Scheduler** (no visible window if you want).
 
 ### Option A: Startup folder (easiest)
 
 1. Press `Win + R`, type `shell:startup`, press Enter. A folder opens.
 2. Right-click in the folder and choose **New** > **Shortcut**.
-3. For the target, use one of these (replace `C:\Path\To\Project` with your real Project path):
-   - If you use the batch file:  
-     `C:\Path\To\Project\run_glancerf.bat`
-   - If you run Python directly:  
+3. For the target, use (replace `C:\Path\To\Project` with your real Project path):
+   - **Run Python directly:**  
      `C:\Windows\System32\cmd.exe /k cd /d C:\Path\To\Project && py -3 run.py`  
      (Or use `python` instead of `py -3` if that is how you run Python.)
 4. Name the shortcut (e.g. **GlanceRF**) and finish.
@@ -38,21 +51,19 @@ You can start GlanceRF at logon in two ways: **Startup folder** (simplest) or **
 
 To stop GlanceRF, close that console window or press Ctrl+C in it.
 
-### Option B: Task Scheduler (no console window, or run at boot)
+### Option B: Task Scheduler (no console window)
 
-A PowerShell script is provided to create a scheduled task that runs GlanceRF at logon, with an optional **hidden** window so no console stays on screen.
-
-1. Open PowerShell (right-click Start > **Windows PowerShell** or **Terminal**).
-2. Go to your Project folder:
+1. Open PowerShell, go to your Project folder: `cd C:\Path\To\Project`.
+2. Create a scheduled task that runs at your logon (replace `C:\Path\To\Project` and `py -3` if needed):
    ```powershell
-   cd C:\Path\To\Project
+   $ProjectPath = "C:\Path\To\Project"
+   $Action = New-ScheduledTaskAction -Execute "cmd.exe" -Argument "/c cd /d `"$ProjectPath`" && py -3 run.py" -WorkingDirectory $ProjectPath -WindowStyle Hidden
+   $Trigger = New-ScheduledTaskTrigger -AtLogOn -User $env:USERNAME
+   $Settings = New-ScheduledTaskSettingsSet -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries -StartWhenAvailable
+   $Principal = New-ScheduledTaskPrincipal -UserId $env:USERNAME -LogonType Interactive
+   Register-ScheduledTask -TaskName "GlanceRF" -Action $Action -Trigger $Trigger -Settings $Settings -Principal $Principal
    ```
-3. Run the install script (this creates a task named **GlanceRF** that runs at your logon):
-   ```powershell
-   .\scripts\startup\install-windows-task.ps1
-   ```
-4. When prompted, confirm the path if it is correct, or edit the script to set `$ProjectPath` (see script comments).
-5. Restart or log off and log back in. GlanceRF will start in the background.
+3. Log off and log back in. GlanceRF will start in the background.
 
 To remove the task later:
 
@@ -60,39 +71,51 @@ To remove the task later:
 Unregister-ScheduledTask -TaskName "GlanceRF" -Confirm:$false
 ```
 
-To run the script without a hidden window (so you see the console), edit `install-windows-task.ps1` and set `-WindowStyle Hidden` to `-WindowStyle Normal` in the `Register-ScheduledTask` command.
-
 ---
 
-## Ubuntu and other Linux
+## Ubuntu and other Linux (manual)
 
 On Linux we use **systemd** so GlanceRF runs as a user service: it starts when you log in and stops when you log out (or when you stop the service).
 
-### 1. Install the user service
+### 1. Create the user service
 
 From your Project folder (the one that contains `run.py`):
 
 ```bash
-cd /path/to/Project
-chmod +x scripts/startup/install-systemd.sh
-./scripts/startup/install-systemd.sh
+mkdir -p ~/.config/systemd/user
 ```
 
-The script copies the service file to `~/.config/systemd/user/glancerf.service`, fills in your Project path and Python path, and enables the service so it starts at logon.
+Create `~/.config/systemd/user/glancerf.service` with (replace `/path/to/Project` and the Python path):
 
-### 2. Start the service now (optional)
+```ini
+[Unit]
+Description=GlanceRF dashboard
+After=network.target
+
+[Service]
+Type=simple
+WorkingDirectory=/path/to/Project
+ExecStart=/usr/bin/python3 run.py
+Restart=on-failure
+RestartSec=5
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=default.target
+```
+
+Use `which python3` to get the correct `ExecStart` path.
+
+### 2. Enable and start
 
 ```bash
+systemctl --user daemon-reload
+systemctl --user enable glancerf
 systemctl --user start glancerf
 ```
 
-### 3. Check status
-
-```bash
-systemctl --user status glancerf
-```
-
-### 4. Useful commands
+### 3. Useful commands
 
 | Action        | Command |
 |---------------|--------|
@@ -102,42 +125,45 @@ systemctl --user status glancerf
 | View logs     | `journalctl --user -u glancerf -f`  |
 | Disable at login | `systemctl --user disable glancerf` |
 
-### 5. Manual setup (if you prefer not to use the script)
-
-1. Copy the service file:
-   ```bash
-   mkdir -p ~/.config/systemd/user
-   cp /path/to/Project/scripts/startup/glancerf.service ~/.config/systemd/user/
-   ```
-2. Edit `~/.config/systemd/user/glancerf.service` and replace:
-   - `YOUR_PROJECT_PATH` with the full path to your Project folder (e.g. `/home/you/GlanceRF/Project`).
-   - `YOUR_PYTHON3_PATH` with the full path to `python3` (run `which python3` to get it).
-3. Enable and start:
-   ```bash
-   systemctl --user daemon-reload
-   systemctl --user enable glancerf
-   systemctl --user start glancerf
-   ```
-
 ---
 
-## macOS
+## macOS (manual)
 
-On macOS we use **launchd** so GlanceRF runs as a **LaunchAgent**: it starts when you log in.
+On macOS we use **launchd** so GlanceRF runs as a LaunchAgent: it starts when you log in.
 
-### 1. Install the LaunchAgent
+### 1. Create the LaunchAgent
 
-From your Project folder:
+Create `~/Library/LaunchAgents/com.glancerf.plist` with (replace `/path/to/Project` and the Python path):
 
-```bash
-cd /path/to/Project
-chmod +x scripts/startup/install-mac-launchd.sh
-./scripts/startup/install-mac-launchd.sh
+```xml
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>com.glancerf</string>
+    <key>ProgramArguments</key>
+    <array>
+        <string>/usr/bin/python3</string>
+        <string>run.py</string>
+    </array>
+    <key>WorkingDirectory</key>
+    <string>/path/to/Project</string>
+    <key>RunAtLoad</key>
+    <true/>
+    <key>KeepAlive</key>
+    <true/>
+    <key>StandardOutPath</key>
+    <string>/path/to/Project/glancerf.log</string>
+    <key>StandardErrorPath</key>
+    <string>/path/to/Project/glancerf.log</string>
+</dict>
+</plist>
 ```
 
-The script copies the plist to `~/Library/LaunchAgents/com.glancerf.plist`, fills in your Project path and Python path, and loads it so it starts at logon.
+Use `which python3` to get the correct path (e.g. `/opt/homebrew/bin/python3` on Apple Silicon Homebrew).
 
-### 2. Start GlanceRF now (optional)
+### 2. Load and start
 
 ```bash
 launchctl load ~/Library/LaunchAgents/com.glancerf.plist
@@ -149,82 +175,24 @@ launchctl load ~/Library/LaunchAgents/com.glancerf.plist
 |----------|--------|
 | Start    | `launchctl load ~/Library/LaunchAgents/com.glancerf.plist`   |
 | Stop     | `launchctl unload ~/Library/LaunchAgents/com.glancerf.plist` |
-| View logs| Check Console.app, or run GlanceRF from Terminal once to see output. |
-
-### 4. Manual setup
-
-1. Copy the plist:
-   ```bash
-   cp /path/to/Project/scripts/startup/com.glancerf.plist ~/Library/LaunchAgents/
-   ```
-2. Edit `~/Library/LaunchAgents/com.glancerf.plist` and replace:
-   - `YOUR_PROJECT_PATH` with the full path to your Project folder (e.g. `/Users/you/GlanceRF/Project`).
-   - `YOUR_PYTHON3_PATH` with the full path to `python3` (run `which python3`; on Apple Silicon Homebrew it is often `/opt/homebrew/bin/python3`).
-3. Load and enable at login:
-   ```bash
-   launchctl load ~/Library/LaunchAgents/com.glancerf.plist
-   ```
+| View logs| `~/Project/glancerf.log` or Console.app |
 
 ---
 
 ## Raspberry Pi
 
-On Raspberry Pi OS (and most Pi distributions), use the same **systemd** approach as Ubuntu. Running as a **user** service is usually best so GlanceRF uses your home directory and config.
+On Raspberry Pi OS use the same **systemd** approach as Ubuntu. Run the Linux installer from the Project folder (`./installers/install-linux.sh`) and choose “Run at logon”, or follow the [Ubuntu and other Linux (manual)](#ubuntu-and-other-linux-manual) steps.
 
-### 1. Install the user service
+For a **headless** Pi (no monitor), set `use_desktop` to `false` in `glancerf_config.json` and access the dashboard from another device using the Pi’s IP and the ports in config (e.g. port 8081 for read-only).
 
-SSH or open a terminal on the Pi, then:
-
-```bash
-cd /home/pi/Project
-# Or wherever your Project folder lives, e.g. /home/pi/GlanceRF/Project
-chmod +x scripts/startup/install-systemd.sh
-./scripts/startup/install-systemd.sh
-```
-
-The script is the same as on Ubuntu; it will use your home directory and the default `python3` on the Pi.
-
-### 2. Start and enable
-
-```bash
-systemctl --user start glancerf
-systemctl --user enable glancerf
-```
-
-### 3. Run at boot without logging in (optional)
-
-If you want GlanceRF to start at **boot** before any user logs in (e.g. for a kiosk or headless Pi):
-
-1. Install the service for the **system** (requires sudo). Copy the service file to the system directory and edit it to use the correct paths and the user you want to run as (e.g. `pi`):
-   ```bash
-   sudo cp /home/pi/Project/scripts/startup/glancerf.service /etc/systemd/system/
-   sudo nano /etc/systemd/system/glancerf.service
-   ```
-   Set `WorkingDirectory` and `ExecStart` to your Project path and Python path. Add:
-   ```ini
-   [Service]
-   User=pi
-   Group=pi
-   ```
-   (or another user/group if you prefer).
-2. Enable and start:
-   ```bash
-   sudo systemctl daemon-reload
-   sudo systemctl enable glancerf
-   sudo systemctl start glancerf
-   ```
-3. Use `sudo systemctl status glancerf`, `sudo systemctl stop glancerf`, etc.
-
-For a **headless** Pi (no monitor), set `use_desktop` to `false` in `glancerf_config.json` and access the dashboard from another device using the Pi’s IP and the ports configured in config (e.g. port 8081 for read-only).
+To run at **boot** before any user logs in (e.g. kiosk): copy the service file to `/etc/systemd/system/glancerf.service`, edit it to set `User=` and `Group=` and the correct paths, then `sudo systemctl daemon-reload`, `sudo systemctl enable glancerf`, `sudo systemctl start glancerf`.
 
 ---
 
 ## Headless vs desktop mode
 
-- **Desktop mode** (`use_desktop`: `true` in `glancerf_config.json`): opens the GlanceRF window on this machine. Use this for Windows/Mac/Linux when you run it on a PC with a display.
-- **Headless mode** (`use_desktop`: `false`): no GUI; only the web server runs. Use this for:
-  - Raspberry Pi without a monitor
-  - Ubuntu server or any Linux/Mac/Windows machine you only access via browser
+- **Desktop mode** (`use_desktop`: `true` in `glancerf_config.json`): opens the GlanceRF window on this machine. Use this when you run it on a PC with a display.
+- **Headless mode** (`use_desktop`: `false`): no GUI; only the web server runs. Use this for Raspberry Pi without a monitor, or any machine you only access via browser.
 
 After changing `glancerf_config.json`, restart GlanceRF (or the service/task) for the change to take effect.
 
@@ -234,11 +202,11 @@ After changing `glancerf_config.json`, restart GlanceRF (or the service/task) fo
 
 - **Service or task does not start**
   - Check that the path to the Project folder and to `python3` (or `py`/`python` on Windows) are correct and have no typos.
-  - On Linux/Mac, run `python3 run.py` (or `py run.py` / `run_glancerf.bat` on Windows) from the Project folder in a terminal to see any error messages.
+  - On Linux/Mac, run `python3 run.py` from the Project folder in a terminal to see any error messages. On Windows, run `py -3 run.py` (or `python run.py`) from the Project folder.
 - **Port already in use**
   - Change `port` and/or `readonly_port` in `glancerf_config.json` to values that are not in use.
 - **Linux: user service not starting at login**
-  - Ensure **lingering** is enabled for your user if you want the service to run when nobody is logged in:
+  - Ensure **lingering** is enabled if you want the service to run when nobody is logged in:
     ```bash
     loginctl enable-linger $USER
     ```
@@ -247,12 +215,11 @@ After changing `glancerf_config.json`, restart GlanceRF (or the service/task) fo
 
 ## Summary
 
-| Platform     | Method           | Script / file used                          |
-|-------------|------------------|---------------------------------------------|
-| Windows     | Startup folder   | Shortcut to `run_glancerf.bat` or `run.py`  |
-| Windows     | Task Scheduler   | `scripts/startup/install-windows-task.ps1`   |
-| Ubuntu/Linux| systemd (user)   | `scripts/startup/install-systemd.sh`, `glancerf.service` |
-| macOS       | launchd          | `scripts/startup/install-mac-launchd.sh`, `com.glancerf.plist` |
-| Raspberry Pi| systemd (user)   | Same as Ubuntu; optionally system-wide.    |
+| Platform     | Easiest              | Manual option                    |
+|-------------|----------------------|----------------------------------|
+| Windows     | `installers\install-windows.bat` | Startup folder shortcut or Task Scheduler (see above) |
+| Ubuntu/Linux| `./installers/install-linux.sh`  | systemd user service (`~/.config/systemd/user/glancerf.service`) |
+| macOS       | `./installers/install-mac.sh`    | launchd (`~/Library/LaunchAgents/com.glancerf.plist`) |
+| Raspberry Pi| Same as Linux        | Same as Ubuntu; optionally system-wide. |
 
 For more on running and configuring GlanceRF, see [USER_GUIDE.md](USER_GUIDE.md).

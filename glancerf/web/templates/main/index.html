@@ -19,6 +19,10 @@
     <style>{module_css}</style>
 </head>
 <body>
+    <div id="ws-lost-warning">
+        <span class="ws-lost-label">WebSocket lost</span>
+        <span id="ws-lost-timer">Disconnected: 0m 0s</span>
+    </div>
     <div id="update-notification">
         <span class="update-close" onclick="this.parentElement.classList.remove('show')">&times;</span>
         <div id="update-notification-content"></div>

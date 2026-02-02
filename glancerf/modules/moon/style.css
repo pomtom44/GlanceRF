@@ -1,0 +1,25 @@
+.grid-cell-moon .moon_display {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 0.25em;
+    text-align: center;
+}
+.grid-cell-moon .moon_phase_icon {
+    font-size: 14cqmin;
+    line-height: 1;
+}
+.grid-cell-moon .moon_phase_label,
+.grid-cell-moon .moon_moonrise,
+.grid-cell-moon .moon_moonset {
+    font-size: 9cqmin;
+    color: #ccc;
+}
+.grid-cell-moon .moon_error,
+.grid-cell-moon .moon_loading {
+    font-size: 6cqmin;
+    color: #888;
+}

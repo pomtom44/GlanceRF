@@ -24,7 +24,15 @@ If you don't know how to use GitHub, run projects from the command line, or wher
 
 ## Quick start
 
-1. **Download** the project and open a terminal in the project folder.
+**Option A – Installer (easiest):** Use the installer for your OS. It checks Python, installs dependencies, and can set up run-at-login and a desktop shortcut.
+
+- **Windows:** From the Project folder, double-click `installers\install-windows.bat` (or run `powershell -ExecutionPolicy Bypass -File installers\install-windows.ps1`).
+- **Linux:** From the Project folder run `chmod +x installers/install-linux.sh` then `./installers/install-linux.sh`. The script detects your distro (Debian/Ubuntu, Fedora/RHEL, Arch, openSUSE, etc.) and uses the right package manager for Python if needed.
+- **macOS:** From the Project folder run `chmod +x installers/install-mac.sh` then `./installers/install-mac.sh`.
+
+**Option B – Manual:**
+
+1. **Download** the project and open a terminal in the **Project** folder (the one that contains `run.py`).
 2. **Install Python** (3.8 or higher) if needed.
 3. **Install dependencies:**
    - With desktop GUI:  
@@ -64,11 +72,12 @@ Configuration is stored in **`glancerf_config.json`** in the same folder as `run
 
 | Guide | Description |
 |-------|-------------|
-| [USER_GUIDE.md](docs/USER_GUIDE.md) | First run, setup, menu (M = open menu: Setup, Layout, Modules, Updates), layout editor, module settings, map and clock options. |
-| [STARTUP_GUIDE.md](docs/STARTUP_GUIDE.md) | Run GlanceRF at startup or logon on Windows, Ubuntu/Linux, macOS, and Raspberry Pi. |
-| [MODULES.md](docs/MODULES.md) | Module system and available modules. |
-| [CREATING_A_MODULE.md](docs/CREATING_A_MODULE.md) | How to create a cell module: folder structure, `module.py`, `index.html`, `style.css`, `script.js`; custom modules folder (survive updates). |
+| [USER_GUIDE.md](docs/USER_GUIDE.md) | First run, setup, menu (M = open menu: Setup, Layout, Modules, Updates), layout editor, module settings. |
+| [STARTUP_GUIDE.md](docs/STARTUP_GUIDE.md) | Run GlanceRF at startup or logon (installers or manual) on Windows, Linux, macOS, and Raspberry Pi. |
+| [MODULES.md](docs/MODULES.md) | Built-in modules and their options (map, clock, weather, moon, RSS, etc.). |
+| [CREATING_A_MODULE.md](docs/CREATING_A_MODULE.md) | How to create a cell module. Put custom modules in `glancerf/modules/_custom/` so they are not overwritten on update. |
 | [TELEMETRY.md](docs/TELEMETRY.md) | Telemetry and privacy: what is collected, what isn't, how to control it. |
+| [FEATURE_REQUESTS.md](docs/FEATURE_REQUESTS.md) | Requested features and how to report bugs or request features. |
 
 ---
 
@@ -82,7 +91,7 @@ Configuration is stored in **`glancerf_config.json`** in the same folder as `run
 - **Full (with desktop GUI):** `pip install -r requirements.txt`  
   Includes PyQt5 and PyQtWebEngine for the desktop window.
 - **Headless (server only):** `pip install -r requirements_headless.txt`  
-  No GUI; access via web browser. Set `"use_desktop": false` in `glancerf_config.json`.
+  No GUI; access via web browser. Set `use_desktop` to `false` in `glancerf_config.json`.
 
 The app skips GUI imports if desktop mode is disabled in config.
 
@@ -92,7 +101,7 @@ The app skips GUI imports if desktop mode is disabled in config.
 
 - **Modes:** Desktop app, server-only (web), and read-only for public displays
 - **Layout:** Any grid size, any monitor; choose which modules go where and resize cells
-- **Built-in modules:** Clock (local, UTC, international), map (various base images), weather, countdown, and more
+- **Built-in modules:** Clock (local, UTC, international), analog clock, date, map (multiple tile sources; optional grid, day/night terminator, sun & moon, aurora overlay), weather, sunrise/sunset, moon phase, RSS feed, countdown/stopwatch, callsign/QTH. Custom modules go in `glancerf/modules/_custom/` and survive updates (see [CREATING_A_MODULE.md](docs/CREATING_A_MODULE.md)).
 
 ---
 

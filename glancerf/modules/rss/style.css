@@ -1,0 +1,56 @@
+.grid-cell-rss .rss_display {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    padding: 0.25em;
+    box-sizing: border-box;
+}
+.grid-cell-rss .rss_title {
+    font-size: 8cqmin;
+    font-weight: bold;
+    color: #aaa;
+    margin-bottom: 0.25em;
+    flex-shrink: 0;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.grid-cell-rss .rss_list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    flex: 1;
+    overflow-y: auto;
+    font-size: 7cqmin;
+    color: #ccc;
+}
+.grid-cell-rss .rss_list li {
+    margin-bottom: 0.35em;
+    padding-bottom: 0.35em;
+    border-bottom: 1px solid #333;
+}
+.grid-cell-rss .rss_list li:last-child {
+    border-bottom: none;
+}
+.grid-cell-rss .rss_list a {
+    color: #ccc;
+    text-decoration: none;
+}
+.grid-cell-rss .rss_list a:hover {
+    text-decoration: underline;
+    color: #fff;
+}
+.grid-cell-rss .rss_list .rss_item_title {
+    display: block;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.grid-cell-rss .rss_error,
+.grid-cell-rss .rss_loading {
+    font-size: 6cqmin;
+    color: #888;
+    flex-shrink: 0;
+}

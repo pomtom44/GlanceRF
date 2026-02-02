@@ -6,43 +6,56 @@ This guide explains how to use GlanceRF: first run, setup, the menu (press M), t
 
 ## First run and setup
 
+**Option A: Use the installer (recommended)**
+
+- **Windows:** Double-click `installers\install-windows.bat` (or run it from the Project folder). It will check Python, install requirements, and ask about startup and desktop/headless mode.
+- **Linux:** From the Project folder run `chmod +x installers/install-linux.sh` then `./installers/install-linux.sh`. It detects your distro and installs Python/requirements, then asks about startup and desktop/headless.
+- **macOS:** From the Project folder run `chmod +x installers/install-mac.sh` then `./installers/install-mac.sh`.
+
+**Option B: Manual setup**
 
 1. **Download the project and save where you want it to run**
 
-  If you know how to download from Git, feel free to do that how you normally would.
-  Otherwise click on "Code" and "Download ZIP".
-  Then extract to where you want it to go.
+   If you know how to download from Git, feel free to do that how you normally would.
+   Otherwise click on "Code" and "Download ZIP".
+   Then extract to where you want it to go.
 
 2. **Install dependencies** (see main README):
 
-  First, make sure Python is installed, follow a guide on this for your OS if you don't know how.
-  Then install the dependencies.
+   First, make sure Python is installed, follow a guide on this for your OS if you don't know how.
+   Then install the dependencies.
 
-  Open a terminal and navigate to your installed location
-  Then type
-  ```pip install -r requirements.txt```
-  
-  **For headless/server-only installations (no GUI):**
-  ```pip install -r requirements_headless.txt```
-  
-  Note: The application automatically handles missing GUI libraries if desktop mode is disabled in configuration.
-  This will install the required modules
+   Open a terminal and navigate to your installed location (the **Project** folder that contains `run.py`).
+   Then type:
+   ```bash
+   pip install -r requirements.txt
+   ```
 
-3. **Basic Configuration**
-  Most of the setup will be done via the GUI. The config file is **`glancerf_config.json`** in the same folder as `run.py` (the Project folder). If you want to run headless, edit it to disable desktop mode.
+   **For headless/server-only installations (no GUI):**
+   ```bash
+   pip install -r requirements_headless.txt
+   ```
 
-4. **Start the application**:
+   Note: The application automatically handles missing GUI libraries if desktop mode is disabled in configuration.
 
-  In the same terminal window, run
-  ```python run.py```
-  If running desktop, a popup should appear where you can configure everything.
-  If running headless, open a browser on another PC and connect to the IP:Port to start the setup.
+3. **Basic configuration**
+
+   Most of the setup will be done via the GUI. The config file is **`glancerf_config.json`** in the same folder as `run.py` (the Project folder). If you want to run headless, edit it to set `"use_desktop": false`.
+
+4. **Start the application**
+
+   In the same terminal window, from the Project folder run:
+   ```bash
+   python run.py
+   ```
+   If running desktop, a popup should appear where you can configure everything.
+   If running headless, open a browser on another PC and connect to the IP:port to start the setup.
 
 ### Setup page (first run or via menu)
 
 On the Setup page you can:
 
-1. **Screen aspect ratio and orientation** – Choose the layout that matches your display (This is just as a rough guide for first setup).
+1. **Screen aspect ratio and orientation** – Choose the layout that matches your display (this is just as a rough guide for first setup).
 2. **Grid size** – Use the sliders to set the number of **columns** (1–8) and **rows** (1–8). The preview shows the resulting grid.
 3. **Continue** – Click to save and continue. You will be sent to the **Layout** page to choose what appears in each cell.
 
@@ -50,9 +63,9 @@ You can open Setup again anytime by pressing **M** to open the menu, then choosi
 
 Once that is done, you will be taken to **Layout** where you can:
 
-1. **Pick Modules** - Pick which modules you want to go where.
-2. **Configure Modules** - On the **Modules** page (menu > Modules), expand a module to edit its settings and click Save for that module.
-3. **Resize Modules** - Each module can be resized to take up other module spaces.
+1. **Pick modules** – Pick which modules you want to go where.
+2. **Configure modules** – On the **Modules** page (menu > Modules), expand a module to edit its settings and click Save for that module.
+3. **Resize modules** – Each module can be resized to take up other module spaces.
 
 You can open the Layout Editor again anytime by pressing **M** to open the menu, then choosing Layout editor.
 
@@ -97,11 +110,12 @@ The values you may want to change are:
 | **port** | Main app port (e.g. 8080). |
 | **readonly_port** | Read-only mirror port (e.g. 8081). |
 | **use_desktop** | `true` = open desktop window; `false` = server only. |
+
 ---
 
 ## Desktop, browser, and read-only view
 
-- **Desktop mode** (`use_desktop: true`) – Starts the main server (e.g. on port 8080) and opens a local window showing the clock. Ideal for a dedicated screen.
+- **Desktop mode** (`use_desktop: true`) – Starts the main server (e.g. on port 8080) and opens a local window showing the dashboard. Ideal for a dedicated screen.
 - **Server-only** (`use_desktop: false`) – Only the web server runs; open the main URL (e.g. `http://localhost:8080`) in a browser.
 - **Read-only view** – A separate server (e.g. port 8081) serves a non-interactive copy of the current layout. Use this for extra displays or kiosks that should only show the dashboard, not setup or layout. Open e.g. `http://localhost:8081`.
 
@@ -139,5 +153,3 @@ To also write logs to a file, add **`log_path`** to `glancerf_config.json` with 
 
 - **Console** – Always used; level is controlled by `log_level`.
 - **File** – Only used when `log_path` is set; the same level applies. Omit `log_path` to have console-only logging.
-
----
