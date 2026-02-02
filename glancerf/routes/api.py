@@ -23,11 +23,14 @@ def register_api_routes(app: FastAPI):
     @app.post("/api/telemetry/test")
     async def test_telemetry():
         """Test endpoint to manually trigger telemetry (for debugging)"""
+        _log.debug("POST /api/telemetry/test")
         try:
             result = await send_telemetry("test", {"manual_trigger": True})
+            _log.debug("Telemetry test result: %s", result)
             if result:
                 return {"status": "success", "message": "Telemetry sent successfully"}
             else:
                 return {"status": "failed", "message": "Telemetry send failed (check console for details)"}
         except Exception as e:
+            _log.debug("Telemetry test error: %s", e)
             return {"status": "error", "message": str(e)}

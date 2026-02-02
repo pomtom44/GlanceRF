@@ -12,6 +12,9 @@ from glancerf.aspect_ratio import get_aspect_ratio_css
 from glancerf.view_utils import build_merged_cells_from_spans, build_grid_html
 from glancerf.views import render_main_page
 from glancerf.modules import get_module_assets
+from glancerf.logging_config import get_logger
+
+_log = get_logger("root")
 
 
 def register_root(app):
@@ -20,16 +23,20 @@ def register_root(app):
     @app.get("/")
     async def root(request: Request):
         """Serve the main HTML page or redirect to setup."""
+        _log.debug("GET / (main)")
         try:
             current_config = get_config()
         except (FileNotFoundError, IOError):
+            _log.debug("root: config not found, redirect to setup")
             return RedirectResponse(url="/setup")
 
         if current_config.get("first_run"):
+            _log.debug("root: first_run=true, redirect to setup")
             return RedirectResponse(url="/setup")
 
         layout = current_config.get("layout")
         if layout is None:
+            _log.debug("root: no layout, redirect to layout")
             return RedirectResponse(url="/layout")
 
         aspect_ratio = current_config.get("aspect_ratio") or "16:9"
@@ -57,6 +64,7 @@ def register_root(app):
         setup_callsign_json = json.dumps(current_config.get("setup_callsign") or "")
         setup_location_json = json.dumps(current_config.get("setup_location") or "")
 
+        _log.debug("root: rendering main page grid=%sx%s", grid_columns, grid_rows)
         html_content = render_main_page(
             aspect_ratio_css=aspect_ratio_css,
             grid_css=grid_css,

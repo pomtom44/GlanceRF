@@ -10,6 +10,10 @@ from typing import List
 from fastapi import Request
 from fastapi.responses import JSONResponse
 
+from glancerf.logging_config import get_logger
+
+_log = get_logger("rate_limit")
+
 # (max_requests, window_seconds)
 RATE_LIMIT_REQUESTS = 10
 RATE_LIMIT_WINDOW = 60
@@ -50,7 +54,9 @@ async def rate_limit_dependency(request: Request) -> None:
     """
     ip = _get_client_ip(request)
     if not _check_rate_limit(ip):
+        _log.debug("Rate limit exceeded for IP %s", ip)
         raise RateLimitExceeded()
+    _log.debug("Rate limit OK for IP %s", ip)
 
 
 class RateLimitExceeded(Exception):

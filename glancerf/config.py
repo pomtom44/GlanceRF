@@ -8,6 +8,10 @@ from copy import deepcopy
 from pathlib import Path
 from typing import Any, Dict, Optional
 
+from glancerf.logging_config import get_logger
+
+_log = get_logger("config")
+
 
 class ConfigValidationError(ValueError):
     """Raised when config structure or value types are invalid."""
@@ -182,16 +186,18 @@ class Config:
     def load(self) -> None:
         """Load configuration from file. If file does not exist, use default config and save it."""
         if not self.config_file.exists():
+            _log.debug("Config file not found, creating default at %s", self.config_file)
             self._config = deepcopy(DEFAULT_CONFIG)
             self.save()
             return
         try:
             with open(self.config_file, 'r', encoding='utf-8') as f:
                 self._config = json.load(f)
+            _log.debug("Config loaded from %s", self.config_file)
         except (json.JSONDecodeError, IOError) as e:
             raise IOError(f"Error loading config file {self.config_file}: {e}")
         _validate_config(self._config)
-    
+
     def save(self) -> None:
         """Save configuration to file"""
         _validate_config(self._config)
@@ -199,6 +205,7 @@ class Config:
         try:
             with open(self.config_file, 'w', encoding='utf-8') as f:
                 json.dump(self._config, f, indent=2)
+            _log.debug("Config saved to %s", self.config_file)
         except IOError as e:
             raise IOError(f"Error saving config file {self.config_file}: {e}")
     

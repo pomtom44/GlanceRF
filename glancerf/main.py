@@ -12,7 +12,7 @@ from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
 
 from glancerf.config import get_config
-from glancerf.logging_config import get_logger, setup_logging
+from glancerf.logging_config import DETAILED_LEVEL, get_logger, setup_logging
 from glancerf.rate_limit import RateLimitExceeded, rate_limit_exceeded_handler
 from glancerf.websocket_manager import ConnectionManager
 from glancerf import __version__
@@ -27,17 +27,17 @@ from glancerf.routes.modules_routes import register_modules_routes
 app = FastAPI(title="GlanceRF")
 app.add_exception_handler(RateLimitExceeded, rate_limit_exceeded_handler)
 
-# Request logging middleware (verbose level only: logs method, path, status, duration at DEBUG)
+# Request logging: one [DETAILED] line per request when log_level is detailed or verbose
 _log = get_logger("main")
 
 
 @app.middleware("http")
 async def _request_logging(request: Request, call_next):
-    if _log.isEnabledFor(logging.DEBUG):
+    if _log.isEnabledFor(DETAILED_LEVEL):
         start = time.perf_counter()
         response = await call_next(request)
         duration_ms = (time.perf_counter() - start) * 1000
-        _log.debug("%s %s -> %s (%.1f ms)", request.method, request.url.path, response.status_code, duration_ms)
+        _log.log(DETAILED_LEVEL, "%s %s -> %s (%.1f ms)", request.method, request.url.path, response.status_code, duration_ms)
         return response
     return await call_next(request)
 
@@ -113,13 +113,16 @@ async def updates_page():
 @app.get("/api/update-status")
 async def get_update_status():
     """Return current version, latest version (if any), update_available, and release_notes. No broadcast."""
+    _log.debug("GET /api/update-status")
     info = await get_latest_release_info()
     current = __version__
     if not info:
+        _log.debug("update-status: no release info; current=%s", current)
         return {"current_version": current, "latest_version": None, "update_available": False, "release_notes": ""}
     latest = info["version"]
     release_notes = info.get("release_notes") or ""
     update_available = compare_versions(current, latest)
+    _log.debug("update-status: current=%s latest=%s update_available=%s", current, latest, update_available)
     return {
         "current_version": current,
         "latest_version": latest,
@@ -131,10 +134,13 @@ async def get_update_status():
 @app.post("/api/check-updates")
 async def manual_check_updates():
     """Trigger a manual update check. Returns JSON; if update available also broadcasts via WebSocket."""
+    _log.debug("POST /api/check-updates")
     latest = await check_for_updates()
     if latest:
+        _log.debug("check-updates: update available %s, sending notification", latest)
         await update_checker.send_update_notification(latest, "notify")
         return {"update_available": True, "current_version": __version__, "latest_version": latest}
+    _log.debug("check-updates: no update available (current=%s)", __version__)
     return {"update_available": False, "current_version": __version__}
 
 
@@ -143,12 +149,17 @@ async def trigger_apply_update():
     """If an update is available, download and apply it (then restart). Returns JSON status."""
     from glancerf.updater import perform_auto_update
 
+    _log.debug("POST /api/apply-update")
     latest = await check_for_updates()
     if not latest:
+        _log.debug("apply-update: no update available (current=%s)", __version__)
         return {"success": False, "message": "No update available", "current_version": __version__}
+    _log.debug("apply-update: starting update to %s", latest)
     success, message = await perform_auto_update(latest)
+    _log.debug("apply-update: success=%s message=%s", success, message)
     if success:
         await update_checker.schedule_restart(delay_seconds=10)
+        _log.debug("apply-update: restart scheduled")
     return {
         "success": success,
         "message": message,

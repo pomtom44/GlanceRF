@@ -53,18 +53,25 @@ async def check_github_release() -> Optional[str]:
 
 async def get_latest_release_info() -> Optional[Dict[str, Any]]:
     """Fetch latest release from GitHub. Returns dict with version, release_notes, or None."""
+    _log.debug("Fetching latest release from %s", GITHUB_RELEASES_URL)
     try:
         async with httpx.AsyncClient(timeout=10.0) as client:
             response = await client.get(GITHUB_RELEASES_URL, headers=GITHUB_HEADERS)
+            _log.debug("GitHub releases API response: status=%s", response.status_code)
             if response.status_code == 200:
                 data = response.json()
                 tag = data.get("tag_name", "")
                 version = tag.lstrip("v") if tag else None
+                _log.debug("Latest release tag=%s version=%s", tag, version)
                 if version and re.match(r"^\d+\.\d+\.\d+", version):
+                    _log.log(DETAILED_LEVEL, "GitHub releases API: latest=%s", version)
                     body = data.get("body") or ""
                     return {"version": version, "release_notes": (body.strip() if body else "")}
+                _log.debug("No valid version in response (tag=%s)", tag)
+            else:
+                _log.debug("GitHub API returned %s: %s", response.status_code, response.text[:300] if response.text else "")
     except Exception as e:
-        _log.debug("GitHub release check failed: %s", e)
+        _log.debug("GitHub release check failed: %s", e, exc_info=True)
     return None
 
 
@@ -85,16 +92,13 @@ async def check_version_endpoint(url: str) -> Optional[str]:
 
 async def check_for_updates() -> Optional[str]:
     """Check for updates. Returns latest version string if available, else None."""
-    # Try GitHub releases first
+    _log.debug("Checking for updates (current=%s)", __version__)
     latest = await check_github_release()
+    _log.debug("Latest from GitHub: %s", latest)
     if latest and compare_versions(__version__, latest):
+        _log.debug("Update available: %s > %s", latest, __version__)
         return latest
-    
-    # Could add fallback to version endpoint here
-    # latest = await check_version_endpoint(VERSION_ENDPOINT)
-    # if latest and compare_versions(__version__, latest):
-    #     return latest
-    
+    _log.debug("No update available")
     return None
 
 

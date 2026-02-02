@@ -15,7 +15,9 @@ from glancerf.config import get_config
 from glancerf.modules import get_modules, get_module_by_id, get_module_dir
 from glancerf.rate_limit import rate_limit_dependency
 from glancerf.view_utils import build_merged_cells_from_spans
+from glancerf.logging_config import get_logger
 
+_log = get_logger("modules_routes")
 _MODULES_DIR = Path(__file__).parent.parent / "modules"
 
 # Form field names use double underscore so setting_id can contain underscores: cell_key__setting_id
@@ -94,9 +96,11 @@ def register_modules_routes(app: FastAPI, connection_manager=None):
     @app.get("/modules")
     async def modules_page():
         """Modules management page - expandable cards with status, description, and per-module settings."""
+        _log.debug("GET /modules")
         try:
             current_config = get_config()
         except (FileNotFoundError, IOError):
+            _log.debug("modules: config not found, redirect to setup")
             return RedirectResponse(url="/setup")
 
         layout = current_config.get("layout") or []
@@ -304,9 +308,11 @@ def register_modules_routes(app: FastAPI, connection_manager=None):
     @app.post("/modules/save-settings")
     async def modules_save_settings(request: Request, _: None = Depends(rate_limit_dependency)):
         """Save module settings for the submitted form. Form field names: cell_key__setting_id."""
+        _log.debug("POST /modules/save-settings")
         try:
             current_config = get_config()
         except (FileNotFoundError, IOError):
+            _log.debug("modules save: config not found, redirect to setup")
             return RedirectResponse(url="/setup")
 
         form_data = await request.form()
@@ -320,12 +326,14 @@ def register_modules_routes(app: FastAPI, connection_manager=None):
             merge[cell_key][setting_id] = value
 
         if not merge:
+            _log.debug("modules save: no form data, redirect")
             return RedirectResponse(url="/modules", status_code=303)
 
         current = dict(current_config.get("module_settings") or {})
         for cell_key, settings in merge.items():
             current[cell_key] = {**(current.get(cell_key) or {}), **settings}
         current_config.set("module_settings", current)
+        _log.debug("modules save: updated %s cells, broadcasting config_update", len(merge))
 
         if connection_manager:
             try:

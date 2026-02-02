@@ -16,9 +16,13 @@ from typing import Optional, Tuple
 import httpx
 
 from glancerf import __version__
-from glancerf.logging_config import get_logger
+from glancerf.logging_config import DETAILED_LEVEL, get_logger
 
 _log = get_logger("updater")
+
+# GitHub API (same as update_checker) for release-by-tag
+GITHUB_RELEASE_BY_TAG = "https://api.github.com/repos/pomtom44/GlanceRF/releases/tags/{tag}"
+GITHUB_HEADERS = {"Accept": "application/vnd.github.v3+json", "User-Agent": "GlanceRF-updater"}
 
 # Constants
 ITEMS_TO_UPDATE = ["glancerf", "run.py", "requirements.txt"]
@@ -51,156 +55,124 @@ def get_backup_dir() -> Path:
 async def download_release_zip(release_url: str, target_path: Path) -> bool:
     """
     Download a release ZIP file from GitHub.
-    
-    Args:
-        release_url: URL to the ZIP file (from GitHub release assets)
-        target_path: Where to save the downloaded file
-    
-    Returns:
-        True if successful, False otherwise
     """
+    _log.debug("Downloading update from %s to %s", release_url[:80], target_path)
     try:
         async with httpx.AsyncClient(timeout=60.0, follow_redirects=True) as client:
             async with client.stream('GET', release_url) as response:
+                _log.debug("Download response status=%s headers=%s", response.status_code, dict(response.headers))
                 response.raise_for_status()
                 with open(target_path, 'wb') as f:
                     async for chunk in response.aiter_bytes():
                         f.write(chunk)
+        _log.debug("Download complete: %s (%s bytes)", target_path, target_path.stat().st_size if target_path.exists() else 0)
         return True
     except Exception as e:
-        _log.debug("Download failed: %s", e)
+        _log.debug("Download failed: %s", e, exc_info=True)
         return False
 
 
 async def get_release_zip_url(version: str) -> Optional[str]:
     """
     Get the ZIP download URL for a GitHub release.
-    
-    Args:
-        version: Version string (e.g., "0.2.0")
-    
-    Returns:
-        URL to the source code ZIP, or None if not found
+    Uses GitHub API release-by-tag (zipball_url); fallback to archive URL with HEAD check.
     """
+    tag = f"v{version}" if not version.startswith("v") else version
     try:
-        # GitHub provides source code ZIP at: https://github.com/owner/repo/archive/refs/tags/vX.Y.Z.zip
-        # Or we can get it from the release API
+        # 1) Prefer GitHub API: get release by tag and use zipball_url (follows redirects on GET)
+        api_url = GITHUB_RELEASE_BY_TAG.format(tag=tag)
+        _log.debug("Getting release zip URL for %s via API: %s", version, api_url)
+        async with httpx.AsyncClient(timeout=15.0, follow_redirects=True) as client:
+            response = await client.get(api_url, headers=GITHUB_HEADERS)
+            _log.debug("GitHub API release-by-tag response: status=%s", response.status_code)
+            if response.status_code == 200:
+                data = response.json()
+                zip_url = data.get("zipball_url")
+                if zip_url:
+                    _log.debug("Using zipball_url: %s", zip_url)
+                    return zip_url
+                _log.debug("Release JSON has no zipball_url")
+            else:
+                _log.debug("GitHub API returned %s: %s", response.status_code, response.text[:200] if response.text else "")
+
+        # 2) Fallback: construct archive URL and verify with HEAD (accept 200 or 302)
         repo = "pomtom44/GlanceRF"
-        tag = f"v{version}" if not version.startswith("v") else version
-        
-        # Try the direct source code archive URL
-        zip_url = f"https://github.com/{repo}/archive/refs/tags/{tag}.zip"
-        
-        # Verify it exists
-        async with httpx.AsyncClient(timeout=10.0) as client:
-            response = await client.head(zip_url)
-            if response.status_code == 200:
-                return zip_url
-        
-        # Fallback: try without 'v' prefix
-        zip_url = f"https://github.com/{repo}/archive/refs/tags/{version}.zip"
-        async with httpx.AsyncClient(timeout=10.0) as client:
-            response = await client.head(zip_url)
-            if response.status_code == 200:
-                return zip_url
-        
+        for candidate_tag in (tag, version):
+            zip_url = f"https://github.com/{repo}/archive/refs/tags/{candidate_tag}.zip"
+            _log.debug("Fallback: HEAD %s", zip_url)
+            async with httpx.AsyncClient(timeout=10.0, follow_redirects=True) as client:
+                response = await client.head(zip_url)
+                _log.debug("HEAD response: status=%s", response.status_code)
+                if response.status_code in (200, 302):
+                    return zip_url
         return None
     except Exception as e:
-        import logging
-        _log.debug(f"Failed to get release URL: {e}")
+        _log.debug("Failed to get release URL: %s", e, exc_info=True)
         return None
 
 
 def extract_zip(zip_path: Path, extract_to: Path) -> bool:
-    """
-    Extract a ZIP file to a directory.
-    
-    Args:
-        zip_path: Path to the ZIP file
-        extract_to: Directory to extract to
-    
-    Returns:
-        True if successful, False otherwise
-    """
+    """Extract a ZIP file to a directory."""
+    _log.debug("Extracting %s to %s", zip_path, extract_to)
     try:
         extract_to.mkdir(parents=True, exist_ok=True)
         with zipfile.ZipFile(zip_path, 'r') as zip_ref:
+            names = zip_ref.namelist()
+            _log.debug("ZIP contains %s entries (first few: %s)", len(names), names[:5] if names else [])
             zip_ref.extractall(extract_to)
+        _log.debug("Extract complete; extract_to contents: %s", [p.name for p in extract_to.iterdir()] if extract_to.exists() else [])
         return True
     except Exception as e:
-        _log.debug("Extract failed: %s", e)
+        _log.debug("Extract failed: %s", e, exc_info=True)
         return False
 
 
 def get_extracted_root(extract_dir: Path) -> Optional[Path]:
-    """
-    Find the root directory inside the extracted ZIP (the app root with glancerf/ and run.py).
-    GitHub source ZIPs extract to a folder named like "GlanceRF-0.2.0" or "GlanceRF-main".
-
-    Args:
-        extract_dir: Directory where ZIP was extracted
-
-    Returns:
-        Path to the directory containing glancerf/ and run.py, or None if not found
-    """
-    # Look for Project/ directory (app root in this repo)
+    """Find the root directory inside the extracted ZIP (app root with glancerf/ and run.py)."""
+    _log.debug("Finding extracted root in %s; top-level items: %s", extract_dir, [p.name for p in extract_dir.iterdir()] if extract_dir.exists() else [])
     project_dir = extract_dir / "Project"
     if project_dir.exists() and project_dir.is_dir():
         if (project_dir / "run.py").exists() and (project_dir / "glancerf").exists():
+            _log.debug("Found Project at %s", project_dir)
             return project_dir
-    # Look in subdirectories (GitHub ZIPs create a versioned folder)
     for item in extract_dir.iterdir():
         if item.is_dir():
             project_in_sub = item / "Project"
             if project_in_sub.exists() and project_in_sub.is_dir():
                 if (project_in_sub / "run.py").exists() and (project_in_sub / "glancerf").exists():
+                    _log.debug("Found Project in subdir: %s", project_in_sub)
                     return project_in_sub
-            # Fallback: repo root might be app root (run.py and glancerf at top level)
             if (item / "run.py").exists() and (item / "glancerf").exists():
+                _log.debug("Found app root at subdir: %s", item)
                 return item
+    _log.debug("No Project or app root found in %s", extract_dir)
     return None
 
 
 def backup_current_installation(backup_dir: Path) -> bool:
-    """
-    Backup the current installation for rollback.
-    
-    Args:
-        backup_dir: Directory to store backup
-    
-    Returns:
-        True if successful, False otherwise
-    """
+    """Backup the current installation for rollback."""
+    _log.debug("Backing up current installation to %s", backup_dir)
     try:
         app_root = get_app_root()
-        
-        # Clear old backup
         if backup_dir.exists():
             shutil.rmtree(backup_dir)
         backup_dir.mkdir(parents=True, exist_ok=True)
-        
-        # Copy essential files/directories
         for item in ITEMS_TO_BACKUP:
             src = app_root / item
             if src.exists():
                 dst = backup_dir / item
+                _log.debug("Backup item: %s -> %s", src, dst)
                 if src.is_dir():
                     shutil.copytree(src, dst)
                 else:
                     shutil.copy2(src, dst)
-        
-        # Save version info
-        version_info = {
-            "version": __version__,
-            "backup_timestamp": time.time()
-        }
+        version_info = {"version": __version__, "backup_timestamp": time.time()}
         with open(backup_dir / "version.json", 'w') as f:
             json.dump(version_info, f)
-        
+        _log.debug("Backup complete; version=%s", __version__)
         return True
     except Exception as e:
-        import logging
-        _log.error(f"Backup failed: {e}", exc_info=True)
+        _log.error("Backup failed: %s", e, exc_info=True)
         return False
 
 
@@ -235,20 +207,17 @@ def _merge_glancerf_dir(src: Path, dst: Path) -> None:
 
 
 def apply_update(extracted_root: Path) -> Tuple[bool, str]:
-    """
-    Apply the update by copying files from extracted update to app root.
-    For glancerf/, merges modules/ so glancerf/modules/_custom/ (user modules) is preserved.
-    """
+    """Apply the update by copying files from extracted update to app root."""
+    _log.debug("Applying update from %s", extracted_root)
     try:
         app_root = get_app_root()
-
         for item in ITEMS_TO_UPDATE:
             src = extracted_root / item
             dst = app_root / item
-
             if not src.exists():
+                _log.debug("Skip (missing): %s", src)
                 continue
-
+            _log.debug("Apply item: %s -> %s", src, dst)
             if item == "glancerf" and src.is_dir():
                 if dst.exists() and dst.is_dir():
                     _merge_glancerf_dir(src, dst)
@@ -257,18 +226,16 @@ def apply_update(extracted_root: Path) -> Tuple[bool, str]:
                         shutil.rmtree(dst) if dst.is_dir() else dst.unlink()
                     shutil.copytree(src, dst)
                 continue
-
             if dst.exists():
                 if dst.is_dir():
                     shutil.rmtree(dst)
                 else:
                     dst.unlink()
-
             if src.is_dir():
                 shutil.copytree(src, dst)
             else:
                 shutil.copy2(src, dst)
-
+        _log.debug("Apply update complete")
         return True, ""
     except Exception as e:
         _log.error("Update apply failed: %s", e, exc_info=True)
@@ -276,62 +243,66 @@ def apply_update(extracted_root: Path) -> Tuple[bool, str]:
 
 
 async def perform_auto_update(version: str) -> Tuple[bool, str]:
-    """
-    Perform automatic update: download, extract, backup, and apply.
-    
-    Args:
-        version: Version to update to (e.g., "0.2.0")
-    
-    Returns:
-        (success, message)
-    """
+    """Perform automatic update: download, extract, backup, and apply."""
+    _log.log(DETAILED_LEVEL, "Auto-update started: %s (current %s)", version, __version__)
     try:
         staging_dir = get_staging_dir()
         backup_dir = get_backup_dir()
-        
+        _log.debug("Staging dir=%s backup dir=%s", staging_dir, backup_dir)
+
         # Step 1: Get download URL
+        _log.debug("Step 1: Getting release download URL for %s", version)
         zip_url = await get_release_zip_url(version)
         if not zip_url:
+            _log.debug("get_release_zip_url returned None for version=%s", version)
             return False, "Could not find release download URL"
-        
+
         # Step 2: Download ZIP
         zip_path = staging_dir / f"update_{version}.zip"
+        _log.debug("Step 2: Downloading to %s", zip_path)
         if not await download_release_zip(zip_url, zip_path):
             return False, "Failed to download update"
-        
+
         # Step 3: Extract ZIP
         extract_dir = staging_dir / f"extracted_{version}"
         if extract_dir.exists():
             shutil.rmtree(extract_dir)
-        
+        _log.debug("Step 3: Extracting to %s", extract_dir)
         if not extract_zip(zip_path, extract_dir):
             return False, "Failed to extract update"
-        
-        # Step 4: Find Project/ directory in extracted files
+
+        # Step 4: Find Project/ directory
+        _log.debug("Step 4: Finding Project directory in extracted files")
         extracted_root = get_extracted_root(extract_dir)
         if not extracted_root:
             return False, "Could not find Project directory in update"
-        
-        # Step 5: Backup current installation
+
+        # Step 5: Backup
+        _log.debug("Step 5: Backing up current installation")
         if not backup_current_installation(backup_dir):
             return False, "Failed to backup current installation"
-        
+
         # Step 6: Apply update
+        _log.debug("Step 6: Applying update")
         success, error = apply_update(extracted_root)
         if not success:
-            # Try to restore from backup
+            _log.debug("Apply failed, restoring from backup")
             restore_from_backup(backup_dir)
             return False, f"Failed to apply update: {error}"
-        
+
         # Step 7: Clean up staging
         try:
             shutil.rmtree(staging_dir)
+            _log.debug("Staging directory removed")
         except Exception as e:
             _log.debug("Failed to clean staging directory: %s", e)
-        
+
+        _log.log(DETAILED_LEVEL, "Auto-update completed: %s", version)
         return True, f"Update to {version} installed successfully. Restart required."
-        
+
     except Exception as e:
+        _log.log(DETAILED_LEVEL, "Auto-update failed: %s", e)
+        _log.debug("Update failed with exception: %s", e, exc_info=True)
         return False, f"Update failed: {str(e)}"
 
 

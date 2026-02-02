@@ -38,9 +38,9 @@ def register_setup_routes(app: FastAPI, connection_manager: ConnectionManager):
     @app.get("/setup")
     async def setup_page():
         """First-run setup page"""
+        _log.debug("GET /setup")
         # Get available options
         available_ratios = get_aspect_ratio_list()
-    
         # Get current values from config (config file must exist, no defaults)
         current_config = get_config()
         current_ratio = current_config.get("aspect_ratio") or "16:9"
@@ -133,6 +133,7 @@ def register_setup_routes(app: FastAPI, connection_manager: ConnectionManager):
         telemetry_enabled: str = Form("1"),
     ):
         """Handle setup form submission"""
+        _log.debug("POST /setup")
         if aspect_ratio not in get_aspect_ratio_list():
             return HTMLResponse(
                 content=f"<h1>Error</h1><p>Invalid aspect ratio: {aspect_ratio}</p>",
@@ -203,7 +204,7 @@ def register_setup_routes(app: FastAPI, connection_manager: ConnectionManager):
             config_instance.set("first_run", False)
     
         # Broadcast config_update to browser and readonly clients (not desktop)
-        # Desktop will reload from the redirect, so we don't need to notify it
+        _log.debug("setup: saved, broadcasting config_update to browsers + readonly")
         try:
             msg = {
                 "type": "config_update",

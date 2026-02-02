@@ -14,6 +14,9 @@ from glancerf.aspect_ratio import get_aspect_ratio_css
 from glancerf.view_utils import build_merged_cells_from_spans, build_grid_html
 from glancerf.views import render_readonly_page
 from glancerf.modules import get_module_assets
+from glancerf.logging_config import get_logger
+
+_log = get_logger("readonly")
 
 
 def register_readonly_routes(readonly_app: FastAPI):
@@ -22,9 +25,11 @@ def register_readonly_routes(readonly_app: FastAPI):
     @readonly_app.get("/")
     async def readonly_root():
         """Read-only version of main page - no interactions allowed."""
+        _log.debug("GET / (readonly)")
         try:
             current_config = get_config()
         except (FileNotFoundError, IOError):
+            _log.debug("readonly: config not found")
             return HTMLResponse(
                 content="<h1>Configuration not found</h1>", status_code=404
             )
@@ -60,6 +65,7 @@ def register_readonly_routes(readonly_app: FastAPI):
         main_port = current_config.get("port")
         if main_port is None or not isinstance(main_port, int):
             main_port = 8080
+        _log.debug("readonly: grid=%sx%s main_port=%s", grid_columns, grid_rows, main_port)
         html_content = render_readonly_page(
             aspect_ratio_css=aspect_ratio_css,
             grid_css=grid_css,

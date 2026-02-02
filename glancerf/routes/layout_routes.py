@@ -16,7 +16,9 @@ from glancerf.view_utils import build_merged_cells_from_spans
 from glancerf.modules import get_modules, get_module_by_id, get_module_ids
 from glancerf.rate_limit import rate_limit_dependency
 from glancerf.websocket_manager import ConnectionManager
+from glancerf.logging_config import get_logger
 
+_log = get_logger("layout_routes")
 _WEB_DIR = Path(__file__).resolve().parent.parent / "web"
 _LAYOUT_TEMPLATE_PATH = _WEB_DIR / "templates" / "layout" / "index.html"
 _layout_template_cache = None
@@ -36,10 +38,11 @@ def register_layout_routes(app: FastAPI, connection_manager: ConnectionManager):
     @app.get("/layout")
     async def layout_configurator():
         """Layout configurator page - configure what displays in each grid cell"""
-        # Reload config on each request
+        _log.debug("GET /layout")
         try:
             current_config = get_config()
         except (FileNotFoundError, IOError):
+            _log.debug("layout: config not found, redirecting to setup")
             return RedirectResponse(url="/setup")
     
         # Get grid dimensions from config (with fallback defaults)
@@ -179,11 +182,13 @@ def register_layout_routes(app: FastAPI, connection_manager: ConnectionManager):
         html_content = html_content.replace("__SETUP_CALLSIGN_JSON__", setup_callsign_json)
         html_content = html_content.replace("__SETUP_LOCATION_JSON__", setup_location_json)
 
+        _log.debug("layout: rendered page grid=%sx%s", grid_columns, grid_rows)
         return HTMLResponse(content=html_content)
 
     @app.post("/layout")
     async def layout_save(request: Request, _: None = Depends(rate_limit_dependency)):
         """Save layout configuration"""
+        _log.debug("POST /layout")
         try:
             data = await request.json()
             layout = data.get("layout")
@@ -328,7 +333,7 @@ def register_layout_routes(app: FastAPI, connection_manager: ConnectionManager):
                         pass
             except Exception:
                 pass
-        
+            _log.debug("layout save: success; broadcast config_update to desktop, browser, readonly")
             return JSONResponse({"success": True})
         except Exception as e:
             return JSONResponse({"error": str(e)}, status_code=500)

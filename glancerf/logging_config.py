@@ -1,7 +1,12 @@
 """
 Logging configuration for GlanceRF.
 Configures console (always) and optional log file from config.
-Levels: default (INFO: startup/shutdown, ERROR: errors), detailed (+ DETAILED: requests, heartbeat, etc.), verbose (+ DEBUG: everything else).
+
+Levels (each keeps its own tag in the log output):
+- default: Startup and error only. [INFO] for startup/shutdown, [ERROR] for errors.
+- detailed: Default plus system calls. One or two lines per action: web requests, API calls out
+  (e.g. GitHub, telemetry). Messages show [DETAILED].
+- verbose: Detailed plus everything else (step-by-step, internals). Extra messages show [DEBUG].
 """
 
 import logging
@@ -9,14 +14,14 @@ import sys
 from pathlib import Path
 from typing import Any, Optional
 
-# Custom level between DEBUG (10) and INFO (20): web requests, heartbeat, update checks
+# Between DEBUG (10) and INFO (20): system calls (requests, API out), one or two per action
 DETAILED_LEVEL = 15
 logging.addLevelName(DETAILED_LEVEL, "DETAILED")
 
 LOG_LEVEL_MAP = {
-    "default": logging.INFO,     # startup, shutdown (INFO), errors (ERROR)
-    "detailed": DETAILED_LEVEL,  # same + DETAILED (web requests, heartbeat, sync checks)
-    "verbose": logging.DEBUG,    # same + DEBUG (per-request details, etc.)
+    "default": logging.INFO,      # startup [INFO], errors [ERROR] only
+    "detailed": DETAILED_LEVEL,    # default + [DETAILED] web requests, API calls out
+    "verbose": logging.DEBUG,     # detailed + [DEBUG] all extra logging
 }
 
 
