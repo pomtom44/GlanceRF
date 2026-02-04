@@ -30,6 +30,15 @@ var currentDesktopWidth = 0;
                 var inner = document.createElement('div');
                 inner.className = 'cell-module-settings-inner';
                 schema.forEach(function(s) {
+                    if (s.type === 'separator') {
+                        var sep = document.createElement('div');
+                        sep.className = 'cell-setting-separator';
+                        var line = document.createElement('div');
+                        line.className = 'cell-setting-separator-line';
+                        sep.appendChild(line);
+                        inner.appendChild(sep);
+                        return;
+                    }
                     var cur = vals[s.id] !== undefined ? vals[s.id] : (s.default !== undefined ? s.default : '');
                     if (!cur || cur === '') {
                         if (s.id === 'callsign' && window.GLANCERF_SETUP_CALLSIGN) {
@@ -73,6 +82,7 @@ var currentDesktopWidth = 0;
                         inp.className = 'cell-setting-select';
                         inp.setAttribute('name', 'ms_' + row + '_' + col + '__' + s.id);
                         inp.value = cur;
+                        if (s.placeholder) inp.placeholder = s.placeholder;
                         if (s.type === 'number') {
                             if (s.min !== undefined) inp.min = s.min;
                             if (s.max !== undefined) inp.max = s.max;
@@ -98,9 +108,38 @@ var currentDesktopWidth = 0;
                         wrap.appendChild(inp);
                         wrap.appendChild(valSpan);
                         inner.appendChild(wrap);
+                    } else {
+                        var customWrap = document.createElement('div');
+                        customWrap.className = 'cell-setting-custom';
+                        customWrap.setAttribute('data-setting-type', s.type);
+                        customWrap.setAttribute('data-cell-key', cellKey);
+                        customWrap.setAttribute('data-setting-id', s.id);
+                        customWrap.setAttribute('data-current-value', typeof cur === 'string' ? cur : (cur != null ? JSON.stringify(cur) : ''));
+                        var hidden = document.createElement('input');
+                        hidden.type = 'hidden';
+                        hidden.className = 'cell-setting-custom-value';
+                        hidden.setAttribute('name', 'ms_' + row + '_' + col + '__' + s.id);
+                        hidden.value = typeof cur === 'string' ? cur : (cur != null ? JSON.stringify(cur) : '');
+                        var customUi = document.createElement('div');
+                        customUi.className = 'cell-setting-custom-ui';
+                        customWrap.appendChild(hidden);
+                        customWrap.appendChild(customUi);
+                        inner.appendChild(customWrap);
+                    }
+                    if (s.hintUrl) {
+                        var hintLink = document.createElement('a');
+                        hintLink.href = s.hintUrl;
+                        hintLink.target = '_blank';
+                        hintLink.rel = 'noopener noreferrer';
+                        hintLink.textContent = s.hintText || 'Guide';
+                        hintLink.className = 'cell-setting-hint-link';
+                        inner.appendChild(hintLink);
                     }
                 });
                 container.appendChild(inner);
+                try {
+                    document.dispatchEvent(new CustomEvent('glancerf-cell-settings-updated', { detail: { container: container } }));
+                } catch (e) {}
             }
 
             function updateAllCellSettings() {

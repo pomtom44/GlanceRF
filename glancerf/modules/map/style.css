@@ -18,3 +18,26 @@
             background: #e0e0e0;
             font-family: inherit;
         }
+        .grid-cell-map .aprs-symbol-icon-wrap {
+            width: 32px;
+            height: 32px;
+            min-width: 32px;
+            min-height: 32px;
+            border: none;
+            background: transparent;
+            box-sizing: border-box;
+            overflow: visible;
+        }
+        .grid-cell-map .aprs-symbol-icon-wrap .aprs-symbol-cell {
+            width: 32px;
+            height: 32px;
+            min-width: 32px;
+            min-height: 32px;
+            max-width: 32px;
+            max-height: 32px;
+            box-sizing: border-box;
+            flex-shrink: 0;
+            background-repeat: no-repeat;
+            image-rendering: -webkit-optimize-contrast;
+            image-rendering: crisp-edges;
+        }

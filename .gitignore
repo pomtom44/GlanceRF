@@ -43,3 +43,6 @@ Thumbs.db
 .update_staging/
 .update_backup/
 restart_after_update.*
+
+# APRS / local cache (not for version control)
+cache/

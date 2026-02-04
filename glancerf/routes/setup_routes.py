@@ -6,6 +6,7 @@ Template and static assets: glancerf/web/templates/setup/, glancerf/web/static/c
 import html as html_module
 import json as _json
 import re
+import time
 from pathlib import Path
 
 from fastapi import Depends, FastAPI, Form, Request
@@ -61,6 +62,7 @@ def register_setup_routes(app: FastAPI, connection_manager: ConnectionManager):
                 status_code=500
             )
         current_callsign = current_config.get("setup_callsign") or ""
+        current_ssid = current_config.get("setup_ssid") or "01"
         current_location = current_config.get("setup_location") or ""
         current_update_mode = current_config.get("update_mode") or "auto"
         current_update_check_time = current_config.get("update_check_time") or "03:00"
@@ -68,6 +70,7 @@ def register_setup_routes(app: FastAPI, connection_manager: ConnectionManager):
         if current_telemetry_enabled is None:
             current_telemetry_enabled = True  # Default to enabled (opt-out)
         current_callsign_esc = html_module.escape(current_callsign)
+        current_ssid_esc = html_module.escape(current_ssid)
         current_location_esc = html_module.escape(current_location)
 
         # Fallback to 3x3 if not configured; clamp to max_grid_scale
@@ -104,6 +107,7 @@ def register_setup_routes(app: FastAPI, connection_manager: ConnectionManager):
             current_rows=current_rows,
             max_grid_scale=max_grid_scale,
             current_callsign_esc=current_callsign_esc,
+            current_ssid_esc=current_ssid_esc,
             current_location_esc=current_location_esc,
             update_mode_none_selected=update_mode_none_selected,
             update_mode_notify_selected=update_mode_notify_selected,
@@ -115,6 +119,8 @@ def register_setup_routes(app: FastAPI, connection_manager: ConnectionManager):
             current_orientation=current_orientation,
             setup_config_json=setup_config_json,
         )
+        cache_bust = str(int(time.time() * 1000))
+        html_content = html_content.replace("__CACHE_BUST__", cache_bust)
         return HTMLResponse(content=html_content)
 
 
@@ -127,6 +133,7 @@ def register_setup_routes(app: FastAPI, connection_manager: ConnectionManager):
         grid_columns: int = Form(...),
         grid_rows: int = Form(...),
         setup_callsign: str = Form(""),
+        setup_ssid: str = Form("01"),
         setup_location: str = Form(""),
         update_mode: str = Form("auto"),
         update_check_time: str = Form("03:00"),
@@ -191,6 +198,10 @@ def register_setup_routes(app: FastAPI, connection_manager: ConnectionManager):
         if not (rows_ok and cols_ok):
             config_instance.set("layout", resize_layout_to_grid(current_layout, grid_columns, grid_rows))
         config_instance.set("setup_callsign", (setup_callsign or "").strip())
+        ssid = (setup_ssid or "01").strip()
+        if not ssid:
+            ssid = "01"
+        config_instance.set("setup_ssid", ssid)
         config_instance.set("setup_location", (setup_location or "").strip())
         config_instance.set("update_mode", update_mode)
         config_instance.set("update_check_time", (update_check_time or "03:00").strip())

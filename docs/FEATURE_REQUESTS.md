@@ -1,8 +1,8 @@
 # Requested features
 
 - Themes, fonts, colors etc
-- Text scaling (zoom)
-- Investigate removing aspect ratio limitations
-- Satellite passes
+- Satellite passes (on map)
 - Predicted radiosonde landing locations
 - Docker implementation
+- GPS Integation
+- Windows background app

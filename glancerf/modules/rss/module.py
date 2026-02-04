@@ -1,4 +1,4 @@
-"""Generic RSS feed cell. Displays recent items from a configurable feed URL (fetched via backend proxy)."""
+"""Shows recent items from an RSS or Atom feed. You set the feed URL, max items, and refresh interval; the backend fetches and caches."""
 
 MODULE = {
     "id": "rss",

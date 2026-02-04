@@ -9,11 +9,11 @@ import time
 from pathlib import Path
 
 from fastapi import Depends, FastAPI, Request
-from fastapi.responses import HTMLResponse, RedirectResponse, JSONResponse
+from fastapi.responses import HTMLResponse, RedirectResponse, JSONResponse, Response
 
 from glancerf.config import get_config
 from glancerf.view_utils import build_merged_cells_from_spans
-from glancerf.modules import get_modules, get_module_by_id, get_module_ids
+from glancerf.modules import get_modules, get_module_by_id, get_module_dir, get_module_ids
 from glancerf.rate_limit import rate_limit_dependency
 from glancerf.websocket_manager import ConnectionManager
 from glancerf.logging_config import get_logger
@@ -34,6 +34,21 @@ def _get_layout_template() -> str:
 
 def register_layout_routes(app: FastAPI, connection_manager: ConnectionManager):
     """Register layout configurator routes."""
+
+    @app.get("/module/{module_id}/layout_settings.js")
+    async def module_layout_settings_js(module_id: str):
+        """Serve a module's layout_settings.js so the layout editor can load custom setting UIs. Module-owned; core does not interpret content."""
+        folder = get_module_dir(module_id)
+        if not folder:
+            return Response(status_code=404)
+        path = folder / "layout_settings.js"
+        if not path.is_file():
+            return Response(status_code=404)
+        try:
+            content = path.read_text(encoding="utf-8")
+        except OSError:
+            return Response(status_code=404)
+        return Response(content=content, media_type="application/javascript; charset=utf-8")
 
     @app.get("/layout")
     async def layout_configurator():
@@ -171,6 +186,18 @@ def register_layout_routes(app: FastAPI, connection_manager: ConnectionManager):
         setup_location_json = _json.dumps(current_config.get("setup_location") or "")
 
         cache_bust = str(int(time.time() * 1000))
+        module_settings_scripts = []
+        for m in get_modules():
+            mid = m.get("id", "")
+            if not mid:
+                continue
+            folder = get_module_dir(mid)
+            if folder and (folder / "layout_settings.js").is_file():
+                module_settings_scripts.append(mid)
+        module_settings_scripts_html = "".join(
+            '<script src="/module/{}/layout_settings.js?v={}"></script>'.format(mid, cache_bust)
+            for mid in module_settings_scripts
+        )
         html_content = _get_layout_template()
         html_content = html_content.replace("__CACHE_BUST__", cache_bust)
         html_content = html_content.replace("__GRID_CSS__", grid_css)
@@ -181,6 +208,7 @@ def register_layout_routes(app: FastAPI, connection_manager: ConnectionManager):
         html_content = html_content.replace("__MODULES_SETTINGS_SCHEMA_JSON__", modules_settings_schema_json)
         html_content = html_content.replace("__SETUP_CALLSIGN_JSON__", setup_callsign_json)
         html_content = html_content.replace("__SETUP_LOCATION_JSON__", setup_location_json)
+        html_content = html_content.replace("__MODULE_SETTINGS_SCRIPTS__", module_settings_scripts_html)
 
         _log.debug("layout: rendered page grid=%sx%s", grid_columns, grid_rows)
         return HTMLResponse(content=html_content)
@@ -256,6 +284,22 @@ def register_layout_routes(app: FastAPI, connection_manager: ConnectionManager):
             if spans is not None and not isinstance(spans, dict):
                 return JSONResponse({"error": "Spans must be an object"}, status_code=400)
 
+            # Get previous layout so we can clear module_settings for any cell whose module changed
+            old_layout = current_config.get("layout") or []
+            current = dict(current_config.get("module_settings") or {})
+            for r in range(grid_rows):
+                for c in range(grid_columns):
+                    cell_key = "{}_{}".format(r, c)
+                    old_module = (
+                        old_layout[r][c]
+                        if r < len(old_layout) and c < len(old_layout[r])
+                        else ""
+                    )
+                    new_module = layout[r][c] if r < len(layout) and c < len(layout[r]) else ""
+                    if old_module != new_module and cell_key in current:
+                        del current[cell_key]
+                        _log.debug("layout save: cleared settings for cell %s (module %s -> %s)", cell_key, old_module or "(empty)", new_module or "(empty)")
+
             if spans:
                 for key, span_info in spans.items():
                     try:
@@ -307,11 +351,22 @@ def register_layout_routes(app: FastAPI, connection_manager: ConnectionManager):
 
             # Merge in-cell module settings from layout form so changes in the layout editor are saved
             if module_settings is not None and isinstance(module_settings, dict):
-                current = dict(current_config.get("module_settings") or {})
                 for cell_key, settings in module_settings.items():
                     if isinstance(settings, dict):
                         current[cell_key] = {**(current.get(cell_key) or {}), **settings}
-                current_config.set("module_settings", current)
+            # Remove settings for cell keys that are outside the current grid (e.g. after resize)
+            for cell_key in list(current):
+                try:
+                    parts = cell_key.split("_")
+                    if len(parts) != 2:
+                        del current[cell_key]
+                        continue
+                    r, c = int(parts[0]), int(parts[1])
+                    if r < 0 or r >= grid_rows or c < 0 or c >= grid_columns:
+                        del current[cell_key]
+                except ValueError:
+                    del current[cell_key]
+            current_config.set("module_settings", current)
 
             # Notify all clients (desktop, browsers, readonly portal) so they reload with new layout
             try:

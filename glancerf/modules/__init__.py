@@ -9,6 +9,7 @@ Each module is a folder (e.g. clock/) containing:
 Folders whose names start with _ are skipped and not loaded as modules.
 """
 
+import importlib
 import importlib.util
 import sys
 from pathlib import Path
@@ -33,22 +34,40 @@ EMPTY_MODULE: Dict[str, Any] = {
 
 
 def _load_module_from_folder(folder: Path, spec_prefix: str = "glancerf.modules") -> Optional[Dict[str, Any]]:
-    """Load MODULE from folder/module.py and inject inner_html, css, js from files."""
+    """Load MODULE from folder/module.py and inject inner_html, css, js from files.
+    If folder has __init__.py, load it as a package first so api_routes can be imported as a submodule."""
     module_py = folder / "module.py"
     if not module_py.is_file():
         return None
+    pkg_name = f"{spec_prefix}.{folder.name}"
     try:
-        spec = importlib.util.spec_from_file_location(
-            f"{spec_prefix}.{folder.name}", module_py
-        )
-        if spec is None or spec.loader is None:
-            return None
-        mod = importlib.util.module_from_spec(spec)
-        sys.modules[spec.name] = mod
-        spec.loader.exec_module(mod)
-        if not hasattr(mod, "MODULE"):
-            return None
-        m = dict(mod.MODULE)
+        if (folder / "__init__.py").is_file():
+            # Load as package so pkg.api_routes is importable
+            spec_pkg = importlib.util.spec_from_file_location(pkg_name, folder / "__init__.py")
+            if spec_pkg is None or spec_pkg.loader is None:
+                return None
+            pkg = importlib.util.module_from_spec(spec_pkg)
+            sys.modules[pkg_name] = pkg
+            spec_pkg.loader.exec_module(pkg)
+            spec_mod = importlib.util.spec_from_file_location(pkg_name + ".module", module_py)
+            if spec_mod is None or spec_mod.loader is None:
+                return None
+            mod = importlib.util.module_from_spec(spec_mod)
+            sys.modules[pkg_name + ".module"] = mod
+            spec_mod.loader.exec_module(mod)
+            if not hasattr(mod, "MODULE"):
+                return None
+            m = dict(mod.MODULE)
+        else:
+            spec = importlib.util.spec_from_file_location(pkg_name, module_py)
+            if spec is None or spec.loader is None:
+                return None
+            mod = importlib.util.module_from_spec(spec)
+            sys.modules[spec.name] = mod
+            spec.loader.exec_module(mod)
+            if not hasattr(mod, "MODULE"):
+                return None
+            m = dict(mod.MODULE)
         if not isinstance(m, dict) or "id" not in m or "name" not in m or "color" not in m:
             return None
         # Override with file contents if present (so module.py can omit inner_html/css/js)
@@ -144,6 +163,13 @@ def get_module_assets(layout: List[List[str]]) -> Tuple[str, str]:
     return ("\n".join(css_parts), "\n".join(js_parts))
 
 
+def clear_module_cache() -> None:
+    """Clear the in-memory module list so next get_modules() reloads from disk. Use after editing module.py."""
+    global _loaded, _by_id
+    _loaded = None
+    _by_id = None
+
+
 def get_modules() -> List[Dict[str, Any]]:
     """Return all discovered cell modules (id, name, color). Order: empty first, then by folder name."""
     return _discover_modules()
@@ -164,3 +190,41 @@ def get_module_dir(module_id: str) -> Optional[Path]:
     if _folder_by_id is None:
         _discover_modules()
     return (_folder_by_id or {}).get(module_id)
+
+
+def get_module_api_packages() -> List[str]:
+    """
+    Return package names for modules that provide api_routes.py (e.g. glancerf.modules.satellite_pass).
+    Core uses this to register each module's API routes at startup.
+    """
+    _discover_modules()
+    packages: List[str] = []
+    parent = _MODULES_DIR.parent
+    for folder in (_folder_by_id or {}).values():
+        if (folder / "api_routes.py").is_file():
+            try:
+                rel = folder.relative_to(parent)
+                pkg = parent.name + "." + rel.as_posix().replace("/", ".").replace("\\", ".")
+                packages.append(pkg)
+            except ValueError:
+                pass
+    return packages
+
+
+def validate_module_dependencies() -> List[Tuple[str, str]]:
+    """
+    Try to import each module that provides api_routes.py. Returns a list of
+    (module_name, error_message) for any that fail. Used at startup to fail fast
+    if a module's dependencies (e.g. skyfield for satellite_pass) are missing.
+    """
+    failures: List[Tuple[str, str]] = []
+    for pkg in get_module_api_packages():
+        module_name = pkg.split(".")[-1] if "." in pkg else pkg
+        try:
+            importlib.import_module(pkg + ".api_routes")
+        except ModuleNotFoundError as e:
+            missing = e.name or "unknown"
+            failures.append((module_name, "Missing dependency '%s'. Install with: pip install %s" % (missing, missing)))
+        except Exception as e:
+            failures.append((module_name, str(e)))
+    return failures

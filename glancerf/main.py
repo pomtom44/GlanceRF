@@ -18,6 +18,7 @@ from glancerf.websocket_manager import ConnectionManager
 from glancerf import __version__
 from glancerf.update_checker import UpdateChecker, check_for_updates, get_latest_release_info, compare_versions
 from glancerf.telemetry import TelemetrySender
+from glancerf.aprs_cache import start_aprs_cache
 from glancerf.routes import api, websocket, layout_routes, setup_routes
 from glancerf.routes.root import register_root
 from glancerf.routes.readonly import run_readonly_server
@@ -173,6 +174,7 @@ async def _start_background_tasks():
     """Start background tasks."""
     update_checker.start()
     telemetry_sender.start()
+    start_aprs_cache()
 
 
 @app.on_event("shutdown")

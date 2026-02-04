@@ -1,4 +1,4 @@
-"""Callsign / QTH cell."""
+"""Shows your callsign, grid square (QTH), and an optional comment. Uses Setup callsign and location if you leave the cell fields blank."""
 
 MODULE = {
     "id": "callsign",

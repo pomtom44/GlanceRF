@@ -1,4 +1,4 @@
-"""Weather cell: current conditions from Open-Meteo."""
+"""Current weather from Open-Meteo (no API key): conditions, temperature, feels like, humidity, wind, pressure. Set location by grid square or lat,lng."""
 
 ON_OFF_OPTIONS = [
     {"value": "1", "label": "On"},

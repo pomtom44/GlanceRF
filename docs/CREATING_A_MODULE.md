@@ -19,7 +19,9 @@ This guide explains how to add a new **cell module** to GlanceRF. A module is a 
 9. [Settings in JavaScript](#9-settings-in-javascript)
 10. [Global variables (callsign and location)](#10-global-variables-callsign-and-location)
 11. [Custom modules (survive updates)](#11-custom-modules-survive-updates)
-12. [Checklist](#12-checklist)
+12. [Module API routes (optional)](#12-module-api-routes-optional)  
+    - [12.5. Satellite_pass API methods (reference)](#125-satellite_pass-api-methods-reference)
+13. [Checklist](#13-checklist)
 
 ---
 
@@ -60,6 +62,8 @@ Optional files (if present, the loader uses them; otherwise the module has no HT
 | **index.html** | HTML fragment injected **inside** each grid cell that uses this module. |
 | **style.css**  | CSS for this module. Loaded once per page; scope under `.grid-cell-{id}`. |
 | **script.js**  | JavaScript for this module. Loaded once per page; finds and updates this module's cells. |
+| **api_routes.py** | Optional. If present, the core calls **`register_routes(app)`** at startup so your module can register its own API endpoints (e.g. GET /api/my_module/data). See [Module API routes (optional)](#12-module-api-routes-optional). |
+| **layout_settings.js** | Optional. If present, the layout editor loads it so your module can render custom setting UIs (e.g. checkboxes from an API). See [Custom setting types](#123-custom-setting-types-layout-editor-no-core-changes). |
 
 The loader reads `module.py` first, then overlays `inner_html`, `css`, and `js` from the files above. You do **not** put HTML/CSS/JS strings inside `module.py` when using the folder structure.
 
@@ -287,7 +291,103 @@ Put your own modules in **`glancerf/modules/_custom/`** so that:
 
 ---
 
-## 12. Checklist
+## 12. Module API routes (optional)
+
+If your module needs **backend API endpoints** (e.g. to fetch data from a server, proxy an external API, or compute something in Python), you can add an **api_routes.py** file to your module folder. The core discovers any module that has this file and calls **`register_routes(app)`** at startup, so your routes are registered on the same FastAPI app as the rest of GlanceRF.
+
+**Design:** The core handles config, display, and updates. Each module is self-contained: if it needs API endpoints, it registers them itself via **api_routes.py**. Your module should only rely on its own module files for logic; use the core only for config (e.g. `get_config()`), logging (`get_logger()`), and route registration.
+
+### 12.1. Adding api_routes.py
+
+1. Create **api_routes.py** in your module folder (e.g. `glancerf/modules/_custom/my_module/api_routes.py`).
+2. Define a function **`register_routes(app: FastAPI) -> None`** that registers your endpoints on `app`.
+3. Use **relative imports** for other code in your module (e.g. `from .my_service import fetch_data`). Put any backend logic in other files in the same folder (e.g. `my_service.py`).
+
+Example (minimal):
+
+```python
+# glancerf/modules/_custom/my_module/api_routes.py
+from fastapi import FastAPI
+
+from glancerf.logging_config import get_logger
+from .my_service import get_data
+
+_log = get_logger("my_module.api_routes")
+
+
+def register_routes(app: FastAPI) -> None:
+    @app.get("/api/my_module/data")
+    async def get_my_module_data():
+        try:
+            result = get_data()  # your module-owned logic
+            return {"data": result}
+        except Exception as e:
+            _log.debug("get_data failed: %s", e)
+            from fastapi.responses import JSONResponse
+            return JSONResponse(
+                {"error": "Failed to get data", "detail": str(e)},
+                status_code=502,
+            )
+```
+
+Your **script.js** (or the Modules page) can then call **`fetch("/api/my_module/data")`** to get data. Use paths under **`/api/`** so they are clearly API endpoints.
+
+### 12.2. How the core discovers and registers module API routes
+
+- On startup, after the core registers its own API routes (e.g. `/api/time`, `/api/rss`), it calls **`register_module_api_routes(app)`** (in `glancerf/routes/api.py`).
+- That function uses **`get_module_api_packages()`** (in `glancerf/modules/__init__.py`) to get a list of package names for every module folder that contains **api_routes.py** (e.g. `glancerf.modules.satellite_pass`).
+- For each package, it imports **`<package>.api_routes`** and, if the module defines a callable **`register_routes`**, calls **`register_routes(app)`**.
+- If a module is removed or **api_routes.py** is deleted, the core simply skips it; no extra configuration is needed.
+
+### 12.3. Custom setting types (layout editor, no core changes)
+
+The core renders module settings from the **settings** schema in **module.py**. Built-in **types** are **text**, **select**, **number**, and **range**. Any **other** type is treated as **custom**. The core does not implement custom types. Instead, the layout editor renders a placeholder; modules add **layout_settings.js** (loaded from **/module/&lt;module_id&gt;/layout_settings.js**) to fill it. See **satellite_pass/layout_settings.js** for an example. Your script finds placeholders (e.g. `.cell-setting-custom[data-setting-type="your_type"]`), fills `.cell-setting-custom-ui`, and updates the `.cell-setting-custom-value` hidden input on change. Listen for the **`glancerf-cell-settings-updated`** event when new placeholders are added.
+
+### 12.4. Example: satellite_pass module
+
+The **satellite_pass** module in **`glancerf/modules/satellite_pass/`** is a full example of a self-contained module with API routes:
+
+- **satellite_service.py** – Fetches satellite list from CelesTrak, caches it in **satellite_list.json** (next to the main config), refreshes about every 24 hours, and prunes the main config so selected satellites that no longer appear in the list are removed from config.
+- **api_routes.py** – Defines **`register_routes(app)`** and registers **GET /api/satellite/list** (serves from cached JSON, refreshing when stale) and **GET /api/satellite/passes** (computes pass data via Skyfield).
+- **module.py** – Includes a setting of type **satellite_checkboxes** (a custom type; the core does not implement it).
+- **layout_settings.js** – Loaded on the layout editor page; finds **satellite_checkboxes** placeholders, fetches **/api/satellite/list**, and renders the checkbox list; updates the hidden input on change so Save stores the selection.
+
+You can use this module as a reference for structure and for how to combine **api_routes.py** with a service layer and config.
+
+### 12.5. Satellite_pass API methods (reference)
+
+If your module or the Modules page needs to call the satellite_pass API, use these endpoints. They are registered by the **satellite_pass** module when it has **api_routes.py** and are served under the same FastAPI app as the rest of GlanceRF.
+
+**GET /api/satellite/list**
+
+- **Purpose:** Return the list of trackable satellites (from cached JSON, refreshed from CelesTrak when missing or older than ~24 hours).
+- **Query parameters:** None.
+- **Response (200):** JSON object:
+  - **`satellites`** – array of objects, each with **`norad_id`** (int) and **`name`** (str), sorted by name.
+- **Errors:** **502** – body `{ "error": "...", "detail": "..." }` if the list could not be loaded or refreshed.
+
+**GET /api/satellite/passes**
+
+- **Purpose:** Compute current position and next pass for each requested satellite at the given observer location.
+- **Query parameters (all required except `alt`):**
+  - **`norad_ids`** (str) – Comma-separated NORAD IDs (e.g. `25544,48274`).
+  - **`lat`** (float) – Observer latitude in degrees (-90 to 90).
+  - **`lng`** (float) – Observer longitude in degrees (-180 to 180).
+  - **`alt`** (float, optional) – Observer altitude in metres (0 to 10000). Default **0**.
+- **Response (200):** JSON object:
+  - **`passes`** – array of objects, one per satellite (only satellites that could be computed are included). Each object has:
+    - **`norad_id`** (int), **`name`** (str)
+    - **`current`** – `{ "az": float, "el": float, "up": bool }` (azimuth and elevation in degrees; `up` is true if the satellite is above the horizon)
+    - **`next_pass`** – `null` or `{ "rise_utc": str, "set_utc": str, "rise_az": float|null, "set_az": float|null, "max_el": float|null, "duration_sec": int }` (ISO UTC times; azimuths in degrees; max elevation in degrees; duration in seconds)
+- **Errors:**
+  - **400** – `norad_ids` missing, not comma-separated integers, empty, or more than 20 IDs; body `{ "error": "..." }`.
+  - **502** – body `{ "error": "...", "detail": "..." }` if pass computation failed.
+
+Example request: `GET /api/satellite/passes?norad_ids=25544,48274&lat=-43.5&lng=172.6&alt=0`
+
+---
+
+## 13. Checklist
 
 - [ ] Copied **`glancerf/modules/_custom/example/`** and renamed the folder to your module id (no leading `_`).
 - [ ] **module.py**: Set `id`, `name`, `color`; add `settings` if needed.
@@ -296,5 +396,6 @@ Put your own modules in **`glancerf/modules/_custom/`** so that:
 - [ ] **script.js**: Find cells with **`querySelectorAll('.grid-cell-{id}')`**; query inside cells with your class names; read per-cell settings from **`window.GLANCERF_MODULE_SETTINGS[cellKey]`** if you have settings; use **`window.GLANCERF_SETUP_CALLSIGN`** or **`window.GLANCERF_SETUP_LOCATION`** as fallbacks if your module uses callsign/location.
 - [ ] Restart the app (or reload the page) and pick your module in the layout editor.
 - [ ] Put your module in **`glancerf/modules/_custom/`** so it survives updates (see [Custom modules (survive updates)](#11-custom-modules-survive-updates)).
+- [ ] If your module needs API endpoints: add **api_routes.py** with **`register_routes(app)`** and keep backend logic in the module folder (see [Module API routes (optional)](#12-module-api-routes-optional)).
 
-For a minimal, commented reference, see the **`example`** module in `glancerf/modules/_custom/example/`.
+For a minimal, commented reference, see the **`example`** module in `glancerf/modules/_custom/example/`. For a module with API routes and cached data, see **`satellite_pass`** in `glancerf/modules/satellite_pass/`.

@@ -3,5 +3,6 @@ uvicorn[standard]==0.24.0
 python-multipart==0.0.6
 httpx==0.25.2
 feedparser>=6.0.11
+skyfield>=1.46
 PyQt5==5.15.10
 PyQtWebEngine==5.15.6

@@ -1,4 +1,4 @@
-"""Moon phase, moonrise and moonset for a given location. Uses Open-Meteo for rise/set; phase computed locally."""
+"""Moon phase (icon and illumination), moonrise and moonset for a location. Rise/set from Open-Meteo; phase is computed in the browser."""
 
 ON_OFF_OPTIONS = [
     {"value": "1", "label": "On"},

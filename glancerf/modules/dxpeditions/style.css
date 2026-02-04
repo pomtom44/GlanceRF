@@ -1,0 +1,118 @@
+.grid-cell-dxpeditions {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    justify-content: flex-start;
+    overflow: hidden;
+}
+
+.grid-cell-dxpeditions .dxpeditions_wrap {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    padding: 6px 8px;
+    box-sizing: border-box;
+    overflow: hidden;
+}
+
+.grid-cell-dxpeditions .dxpeditions_title {
+    font-size: 16px;
+    font-weight: 600;
+    color: #0f0;
+    text-align: center;
+    flex-shrink: 0;
+    margin-bottom: 2px;
+}
+
+.grid-cell-dxpeditions .dxpeditions_credits {
+    font-size: 10px;
+    color: #888;
+    text-align: center;
+    flex-shrink: 0;
+    margin-bottom: 4px;
+}
+
+.grid-cell-dxpeditions .dxpeditions_list {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.grid-cell-dxpeditions .dxpeditions_item {
+    font-size: 12px;
+    line-height: 1.3;
+    color: #ccc;
+    padding: 4px 6px;
+    background: #1a1a1a;
+    border: 1px solid #333;
+    border-radius: 4px;
+    flex-shrink: 0;
+}
+
+.grid-cell-dxpeditions .dxpeditions_item .dxpeditions_call {
+    color: #0f0;
+    font-weight: 600;
+}
+
+.grid-cell-dxpeditions .dxpeditions_item .dxpeditions_call a {
+    color: #0f0;
+    text-decoration: none;
+}
+
+.grid-cell-dxpeditions .dxpeditions_item .dxpeditions_call a:hover {
+    text-decoration: underline;
+}
+
+.grid-cell-dxpeditions .dxpeditions_item .dxpeditions_source {
+    font-size: 10px;
+    color: #666;
+    margin-left: 4px;
+}
+
+.grid-cell-dxpeditions .dxpeditions_item .dxpeditions_dates {
+    color: #888;
+    font-size: 11px;
+    font-variant-numeric: tabular-nums;
+}
+
+.grid-cell-dxpeditions .dxpeditions_item .dxpeditions_info {
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+}
+
+.grid-cell-dxpeditions .dxpeditions_empty,
+.grid-cell-dxpeditions .dxpeditions_error {
+    display: none;
+    font-size: 13px;
+    color: #888;
+    text-align: center;
+    padding: 10px 8px;
+}
+
+.grid-cell-dxpeditions .dxpeditions_error {
+    color: #c00;
+}
+
+.grid-cell-dxpeditions.dxpeditions_state_empty .dxpeditions_empty,
+.grid-cell-dxpeditions.dxpeditions_state_loading .dxpeditions_empty {
+    display: block;
+}
+
+.grid-cell-dxpeditions.dxpeditions_state_error .dxpeditions_error {
+    display: block;
+}
+
+.grid-cell-dxpeditions.dxpeditions_state_empty .dxpeditions_title,
+.grid-cell-dxpeditions.dxpeditions_state_empty .dxpeditions_credits,
+.grid-cell-dxpeditions.dxpeditions_state_empty .dxpeditions_list,
+.grid-cell-dxpeditions.dxpeditions_state_loading .dxpeditions_title,
+.grid-cell-dxpeditions.dxpeditions_state_loading .dxpeditions_credits,
+.grid-cell-dxpeditions.dxpeditions_state_loading .dxpeditions_list,
+.grid-cell-dxpeditions.dxpeditions_state_error .dxpeditions_title,
+.grid-cell-dxpeditions.dxpeditions_state_error .dxpeditions_credits,
+.grid-cell-dxpeditions.dxpeditions_state_error .dxpeditions_list {
+    display: none;
+}

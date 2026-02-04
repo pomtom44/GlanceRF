@@ -1,4 +1,4 @@
-"""Analog clock cell: SVG clock face with hour, minute, and optional second hands."""
+"""Traditional analog clock face with hour, minute, and optional second hands. Choose local or UTC time zone."""
 
 ON_OFF_OPTIONS = [
     {"value": "1", "label": "On"},

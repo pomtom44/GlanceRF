@@ -1,4 +1,4 @@
-"""Clock cell: local, UTC, and optional third timezone."""
+"""Shows local time, UTC, and an optional third timezone (e.g. London, Tokyo). Can include the current date above the times."""
 
 ON_OFF_OPTIONS = [
     {"value": "1", "label": "On"},

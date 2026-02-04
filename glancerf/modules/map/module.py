@@ -1,4 +1,4 @@
-"""Basic world map with optional grid, terminator, sun/moon, and aurora overlays."""
+"""World map with multiple tile sources, optional grid (lat/long or Maidenhead), day/night terminator, sun and moon markers, aurora overlay, HF/VHF propagation overlays, and APRS station locations (icons or age-coloured dots) from local cache."""
 
 GRID_OPTIONS = [
     {"value": "none", "label": "None"},
@@ -56,7 +56,8 @@ MODULE = {
             "default": "carto_voyager",
         },
         {"id": "zoom", "label": "Zoom level", "type": "number", "min": 0, "max": 18, "default": "2"},
-        {"id": "center", "label": "Map center (grid square or lat,lng)", "type": "text", "default": ""},
+        {"id": "center", "label": "Map center (grid square, lat,lng, or DMS e.g. 45°11'07\"N 6°56'51\"E)", "type": "text", "default": ""},
+        {"type": "separator"},
         {
             "id": "grid_style",
             "label": "Grid overlay",
@@ -78,6 +79,7 @@ MODULE = {
             "options": ON_OFF_OPTIONS,
             "default": "0",
         },
+        {"type": "separator"},
         {
             "id": "show_aurora",
             "label": "Aurora forecast overlay",
@@ -93,6 +95,62 @@ MODULE = {
             "max": 100,
             "default": "50",
             "unit": "%",
+        },
+        {"type": "separator"},
+        {
+            "id": "propagation_source",
+            "label": "Propagation overlay",
+            "type": "select",
+                "options": [
+                {"value": "none", "label": "None"},
+                {"value": "kc2g_muf", "label": "HF: KC2G MUF (3000 km)"},
+                {"value": "kc2g_fof2", "label": "HF: KC2G foF2 (NVIS)"},
+                {"value": "tropo", "label": "VHF/UHF: Tropo"},
+                {"value": "vhf_aprs", "label": "VHF: APRS (144 MHz cache)"},
+            ],
+            "default": "none",
+        },
+        {
+            "id": "propagation_opacity",
+            "label": "Propagation overlay opacity",
+            "type": "range",
+            "min": 0,
+            "max": 100,
+            "default": "60",
+            "unit": "%",
+        },
+        {
+            "id": "propagation_aprs_age",
+            "label": "APRS data age (H:MM)",
+            "type": "text",
+            "default": "6:00",
+            "placeholder": "e.g. 0:30, 1:15, 6:00",
+        },
+        {"type": "separator"},
+        {
+            "id": "show_aprs_locations",
+            "label": "APRS station locations",
+            "type": "select",
+            "options": ON_OFF_OPTIONS,
+            "default": "0",
+        },
+        {
+            "id": "aprs_display_mode",
+            "label": "APRS display",
+            "type": "select",
+            "options": [
+                {"value": "dots", "label": "Dots (age: green to red)"},
+                {"value": "icons", "label": "Icons (APRS symbol)"},
+            ],
+            "default": "dots",
+        },
+        {
+            "id": "aprs_filter",
+            "label": "APRS filter (locations display only)",
+            "type": "text",
+            "default": "",
+            "hintUrl": "https://www.aprs-is.net/javAPRSFilter.aspx",
+            "hintText": "APRS-IS filter guide",
         },
     ],
 }

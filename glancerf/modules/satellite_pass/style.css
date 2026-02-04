@@ -1,0 +1,123 @@
+.grid-cell-satellite_pass {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    justify-content: flex-start;
+    overflow: hidden;
+}
+
+.grid-cell-satellite_pass .satellite_pass_wrap {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-start;
+    height: 100%;
+    padding: 6px 8px;
+    box-sizing: border-box;
+    gap: 4px;
+}
+
+.grid-cell-satellite_pass .satellite_pass_name {
+    font-size: 18px;
+    font-weight: 600;
+    color: #0f0;
+    text-align: center;
+    min-height: 24px;
+    line-height: 1.25;
+    letter-spacing: 0.02em;
+}
+
+.grid-cell-satellite_pass .satellite_pass_events {
+    font-size: 14px;
+    color: #0f0;
+    text-align: center;
+    min-height: 18px;
+    line-height: 1.35;
+}
+
+.grid-cell-satellite_pass .satellite_pass_info {
+    font-size: 13px;
+    color: #888;
+    text-align: center;
+    min-height: 16px;
+    line-height: 1.3;
+}
+
+.grid-cell-satellite_pass .satellite_pass_dome_wrap {
+    flex: 1;
+    min-height: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    border-radius: 6px;
+    overflow: hidden;
+    background: #111;
+    border: 1px solid #333;
+}
+
+.grid-cell-satellite_pass .satellite_pass_canvas {
+    display: block;
+    max-width: 100%;
+    max-height: 100%;
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+}
+
+.grid-cell-satellite_pass .satellite_pass_azel {
+    font-size: 13px;
+    color: #888;
+    text-align: center;
+    min-height: 18px;
+    line-height: 1.2;
+    font-variant-numeric: tabular-nums;
+}
+
+.grid-cell-satellite_pass .satellite_pass_empty,
+.grid-cell-satellite_pass .satellite_pass_error,
+.grid-cell-satellite_pass .satellite_pass_loading {
+    display: none;
+    font-size: 15px;
+    color: #888;
+    text-align: center;
+    padding: 10px 8px;
+    line-height: 1.4;
+}
+
+.grid-cell-satellite_pass .satellite_pass_error {
+    color: #c00;
+}
+
+.grid-cell-satellite_pass.satellite_pass_state_empty .satellite_pass_empty {
+    display: block;
+}
+
+.grid-cell-satellite_pass.satellite_pass_state_error .satellite_pass_error {
+    display: block;
+}
+
+.grid-cell-satellite_pass.satellite_pass_state_loading .satellite_pass_loading {
+    display: block;
+}
+
+.grid-cell-satellite_pass.satellite_pass_state_empty .satellite_pass_name,
+.grid-cell-satellite_pass.satellite_pass_state_empty .satellite_pass_events,
+.grid-cell-satellite_pass.satellite_pass_state_empty .satellite_pass_info,
+.grid-cell-satellite_pass.satellite_pass_state_empty .satellite_pass_dome_wrap,
+.grid-cell-satellite_pass.satellite_pass_state_empty .satellite_pass_azel,
+.grid-cell-satellite_pass.satellite_pass_state_loading .satellite_pass_name,
+.grid-cell-satellite_pass.satellite_pass_state_loading .satellite_pass_events,
+.grid-cell-satellite_pass.satellite_pass_state_loading .satellite_pass_info,
+.grid-cell-satellite_pass.satellite_pass_state_loading .satellite_pass_dome_wrap,
+.grid-cell-satellite_pass.satellite_pass_state_loading .satellite_pass_azel {
+    display: none;
+}
+
+.grid-cell-satellite_pass.satellite_pass_state_error .satellite_pass_name,
+.grid-cell-satellite_pass.satellite_pass_state_error .satellite_pass_events,
+.grid-cell-satellite_pass.satellite_pass_state_error .satellite_pass_info,
+.grid-cell-satellite_pass.satellite_pass_state_error .satellite_pass_dome_wrap,
+.grid-cell-satellite_pass.satellite_pass_state_error .satellite_pass_azel {
+    display: none;
+}

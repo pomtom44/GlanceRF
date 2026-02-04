@@ -55,9 +55,9 @@ This guide explains how to use GlanceRF: first run, setup, the menu (press M), t
 
 On the Setup page you can:
 
-1. **Screen aspect ratio and orientation** – Choose the layout that matches your display (this is just as a rough guide for first setup).
-2. **Grid size** – Use the sliders to set the number of **columns** (1–8) and **rows** (1–8). The preview shows the resulting grid.
-3. **Continue** – Click to save and continue. You will be sent to the **Layout** page to choose what appears in each cell.
+1. **Page 1 – Layout:** Screen aspect ratio and orientation (matches your display), grid size (columns and rows, 1–8 each). Click **Continue** to save and go to the Layout page.
+2. **Page 2 – Station & updates:** Callsign and SSID (used as default by modules and for APRS cache), location (grid square or lat,lng for modules that need it), update mode (none / notify / auto), update check time, and telemetry (on/off).
+3. **Page 3 – Tips & shortcuts:** Quick reference for keyboard shortcuts and tips.
 
 You can open Setup again anytime by pressing **M** to open the menu, then choosing Setup.
 

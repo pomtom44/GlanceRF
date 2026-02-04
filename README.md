@@ -26,7 +26,7 @@ If you don't know how to use GitHub, run projects from the command line, or wher
 
 **Option A – Installer (easiest):** Use the installer for your OS. It checks Python, installs dependencies, and can set up run-at-login and a desktop shortcut.
 
-- **Windows:** From the Project folder, double-click `installers\install-windows.bat` (or run `powershell -ExecutionPolicy Bypass -File installers\install-windows.ps1`).
+- **Windows:** From the Project folder, double-click `installers\install-windows.bat` 
 - **Linux:** From the Project folder run `chmod +x installers/install-linux.sh` then `./installers/install-linux.sh`. The script detects your distro (Debian/Ubuntu, Fedora/RHEL, Arch, openSUSE, etc.) and uses the right package manager for Python if needed.
 - **macOS:** From the Project folder run `chmod +x installers/install-mac.sh` then `./installers/install-mac.sh`.
 
@@ -101,7 +101,7 @@ The app skips GUI imports if desktop mode is disabled in config.
 
 - **Modes:** Desktop app, server-only (web), and read-only for public displays
 - **Layout:** Any grid size, any monitor; choose which modules go where and resize cells
-- **Built-in modules:** Clock (local, UTC, international), analog clock, date, map (multiple tile sources; optional grid, day/night terminator, sun & moon, aurora overlay), weather, sunrise/sunset, moon phase, RSS feed, countdown/stopwatch, callsign/QTH. Custom modules go in `glancerf/modules/_custom/` and survive updates (see [CREATING_A_MODULE.md](docs/CREATING_A_MODULE.md)).
+- **Built-in modules:** Clock (local, UTC, third timezone), analog clock, date, map (multiple tile sources; optional grid, day/night terminator, sun & moon, aurora overlay; HF/VHF propagation overlays; APRS station locations from local cache with icons or age-coloured dots), weather, sunrise/sunset, moon phase and rise/set, RSS feed, countdown/stopwatch, callsign/QTH, satellite pass, contests calendar, DXpeditions. Custom modules go in `glancerf/modules/_custom/` and survive updates (see [CREATING_A_MODULE.md](docs/CREATING_A_MODULE.md)).
 
 ---
 

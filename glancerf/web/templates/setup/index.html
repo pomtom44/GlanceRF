@@ -4,8 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>GlanceRF - First Run Setup</title>
-    <link rel="stylesheet" href="/static/css/setup.css">
-    <link rel="stylesheet" href="/static/css/menu.css">
+    <link rel="stylesheet" href="/static/css/setup.css?v=__CACHE_BUST__">
+    <link rel="stylesheet" href="/static/css/menu.css?v=__CACHE_BUST__">
 </head>
 <body>
     <div id="glancerf-menu" role="dialog" aria-modal="true" aria-label="Menu">
@@ -91,8 +91,12 @@
             <div id="setup-page-2" class="setup-page">
             <div class="form-group">
                 <label for="setup_callsign">Callsign</label>
-                <input type="text" id="setup_callsign" name="setup_callsign" value="{current_callsign_esc}" placeholder="e.g. ZL4ST" maxlength="32">
-                <span style="font-size:12px;">Used as default by modules (e.g. Callsign / QTH) unless overridden per cell.</span>
+                <div class="setup-callsign-row">
+                    <input type="text" id="setup_callsign" name="setup_callsign" value="{current_callsign_esc}" placeholder="e.g. ZL4ST" maxlength="32">
+                    <span class="setup-callsign-hyphen">-</span>
+                    <input type="text" id="setup_ssid" name="setup_ssid" value="{current_ssid_esc}" placeholder="01" maxlength="2" pattern="[0-9][0-9]?" class="setup-ssid-input" title="APRS SSID (e.g. 01). Used as callsign-SSID when connecting.">
+                </div>
+                <span style="font-size:12px;">Used as default by modules (e.g. Callsign / QTH) and for APRS-IS. SSID is used as callsign-SSID when connecting (default 01 if blank).</span>
             </div>
             <div class="form-group">
                 <label for="setup_location">Default location</label>
@@ -161,6 +165,6 @@
         var o = document.getElementById('glancerf-menu-overlay');
         if (o) o.addEventListener('click', function() {{ var m = document.getElementById('glancerf-menu'); if (m) m.classList.remove('open'); }});
     </script>
-    <script src="/static/js/setup.js?v=2"></script>
+    <script src="/static/js/setup.js?v=__CACHE_BUST__"></script>
 </body>
 </html>

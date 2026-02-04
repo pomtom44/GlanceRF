@@ -1,4 +1,4 @@
-"""Standalone date cell: current date with optional format (DMY, MDY, YMD)."""
+"""Displays the current date (weekday, day, month, year) in your choice of format: Day Month Year, Month Day Year, or Year Month Day."""
 
 DATE_FORMAT_OPTIONS = [
     {"value": "dmy", "label": "Day Month Year (e.g. 27 Jan 2025)"},

@@ -200,11 +200,34 @@ body {
 .cell-module-settings-inner {
     margin-right: 0;
 }
+.cell-module-settings .cell-setting-separator {
+    width: 100%;
+    margin: 12px 0 8px 0;
+}
+.cell-module-settings .cell-setting-separator-line {
+    height: 2px;
+    min-height: 2px;
+    background-color: #555;
+    margin: 0;
+    padding: 0;
+    width: 100%;
+}
 .cell-module-settings .cell-setting-label {
     display: block;
     color: #888;
     margin-bottom: 2px;
     font-size: 12px;
+}
+.cell-module-settings .cell-setting-hint-link {
+    display: inline-block;
+    margin-top: 4px;
+    margin-bottom: 14px;
+    font-size: 11px;
+    color: #0f0;
+    text-decoration: none;
+}
+.cell-module-settings .cell-setting-hint-link:hover {
+    text-decoration: underline;
 }
 .cell-module-settings .cell-setting-select {
     width: 100%;
@@ -230,35 +253,45 @@ body {
     appearance: none;
     flex: 1;
     min-width: 0;
+    height: 24px;
+    padding: 0;
+    margin: 0;
+    background: transparent;
+    border: none;
+    box-sizing: border-box;
+}
+.cell-module-settings input[type="range"]::-webkit-slider-runnable-track {
     height: 8px;
-    background: #1a1a1a;
     border-radius: 4px;
+    background: #1a1a1a;
     border: 1px solid #333;
+    margin: 8px 0;
 }
 .cell-module-settings input[type="range"]::-webkit-slider-thumb {
     -webkit-appearance: none;
     appearance: none;
     width: 16px;
     height: 16px;
+    margin-top: -4px;
     background: #0f0;
     border-radius: 50%;
     cursor: pointer;
     border: 1px solid #0c0;
-}
-.cell-module-settings input[type="range"]::-moz-range-thumb {
-    width: 16px;
-    height: 16px;
-    background: #0f0;
-    border-radius: 50%;
-    cursor: pointer;
-    border: 1px solid #0c0;
-}
-.cell-module-settings input[type="range"]::-webkit-slider-runnable-track {
-    height: 8px;
-    border-radius: 4px;
+    position: relative;
 }
 .cell-module-settings input[type="range"]::-moz-range-track {
     height: 8px;
     border-radius: 4px;
     background: #1a1a1a;
+    border: 1px solid #333;
+    margin: 8px 0;
+}
+.cell-module-settings input[type="range"]::-moz-range-thumb {
+    width: 16px;
+    height: 16px;
+    margin: -4px 0 0 0;
+    background: #0f0;
+    border-radius: 50%;
+    cursor: pointer;
+    border: 1px solid #0c0;
 }

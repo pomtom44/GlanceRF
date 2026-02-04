@@ -1,4 +1,4 @@
-"""Sunrise, sunset and optional moonrise/moonset for a given location. Uses Open-Meteo."""
+"""Sunrise and sunset times for a location (Open-Meteo). Optionally show moonrise and moonset. Uses Setup location if the cell field is blank."""
 
 ON_OFF_OPTIONS = [
     {"value": "1", "label": "On"},

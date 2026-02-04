@@ -1,4 +1,4 @@
-"""Countdown or stopwatch cell: count down to a target date/time or show elapsed time from a start."""
+"""Countdown to a target date and time, or stopwatch showing elapsed time from a start. Optional label; updates every second."""
 
 MODE_OPTIONS = [
     {"value": "countdown", "label": "Countdown (to target)"},

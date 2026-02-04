@@ -49,6 +49,24 @@
             #setup-page-2 .form-group > span {
                 color: #ddd;
             }
+
+            .setup-callsign-row {
+                display: flex;
+                align-items: center;
+                gap: 10px;
+            }
+            .setup-callsign-row input:first-of-type {
+                flex: 4;
+                min-width: 0;
+            }
+            .setup-callsign-hyphen {
+                color: #0f0;
+                font-size: 18px;
+            }
+            .setup-ssid-input {
+                flex: 1;
+                min-width: 0;
+            }
         
             select {
                 width: 100%;

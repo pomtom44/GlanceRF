@@ -1,0 +1,1 @@
+# Contests module package

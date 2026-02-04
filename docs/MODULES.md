@@ -29,6 +29,12 @@ Leave the field empty to use the default center (20°N, 0°E).
 - **Sun and moon on map** – On/Off. Shows the subsolar and sublunar positions as markers on the map.
 - **Aurora forecast overlay** – On/Off. Shows NOAA OVATION aurora probability as a colour overlay (low to high chance).
 - **Aurora overlay opacity** – 0–100%. Slider to adjust how strong the aurora overlay appears (100% = fully opaque).
+- **Propagation overlay** – **None**, **HF: KC2G MUF (3000 km)**, **HF: KC2G foF2 (NVIS)**, **VHF/UHF: Tropo**, or **VHF: APRS (144 MHz cache)**. Colour overlay for band conditions; APRS uses local cache data only.
+- **Propagation overlay opacity** – 0–100%. Slider for propagation overlay strength.
+- **APRS data age (H:MM)** – How far back to show APRS stations (e.g. `0:30` for 30 minutes, `6:00` for 6 hours). Used for propagation history and for hiding older APRS locations.
+- **APRS station locations** – On/Off. When on, shows APRS stations from the local cache on the map (no live APRS-IS connection).
+- **APRS display** – **Dots (age: green to red)** or **Icons (APRS symbol)**. Dots colour by how recently the station was seen; icons use the APRS symbol from the packet (e.g. house, car, node).
+- **APRS filter (locations display only)** – Optional p/ prefix filter (e.g. `p/ZL`) so only stations whose callsign starts with the given prefix are shown. Does not change API or propagation data.
 
 ---
 
@@ -121,7 +127,12 @@ Data is cached for 24 hours and refreshed hourly. Requires network access for su
 
 ## Moon module
 
-A cell that shows the current moon phase (icon and name) and illumination percentage. No API; computed in the browser.
+A cell that shows the current moon phase (icon and name), illumination percentage, and optional moonrise and moonset times. Rise/set uses Open-Meteo; phase is computed in the browser.
+
+- **Grid square or lat,lng** – Location for moonrise/moonset. Uses **Setup location** if blank.
+- **Show moon phase** – On/Off.
+- **Show moonrise** – On/Off.
+- **Show moonset** – On/Off.
 
 ---
 
@@ -129,6 +140,44 @@ A cell that shows the current moon phase (icon and name) and illumination percen
 
 A cell that shows recent items from an RSS or Atom feed. You provide the feed URL; the backend fetches and caches it.
 
-- **Feed URL** – Full URL of the RSS/Atom feed (e.g. `https://example.com/feed.xml`).
+- **RSS feed URL** – Full URL of the RSS/Atom feed (e.g. `https://example.com/feed.xml`).
+- **Max items to show** – How many items to display (1–50).
+- **Refresh interval (minutes)** – How often to refetch the feed (1–120).
 
-Items are shown as a list; the number of items and refresh interval are fixed. Requires network access.
+Requires network access.
+
+---
+
+## Satellite pass module
+
+A cell that shows a HamClock-style satellite pass display: sky dome with horizon and elevation rings, next pass path, current position, and rise/set times. Data comes from CelesTrak TLEs via the backend (Skyfield).
+
+- **Grid square or lat,lng** – Observer location for pass prediction (Maidenhead or decimal coordinates). Uses **Setup location** if blank.
+- **Satellites to track** – Tickbox list of trackable satellites (space stations and amateur-radio sats from CelesTrak). Select one or more; the first in the list with pass data is shown.
+
+**Satellite list:** The full list is stored in **satellite_list.json** (same directory as the main config). On first run or when the file is missing, it is populated from CelesTrak. The list is refreshed from CelesTrak about every 24 hours when the list API is used. **Config** stores only the **selected** NORAD IDs (per cell) in the main config file. When you open the Modules editor, all satellites from the JSON are shown; only those in config are checked. If a satellite is removed from CelesTrak and the list is refreshed, that NORAD ID is automatically removed from your selected satellites in config (so config stays in sync with the list).
+
+The display shows: satellite name, "Rise in Xm @ AZ" or "Set in Xm @ AZ", a sky dome (horizon, 30/60 deg rings, compass, pass arc, current position dot), and Az/El. Data refreshes about every 45 seconds. Requires network access.
+
+---
+
+## Contests module
+
+A cell that shows upcoming amateur radio contests from WA7BNM and other open sources (SSA Sweden, RSGB UK). You can add custom RSS or iCal URLs.
+
+- **Max entries to show** – How many contest entries to display.
+- **Data sources** – Tick which built-in sources to use (WA7BNM, SSA, RSGB).
+- **Custom sources (RSS / iCal URLs)** – Optional URLs for additional contest calendars.
+
+Requires network access.
+
+---
+
+## DXpeditions module
+
+A cell that shows upcoming DXpeditions from NG3K Announced DX Operations (ADXO).
+
+- **Max entries to show** – How many DXpedition entries to display.
+- **Data sources** – Tick which built-in sources to use.
+
+Requires network access.

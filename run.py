@@ -15,6 +15,7 @@ from glancerf.main import run_server, run_readonly_server
 from glancerf.config import get_config
 from glancerf.utils import get_local_ip
 from glancerf.logging_config import setup_logging, get_logger
+from glancerf.modules import validate_module_dependencies
 
 
 def _graceful_shutdown(signum=None, frame=None):
@@ -48,6 +49,14 @@ def main():
         sys.exit(1)
 
     log = get_logger("run")
+
+    failures = validate_module_dependencies()
+    if failures:
+        for module_name, err_msg in failures:
+            log.error("Module '%s' could not be loaded: %s", module_name, err_msg)
+        log.error("Fix the above and restart GlanceRF.")
+        sys.exit(1)
+
     port = config.get("port")
     readonly_port = config.get("readonly_port")
     use_desktop = config.get("use_desktop")
