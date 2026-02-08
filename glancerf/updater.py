@@ -28,7 +28,28 @@ GITHUB_HEADERS = {"Accept": "application/vnd.github.v3+json", "User-Agent": "Gla
 # Constants
 ITEMS_TO_UPDATE = ["glancerf", "run.py", "requirements.txt"]
 ITEMS_TO_BACKUP = ["glancerf", "run.py", "requirements.txt", "glancerf_config.json"]
+# Never overwrite or delete these at app root (user data / config)
+PROTECTED_APP_ROOT_FILES = ["glancerf_config.json"]
 RESTART_DELAY_SECONDS = 10
+
+# Progress for web UI (running, step, message; when done: success, final_message)
+_update_progress = {
+    "running": False,
+    "step": "",
+    "message": "",
+    "success": None,
+    "final_message": None,
+}
+
+
+def get_update_progress() -> dict:
+    """Return a copy of current update progress for the web UI."""
+    return dict(_update_progress)
+
+
+def _set_progress(step: str, message: str = "") -> None:
+    _update_progress["step"] = step
+    _update_progress["message"] = message
 
 
 def get_app_root() -> Path:
@@ -180,8 +201,9 @@ def backup_current_installation(backup_dir: Path) -> bool:
 def _merge_glancerf_dir(src: Path, dst: Path) -> None:
     """
     Copy src (extracted glancerf/) to dst (app glancerf/).
-    For glancerf/modules/ we merge: copy each built-in module from src over dst,
-    but do not delete dst/modules subfolders that are not in src (e.g. _custom/).
+    For glancerf/modules/ we merge: copy __init__.py and each subdir from update;
+    preserve dst/modules/_custom/. Then remove from dst any file or dir that is
+    not in the update (obsolete files), except _custom under modules.
     """
     for entry in src.iterdir():
         dst_entry = dst / entry.name
@@ -191,12 +213,17 @@ def _merge_glancerf_dir(src: Path, dst: Path) -> None:
             shutil.copy2(entry, dst_entry)
         elif entry.is_dir():
             if entry.name == "modules":
-                # Merge modules: copy each subdir from update over existing; preserve _custom/
+                # Merge modules: copy __init__.py and each subdir from update; preserve dst _custom/
                 dst.mkdir(parents=True, exist_ok=True)
                 modules_dst = dst / "modules"
                 modules_dst.mkdir(parents=True, exist_ok=True)
                 for sub in entry.iterdir():
-                    if sub.is_dir():
+                    if sub.is_file():
+                        sub_dst = modules_dst / sub.name
+                        if sub_dst.exists():
+                            sub_dst.unlink()
+                        shutil.copy2(sub, sub_dst)
+                    elif sub.is_dir():
                         sub_dst = modules_dst / sub.name
                         if sub_dst.exists():
                             shutil.rmtree(sub_dst)
@@ -206,6 +233,31 @@ def _merge_glancerf_dir(src: Path, dst: Path) -> None:
                     shutil.rmtree(dst_entry)
                 shutil.copytree(entry, dst_entry)
 
+    # Remove obsolete files/dirs in dst that are not in the update (except _custom)
+    for entry in list(dst.iterdir()):
+        if (src / entry.name).exists():
+            continue
+        if entry.name == "modules":
+            modules_src = src / "modules"
+            modules_dst = dst / "modules"
+            if not modules_dst.is_dir():
+                continue
+            for sub in list(modules_dst.iterdir()):
+                if sub.name == "_custom":
+                    continue
+                if not (modules_src / sub.name).exists():
+                    _log.debug("Removing obsolete: %s", sub)
+                    if sub.is_dir():
+                        shutil.rmtree(sub)
+                    else:
+                        sub.unlink()
+        else:
+            _log.debug("Removing obsolete: %s", entry)
+            if entry.is_dir():
+                shutil.rmtree(entry)
+            else:
+                entry.unlink()
+
 
 def apply_update(extracted_root: Path) -> Tuple[bool, str]:
     """Apply the update by copying files from extracted update to app root."""
@@ -213,6 +265,9 @@ def apply_update(extracted_root: Path) -> Tuple[bool, str]:
     try:
         app_root = get_app_root()
         for item in ITEMS_TO_UPDATE:
+            if item in PROTECTED_APP_ROOT_FILES:
+                _log.debug("Skip (protected): %s", item)
+                continue
             src = extracted_root / item
             dst = app_root / item
             if not src.exists():
@@ -248,6 +303,8 @@ def install_requirements(app_root: Path) -> Tuple[bool, str]:
     Run pip install -r requirements.txt from app_root so new dependencies
     (e.g. feedparser) are installed after an update.
     Uses the same Python executable that is running the app.
+    On Linux with PEP 668 (externally-managed-environment), retries with
+    --break-system-packages so headless/system installs can update deps.
     """
     req_file = app_root / "requirements.txt"
     if not req_file.is_file():
@@ -266,6 +323,19 @@ def install_requirements(app_root: Path) -> Tuple[bool, str]:
             _log.debug("pip install -r requirements.txt succeeded")
             return True, ""
         err = (result.stderr or result.stdout or "").strip() or "pip install failed"
+        if "externally-managed-environment" in err:
+            _log.debug("Retrying pip with --break-system-packages (Linux PEP 668)")
+            result2 = subprocess.run(
+                [sys.executable, "-m", "pip", "install", "--break-system-packages", "-r", str(req_file)],
+                cwd=str(app_root),
+                capture_output=True,
+                text=True,
+                timeout=300,
+            )
+            if result2.returncode == 0:
+                _log.debug("pip install --break-system-packages succeeded")
+                return True, ""
+            err = (result2.stderr or result2.stdout or "").strip() or "pip install failed"
         _log.warning("pip install -r requirements.txt failed: %s", err[:500])
         return False, err[:500]
     except subprocess.TimeoutExpired:
@@ -278,6 +348,9 @@ def install_requirements(app_root: Path) -> Tuple[bool, str]:
 
 async def perform_auto_update(version: str) -> Tuple[bool, str]:
     """Perform automatic update: download, extract, backup, and apply."""
+    _update_progress["running"] = True
+    _update_progress["success"] = None
+    _update_progress["final_message"] = None
     _log.log(DETAILED_LEVEL, "Auto-update started: %s (current %s)", version, __version__)
     try:
         staging_dir = get_staging_dir()
@@ -285,56 +358,86 @@ async def perform_auto_update(version: str) -> Tuple[bool, str]:
         _log.debug("Staging dir=%s backup dir=%s", staging_dir, backup_dir)
 
         # Step 1: Get download URL
+        _set_progress("Getting download URL", "Fetching release info from GitHub...")
         _log.debug("Step 1: Getting release download URL for %s", version)
         zip_url = await get_release_zip_url(version)
         if not zip_url:
             _log.debug("get_release_zip_url returned None for version=%s", version)
+            _update_progress["running"] = False
+            _update_progress["success"] = False
+            _update_progress["final_message"] = "Could not find release download URL"
             return False, "Could not find release download URL"
 
         # Step 2: Download ZIP
         zip_path = staging_dir / f"update_{version}.zip"
+        _set_progress("Downloading", f"Downloading update {version}...")
         _log.debug("Step 2: Downloading to %s", zip_path)
         if not await download_release_zip(zip_url, zip_path):
+            _update_progress["running"] = False
+            _update_progress["success"] = False
+            _update_progress["final_message"] = "Failed to download update"
             return False, "Failed to download update"
 
         # Step 3: Extract ZIP
         extract_dir = staging_dir / f"extracted_{version}"
         if extract_dir.exists():
             shutil.rmtree(extract_dir)
+        _set_progress("Extracting", "Extracting archive...")
         _log.debug("Step 3: Extracting to %s", extract_dir)
         if not extract_zip(zip_path, extract_dir):
+            _update_progress["running"] = False
+            _update_progress["success"] = False
+            _update_progress["final_message"] = "Failed to extract update"
             return False, "Failed to extract update"
 
         # Step 4: Find Project/ directory
+        _set_progress("Preparing", "Locating update files...")
         _log.debug("Step 4: Finding Project directory in extracted files")
         extracted_root = get_extracted_root(extract_dir)
         if not extracted_root:
+            _update_progress["running"] = False
+            _update_progress["success"] = False
+            _update_progress["final_message"] = "Could not find Project directory in update"
             return False, "Could not find Project directory in update"
 
         # Step 5: Backup
+        _set_progress("Backing up", "Backing up current installation...")
         _log.debug("Step 5: Backing up current installation")
         if not backup_current_installation(backup_dir):
+            _update_progress["running"] = False
+            _update_progress["success"] = False
+            _update_progress["final_message"] = "Failed to backup current installation"
             return False, "Failed to backup current installation"
 
         # Step 6: Apply update
+        _set_progress("Applying", "Applying update files...")
         _log.debug("Step 6: Applying update")
         success, error = apply_update(extracted_root)
         if not success:
             _log.debug("Apply failed, restoring from backup")
             restore_from_backup(backup_dir)
+            _update_progress["running"] = False
+            _update_progress["success"] = False
+            _update_progress["final_message"] = f"Failed to apply update: {error}"
             return False, f"Failed to apply update: {error}"
 
         # Step 6b: Install/upgrade dependencies from new requirements.txt
+        _set_progress("Installing dependencies", "Running pip install -r requirements.txt...")
         app_root = get_app_root()
         pip_ok, pip_err = install_requirements(app_root)
         if not pip_ok:
             _log.warning("Dependency install failed after update: %s", pip_err)
-            return True, (
+            msg = (
                 f"Update to {version} installed successfully. Restart required. "
                 "Dependency install failed; run manually: pip install -r requirements.txt"
             )
+            _update_progress["running"] = False
+            _update_progress["success"] = True
+            _update_progress["final_message"] = msg
+            return True, msg
 
         # Step 7: Clean up staging
+        _set_progress("Cleaning up", "Removing temporary files...")
         try:
             shutil.rmtree(staging_dir)
             _log.debug("Staging directory removed")
@@ -342,11 +445,18 @@ async def perform_auto_update(version: str) -> Tuple[bool, str]:
             _log.debug("Failed to clean staging directory: %s", e)
 
         _log.log(DETAILED_LEVEL, "Auto-update completed: %s", version)
-        return True, f"Update to {version} installed successfully. Restart required."
+        msg = f"Update to {version} installed successfully. Restart required."
+        _update_progress["running"] = False
+        _update_progress["success"] = True
+        _update_progress["final_message"] = msg
+        return True, msg
 
     except Exception as e:
         _log.log(DETAILED_LEVEL, "Auto-update failed: %s", e)
         _log.debug("Update failed with exception: %s", e, exc_info=True)
+        _update_progress["running"] = False
+        _update_progress["success"] = False
+        _update_progress["final_message"] = f"Update failed: {str(e)}"
         return False, f"Update failed: {str(e)}"
 
 

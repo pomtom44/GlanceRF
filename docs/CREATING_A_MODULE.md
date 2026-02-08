@@ -347,7 +347,7 @@ The core renders module settings from the **settings** schema in **module.py**. 
 
 The **satellite_pass** module in **`glancerf/modules/satellite_pass/`** is a full example of a self-contained module with API routes:
 
-- **satellite_service.py** – Fetches satellite list from CelesTrak, caches it in **satellite_list.json** (next to the main config), refreshes about every 24 hours, and prunes the main config so selected satellites that no longer appear in the list are removed from config.
+- **satellite_service.py** – Fetches satellite list from CelesTrak, caches it in **satellite_list.json** in the project **cache** folder, refreshes about every 24 hours, and prunes the main config so selected satellites that no longer appear in the list are removed from config.
 - **api_routes.py** – Defines **`register_routes(app)`** and registers **GET /api/satellite/list** (serves from cached JSON, refreshing when stale) and **GET /api/satellite/passes** (computes pass data via Skyfield).
 - **module.py** – Includes a setting of type **satellite_checkboxes** (a custom type; the core does not implement it).
 - **layout_settings.js** – Loaded on the layout editor page; finds **satellite_checkboxes** placeholders, fetches **/api/satellite/list**, and renders the checkbox list; updates the hidden input on change so Save stores the selection.

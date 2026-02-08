@@ -27,6 +27,10 @@ _LIST_MAX_AGE_SECONDS = 86400  # 24 hours
 _MODULE_ID_SATELLITE_PASS = "satellite_pass"
 _SETTING_SELECTED_SATELLITES = "selected_satellites"
 
+# Project root (parent of glancerf package); cache/de421.bsp lives there
+_PROJECT_DIR = Path(__file__).resolve().parent.parent.parent.parent
+_DE421_PATH = _PROJECT_DIR / "cache" / "de421.bsp"
+
 _ts = None
 _eph = None
 
@@ -37,10 +41,10 @@ def _get_timescale_and_ephemeris():
         _ts = load.timescale()
     if _eph is None:
         try:
-            _eph = load("de421.bsp")
+            _eph = load(str(_DE421_PATH))
         except Exception as e:
-            _log.debug("Skyfield de421 load failed, using built-in: %s", e)
-            _eph = load("de421.bsp")  # may fail; caller handles
+            _log.debug("Skyfield de421 load failed from cache: %s", e)
+            _eph = load(str(_DE421_PATH))  # may fail; caller handles
     return _ts, _eph
 
 
@@ -78,9 +82,8 @@ def fetch_satellite_list() -> list[dict[str, Any]]:
 
 
 def _get_satellite_list_path() -> Path:
-    """Path to satellite_list.json (same directory as main config)."""
-    from glancerf.config import get_config
-    return get_config().config_dir / _SATELLITE_LIST_FILENAME
+    """Path to satellite_list.json in project cache folder."""
+    return _PROJECT_DIR / "cache" / _SATELLITE_LIST_FILENAME
 
 
 def _load_satellite_list_from_file() -> list[dict[str, Any]] | None:
@@ -159,7 +162,7 @@ def _prune_config_selected_satellites(valid_norad_ids: set[int]) -> None:
 
 def get_satellite_list_cached() -> list[dict[str, Any]]:
     """
-    Return the trackable satellite list. Uses satellite_list.json in the config directory.
+    Return the trackable satellite list. Uses satellite_list.json in the project cache folder.
     On first run or if the file is missing or older than ~24 hours, fetches from CelesTrak,
     saves to JSON, prunes config (removes selected NORAD IDs no longer in the list), then returns.
     Otherwise loads from the JSON file.

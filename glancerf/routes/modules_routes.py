@@ -112,6 +112,7 @@ def register_modules_routes(app: FastAPI, connection_manager=None):
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>GlanceRF - Modules</title>
+    <link rel="icon" href="/logo.png" type="image/png">
     <link rel="stylesheet" href="/static/css/menu.css">
     <style>
         * {{ margin: 0; padding: 0; box-sizing: border-box; }}

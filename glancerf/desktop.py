@@ -5,6 +5,8 @@ Opens a native window displaying the web interface
 
 import os
 import sys
+import webbrowser
+from pathlib import Path
 
 # Avoid WGL/OpenGL context failures on Windows (RDP, VMs, basic drivers).
 # ANGLE uses Direct3D instead of OpenGL; set before Qt is loaded.
@@ -18,7 +20,7 @@ if "--disable-gpu-sandbox" not in _existing and "--disable-gpu" not in _existing
     os.environ["QTWEBENGINE_CHROMIUM_FLAGS"] = (_existing + " --disable-gpu-sandbox").strip()
 
 from PyQt5.QtCore import QUrl, QTimer, QPoint, QEvent, Qt
-from PyQt5.QtGui import QKeySequence, QFont
+from PyQt5.QtGui import QKeySequence, QFont, QIcon
 from PyQt5.QtWidgets import (
     QApplication,
     QMainWindow,
@@ -29,11 +31,26 @@ from PyQt5.QtWidgets import (
     QVBoxLayout,
     QLabel,
     QProgressBar,
+    QSystemTrayIcon,
+    QMenu,
+    QAction,
+    QStyle,
 )
 from PyQt5.QtWebEngineWidgets import QWebEngineView
 
 from glancerf.config import get_config
 from glancerf.aspect_ratio import calculate_dimensions, get_closest_aspect_ratio
+
+# Project folder (parent of glancerf package); logos/logo.png may live here
+_PROJECT_DIR = Path(__file__).resolve().parent.parent
+_LOGO_PATH = _PROJECT_DIR / "logos" / "logo.png"
+
+
+def _app_icon():
+    """Return QIcon for logo.png if present, else None."""
+    if _LOGO_PATH.is_file():
+        return QIcon(str(_LOGO_PATH))
+    return None
 
 
 class GlanceRFWindow(QMainWindow):
@@ -77,6 +94,12 @@ class GlanceRFWindow(QMainWindow):
         self._stack.setCurrentIndex(0)
         self.setCentralWidget(self._stack)
         self.setWindowTitle("GlanceRF")
+        _icon = _app_icon()
+        if _icon is not None:
+            self.setWindowIcon(_icon)
+            app = QApplication.instance()
+            if app is not None:
+                app.setWindowIcon(_icon)
 
         f11_shortcut = QShortcut(QKeySequence(Qt.Key_F11), self)
         f11_shortcut.setContext(Qt.ApplicationShortcut)
@@ -112,6 +135,8 @@ class GlanceRFWindow(QMainWindow):
         self.setMinimumSize(400, 300)
         self.setMaximumSize(16777215, 16777215)
         self.show()
+        self.raise_()
+        self.activateWindow()
 
         # Re-apply max size after show; some platforms apply limits at show time
         self.setMaximumSize(16777215, 16777215)
@@ -271,6 +296,39 @@ class GlanceRFWindow(QMainWindow):
         event.accept()
 
 
+def _create_tray_icon(app, window, port):
+    """Create system tray icon; click opens read-write localhost in browser."""
+    tray = QSystemTrayIcon(window)
+    icon = _app_icon()
+    if icon is None:
+        icon = app.style().standardIcon(QStyle.SP_ComputerIcon)
+    tray.setIcon(icon)
+    tray.setToolTip("GlanceRF - Click to open in browser")
+    url = "http://localhost:{0}".format(port)
+
+    def open_browser():
+        webbrowser.open(url)
+
+    def on_activated(reason):
+        if reason in (QSystemTrayIcon.Trigger, QSystemTrayIcon.DoubleClick):
+            open_browser()
+    tray.activated.connect(on_activated)
+    menu = QMenu()
+    open_act = QAction("Open in browser", window)
+    open_act.triggered.connect(open_browser)
+    menu.addAction(open_act)
+    show_act = QAction("Show window", window)
+    show_act.triggered.connect(lambda: (window.show(), window.raise_(), window.activateWindow()))
+    menu.addAction(show_act)
+    menu.addSeparator()
+    exit_act = QAction("Exit", window)
+    exit_act.triggered.connect(app.quit)
+    menu.addAction(exit_act)
+    tray.setContextMenu(menu)
+    tray.show()
+    return tray
+
+
 def run_desktop(port: int = 8080, server_thread=None):
     """
     Run GlanceRF in desktop mode
@@ -285,6 +343,9 @@ def run_desktop(port: int = 8080, server_thread=None):
     
     # Create and show main window
     window = GlanceRFWindow(port)
+    
+    # System tray icon: shows app is running; click opens read-write URL in browser
+    tray = _create_tray_icon(app, window, port)
     
     # Run the application
     # This blocks until the window is closed

@@ -4,6 +4,7 @@ Handles loading and saving settings to JSON file
 """
 
 import json
+import os
 from copy import deepcopy
 from pathlib import Path
 from typing import Any, Dict, Optional
@@ -234,5 +235,7 @@ def get_config(config_dir: Optional[Path] = None) -> Config:
     """Get the global config instance"""
     global _config_instance
     if _config_instance is None:
+        if config_dir is None and os.environ.get("GLANCERF_PROJECT"):
+            config_dir = Path(os.environ["GLANCERF_PROJECT"])
         _config_instance = Config(config_dir)
     return _config_instance

@@ -5,4 +5,4 @@
 - Predicted radiosonde landing locations
 - Docker implementation
 - GPS Integation
-- Windows background app
+- GPIO

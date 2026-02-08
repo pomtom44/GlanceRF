@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>GlanceRF - Updates</title>
+    <link rel="icon" href="/logo.png" type="image/png">
     <link rel="stylesheet" href="/static/css/updates.css">
     <link rel="stylesheet" href="/static/css/menu.css">
 </head>
@@ -26,6 +27,10 @@
         <p class="update-versions" id="update-versions">Checking for updates...</p>
         <div class="update-notes" id="update-release-notes"></div>
         <button type="button" class="btn btn-primary" id="update-btn" disabled>Check for updates</button>
+        <div class="update-progress" id="update-progress" style="display:none;">
+            <p class="update-progress-step" id="update-progress-step"></p>
+            <p class="update-progress-message" id="update-progress-message"></p>
+        </div>
         <p class="update-result" id="update-result" style="display:none;"></p>
     </div>
     <script>
@@ -34,6 +39,10 @@
             var notesEl = document.getElementById('update-release-notes');
             var btn = document.getElementById('update-btn');
             var resultEl = document.getElementById('update-result');
+            var progressDiv = document.getElementById('update-progress');
+            var progressStepEl = document.getElementById('update-progress-step');
+            var progressMessageEl = document.getElementById('update-progress-message');
+            var progressPollId = null;
 
             function loadStatus() {
                 if (!versionsEl || !btn) return;
@@ -41,6 +50,7 @@
                 if (notesEl) notesEl.textContent = '';
                 btn.disabled = true;
                 if (resultEl) { resultEl.style.display = 'none'; resultEl.textContent = ''; }
+                if (progressDiv) progressDiv.style.display = 'none';
                 fetch('/api/update-status')
                     .then(function(r) { return r.json(); })
                     .then(function(data) {
@@ -65,22 +75,63 @@
                     });
             }
 
+            function stopProgressPoll() {
+                if (progressPollId) {
+                    clearInterval(progressPollId);
+                    progressPollId = null;
+                }
+            }
+
+            function pollProgress() {
+                fetch('/api/update-progress')
+                    .then(function(r) { return r.json(); })
+                    .then(function(p) {
+                        if (progressStepEl) progressStepEl.textContent = p.step || '';
+                        if (progressMessageEl) progressMessageEl.textContent = p.message || '';
+                        if (!p.running) {
+                            stopProgressPoll();
+                            if (resultEl) {
+                                resultEl.style.display = 'block';
+                                resultEl.textContent = p.final_message || (p.success ? 'Done.' : 'Update failed.');
+                                if (p.success) resultEl.textContent += ' Restarting in 10s...';
+                            }
+                            if (btn) btn.disabled = false;
+                            if (progressDiv) progressDiv.style.display = 'none';
+                            if (p.success) loadStatus();
+                        }
+                    })
+                    .catch(function() { stopProgressPoll(); if (btn) btn.disabled = false; });
+            }
+
             if (btn && resultEl) {
                 btn.addEventListener('click', function() {
                     if (btn._updateAvailable) {
                         btn.disabled = true;
-                        resultEl.style.display = 'block';
-                        resultEl.textContent = 'Updating...';
+                        if (resultEl) { resultEl.style.display = 'none'; resultEl.textContent = ''; }
+                        if (progressDiv) {
+                            progressDiv.style.display = 'block';
+                            if (progressStepEl) progressStepEl.textContent = 'Starting...';
+                            if (progressMessageEl) progressMessageEl.textContent = '';
+                        }
                         fetch('/api/apply-update', { method: 'POST' })
                             .then(function(r) { return r.json(); })
                             .then(function(data) {
-                                resultEl.textContent = data.success ? 'Update applied. Restarting in 10s...' : ('Failed: ' + (data.message || ''));
-                                btn.disabled = false;
-                                if (data.success) loadStatus();
+                                if (data.started) {
+                                    progressPollId = setInterval(pollProgress, 800);
+                                    pollProgress();
+                                } else {
+                                    resultEl.style.display = 'block';
+                                    resultEl.textContent = data.success ? ('Update applied. Restarting in 10s...') : ('Failed: ' + (data.message || ''));
+                                    btn.disabled = false;
+                                    if (progressDiv) progressDiv.style.display = 'none';
+                                    if (data.success) loadStatus();
+                                }
                             })
                             .catch(function() {
+                                resultEl.style.display = 'block';
                                 resultEl.textContent = 'Update request failed.';
                                 btn.disabled = false;
+                                if (progressDiv) progressDiv.style.display = 'none';
                             });
                     } else {
                         loadStatus();

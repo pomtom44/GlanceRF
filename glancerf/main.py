@@ -3,12 +3,13 @@ FastAPI application for GlanceRF
 Main web server and API endpoints
 """
 
+import asyncio
 import logging
 import time
 from pathlib import Path
 
 from fastapi import FastAPI, Request
-from fastapi.responses import HTMLResponse
+from fastapi.responses import HTMLResponse, FileResponse, Response
 from fastapi.staticfiles import StaticFiles
 
 from glancerf.config import get_config
@@ -41,6 +42,19 @@ async def _request_logging(request: Request, call_next):
         _log.log(DETAILED_LEVEL, "%s %s -> %s (%.1f ms)", request.method, request.url.path, response.status_code, duration_ms)
         return response
     return await call_next(request)
+
+# Project folder (parent of glancerf package); logos/logo.png may live here
+_project_dir = Path(__file__).resolve().parent.parent
+_logo_path = _project_dir / "logos" / "logo.png"
+
+
+@app.get("/logo.png", include_in_schema=False)
+def _serve_logo():
+    """Serve logo.png from Project folder for favicon and web use."""
+    if _logo_path.is_file():
+        return FileResponse(str(_logo_path), media_type="image/png")
+    return Response(status_code=404)
+
 
 # Serve static assets (CSS, JS) from glancerf/web/static
 _web_static = Path(__file__).resolve().parent / "web" / "static"
@@ -145,27 +159,42 @@ async def manual_check_updates():
     return {"update_available": False, "current_version": __version__}
 
 
+@app.get("/api/update-progress")
+async def get_update_progress():
+    """Return current update progress (step, message, running, success, final_message) for the web UI."""
+    from glancerf.updater import get_update_progress as _get_progress
+    return _get_progress()
+
+
 @app.post("/api/apply-update")
 async def trigger_apply_update():
-    """If an update is available, download and apply it (then restart). Returns JSON status."""
-    from glancerf.updater import perform_auto_update
+    """If an update is available, start the update in the background. Returns immediately; client should poll /api/update-progress."""
+    from glancerf.updater import perform_auto_update, get_update_progress
 
     _log.debug("POST /api/apply-update")
     latest = await check_for_updates()
     if not latest:
         _log.debug("apply-update: no update available (current=%s)", __version__)
-        return {"success": False, "message": "No update available", "current_version": __version__}
-    _log.debug("apply-update: starting update to %s", latest)
-    success, message = await perform_auto_update(latest)
-    _log.debug("apply-update: success=%s message=%s", success, message)
-    if success:
-        await update_checker.schedule_restart(delay_seconds=10)
-        _log.debug("apply-update: restart scheduled")
+        return {"success": False, "message": "No update available", "current_version": __version__, "started": False}
+    progress = get_update_progress()
+    if progress.get("running"):
+        return {"success": False, "message": "Update already in progress", "current_version": __version__, "started": False}
+    _log.debug("apply-update: starting update to %s (background)", latest)
+
+    async def _run_update_then_restart():
+        success, message = await perform_auto_update(latest)
+        _log.debug("apply-update: success=%s message=%s", success, message)
+        if success:
+            await update_checker.schedule_restart(delay_seconds=10)
+            _log.debug("apply-update: restart scheduled")
+
+    asyncio.create_task(_run_update_then_restart())
     return {
-        "success": success,
-        "message": message,
+        "success": True,
+        "message": "Update started",
         "current_version": __version__,
         "latest_version": latest,
+        "started": True,
     }
 
 

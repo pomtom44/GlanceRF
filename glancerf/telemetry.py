@@ -6,6 +6,7 @@ Sends anonymous usage data to telemetry server
 import asyncio
 import json
 import platform
+import re
 import time
 from datetime import datetime
 from typing import Optional, List, Tuple
@@ -22,13 +23,34 @@ _log = get_logger("telemetry")
 
 TELEMETRY_URL = "https://glancerf-telemetry.zl4st.com/telemetry.php"
 
+# Linux kernel version in platform.version() looks like:
+# "#1 SMP PREEMPT_DYNAMIC PMX 6.8.12-16 (2025-10-14T08:58Z)" -> we want "6.8.12-16"
+_LINUX_VERSION_RE = re.compile(r"(\d+\.\d+\.\d+(?:-\d+)?)\s*\(")
+
+
+def _normalize_platform_version(system: str, raw_version: str) -> str:
+    """Return a short, readable platform version. On Linux, extract kernel version only."""
+    if not raw_version or not isinstance(raw_version, str):
+        return raw_version or ""
+    if system == "Linux":
+        m = _LINUX_VERSION_RE.search(raw_version)
+        if m:
+            return m.group(1).strip()
+        # Fallback: take first X.Y.Z or X.Y.Z-N
+        m = re.search(r"\d+\.\d+\.\d+(?:-\d+)?", raw_version)
+        if m:
+            return m.group(0)
+    return raw_version.strip()[:128] if len(raw_version) > 128 else raw_version.strip()
+
 
 def get_system_info() -> dict:
     """Get detailed system information."""
+    system = platform.system()
+    raw_version = platform.version()
     return {
-        "platform": platform.system(),
+        "platform": system,
         "platform_release": platform.release(),
-        "platform_version": platform.version(),
+        "platform_version": _normalize_platform_version(system, raw_version),
         "architecture": platform.machine(),
         "python_version": platform.python_version(),
         "processor": platform.processor(),
