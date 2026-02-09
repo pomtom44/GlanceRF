@@ -164,12 +164,25 @@ fi
 echo "Python OK: $PYTHON3"
 echo ""
 
-# --- 2. Check / install requirements ---
+# --- 2. Create venv and install requirements ---
+VENV_DIR="$PROJECT_DIR/.venv"
+VENV_PYTHON="$VENV_DIR/bin/python"
+
+if [ ! -d "$VENV_DIR" ]; then
+    echo "Creating virtual environment..."
+    "$PYTHON3" -m venv "$VENV_DIR"
+    if [ $? -ne 0 ]; then
+        echo "Failed to create venv. On Debian/Ubuntu, install python3-venv:"
+        echo "  sudo apt-get install python3-venv"
+        exit 1
+    fi
+fi
+
 echo "Checking requirements..."
 REQUIREMENTS_PATH="$PROJECT_DIR/requirements.txt"
-if ! "$PYTHON3" -c "import fastapi" 2>/dev/null; then
+if ! "$VENV_PYTHON" -c "import fastapi" 2>/dev/null; then
     echo "Installing requirements..."
-    "$PYTHON3" -m pip install -r "$REQUIREMENTS_PATH"
+    "$VENV_PYTHON" -m pip install -r "$REQUIREMENTS_PATH"
     if [ $? -ne 0 ]; then
         echo "Failed to install requirements."
         exit 1
@@ -196,7 +209,7 @@ esac
 USE_DESKTOP="True"
 [ "$WANT_HEADLESS" = true ] && USE_DESKTOP="False"
 export GLANCERF_PROJECT="$PROJECT_DIR"
-"$PYTHON3" -c "
+"$VENV_PYTHON" -c "
 import json, os
 p = os.path.join(os.environ.get('GLANCERF_PROJECT',''), 'glancerf_config.json')
 if os.path.exists(p):
@@ -217,7 +230,6 @@ case "$shortcut_resp" in
 esac
 
 if [ "$WANT_SHORTCUT" = true ]; then
-    PYTHON_EXE="$("$PYTHON3" -c "import sys; print(sys.executable)")"
     DESKTOP_DIR="${XDG_DESKTOP_DIR:-$HOME/Desktop}"
     mkdir -p "$DESKTOP_DIR"
     DESKTOP_FILE="$DESKTOP_DIR/GlanceRF.desktop"
@@ -226,7 +238,7 @@ if [ "$WANT_SHORTCUT" = true ]; then
 Type=Application
 Name=GlanceRF
 Comment=GlanceRF dashboard
-Exec=$PYTHON_EXE run.py
+Exec=$VENV_PYTHON run.py
 Path=$PROJECT_DIR
 Terminal=false
 Categories=Utility;
@@ -244,7 +256,7 @@ if [ "$WANT_STARTUP" = true ]; then
     if [ "$HAS_SYSTEMD" = "yes" ]; then
         USER_UNIT_DIR="${XDG_CONFIG_HOME:-$HOME/.config}/systemd/user"
         mkdir -p "$USER_UNIT_DIR"
-        PYTHON_PATH="$(command -v $PYTHON3)"
+        PYTHON_PATH="$VENV_PYTHON"
         SERVICE_FILE="$USER_UNIT_DIR/glancerf.service"
         cat > "$SERVICE_FILE" << EOF
 [Unit]
@@ -280,5 +292,5 @@ if [ "$WANT_STARTUP" = true ] && [ "$HAS_SYSTEMD" = "yes" ]; then
 else
     echo "Starting GlanceRF..."
     cd "$PROJECT_DIR"
-    exec "$PYTHON3" run.py
+    exec "$VENV_PYTHON" run.py
 fi
