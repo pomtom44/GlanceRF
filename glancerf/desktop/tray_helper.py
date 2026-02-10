@@ -1,16 +1,11 @@
 #!/usr/bin/env python3
 """
 Tray icon helper for GlanceRF when running as a Windows service (headless).
-Shows a system tray icon; left-click or menu opens the dashboard in the browser.
-Run at logon to get a taskbar presence when GlanceRF is running as a service.
 """
-
 import sys
-import webbrowser
 from pathlib import Path
 
-# When run as script (e.g. python glancerf/tray_helper.py), Project must be on path
-_project_dir = Path(__file__).resolve().parent.parent
+_project_dir = Path(__file__).resolve().parent.parent.parent
 try:
     _in_path = any(Path(p).resolve() == _project_dir for p in sys.path if p)
 except (OSError, ValueError):
@@ -25,8 +20,10 @@ except ImportError:
     print("tray_helper requires: pip install pystray Pillow")
     sys.exit(1)
 
+import webbrowser
 
-def _get_port() -> int:
+
+def _get_port():
     try:
         from glancerf.config import get_config
         return int(get_config().get("port") or 8080)
@@ -34,13 +31,11 @@ def _get_port() -> int:
         return 8080
 
 
-# Tray icon size (larger = sharper on high-DPI; Windows may scale to fit)
 _TRAY_ICON_SIZE = (128, 128)
 
 
-def _load_icon_image() -> "Image.Image":
-    """Load logo for tray; fallback to a simple colored image if missing."""
-    logo_path = Path(__file__).resolve().parent.parent / "logos" / "logo.png"
+def _load_icon_image():
+    logo_path = Path(__file__).resolve().parent.parent.parent / "logos" / "logo.png"
     if logo_path.is_file():
         try:
             img = Image.open(logo_path).convert("RGBA")
@@ -48,14 +43,12 @@ def _load_icon_image() -> "Image.Image":
             return img
         except Exception:
             pass
-    # Fallback: simple dark/blue square
-    img = Image.new("RGBA", _TRAY_ICON_SIZE, (30, 60, 120, 255))
-    return img
+    return Image.new("RGBA", _TRAY_ICON_SIZE, (30, 60, 120, 255))
 
 
-def main() -> None:
+def main():
     port = _get_port()
-    url = f"http://localhost:{port}"
+    url = "http://localhost:%s" % port
 
     def open_browser(icon=None, item=None):
         webbrowser.open(url)
@@ -69,12 +62,7 @@ def main() -> None:
         pystray.Menu.SEPARATOR,
         pystray.MenuItem("Quit", quit_app),
     )
-    icon = pystray.Icon(
-        "GlanceRF",
-        icon=icon_image,
-        title="GlanceRF - Click to open in browser",
-        menu=menu,
-    )
+    icon = pystray.Icon("GlanceRF", icon=icon_image, title="GlanceRF - Click to open in browser", menu=menu)
     icon.run()
 
 

@@ -12,13 +12,12 @@ from pathlib import Path
 from fastapi import Depends, FastAPI, Form, Request
 from fastapi.responses import HTMLResponse, RedirectResponse
 
-from glancerf.config import get_config, resize_layout_to_grid
-from glancerf.logging_config import get_logger
-from glancerf.rate_limit import rate_limit_dependency
+from glancerf.config import get_config, get_logger, resize_layout_to_grid
+from glancerf.gpio import get_gpio_menu_html, is_gpio_available
+from glancerf.utils import get_aspect_ratio_list, rate_limit_dependency
+from glancerf.web import ConnectionManager
 
 _log = get_logger("setup_routes")
-from glancerf.aspect_ratio import get_aspect_ratio_list
-from glancerf.websocket_manager import ConnectionManager
 
 _WEB_DIR = Path(__file__).resolve().parent.parent / "web"
 _SETUP_TEMPLATE_PATH = _WEB_DIR / "templates" / "setup" / "index.html"
@@ -99,6 +98,13 @@ def register_setup_routes(app: FastAPI, connection_manager: ConnectionManager):
         telemetry_enabled_selected = ' selected' if current_telemetry_enabled else ''
         telemetry_disabled_selected = ' selected' if not current_telemetry_enabled else ''
         setup_config_json = _json.dumps({"current_ratio": current_ratio, "current_orientation": current_orientation})
+        setup_gpio_section = (
+            '<p style="color:#ccc; font-size:14px; line-height:1.6; margin-bottom:16px;">'
+            '<a href="/gpio" style="color:#0f0;">Configure GPIO</a> to assign module inputs and outputs to pins.'
+            '</p>'
+        ) if is_gpio_available() else (
+            '<p style="color:#888; font-size:14px; line-height:1.6; margin-bottom:16px;">GPIO not supported and disabled on this system.</p>'
+        )
         html_content = _get_setup_template().format(
             ratio_options=ratio_options,
             orientation_landscape_selected=orientation_landscape_selected,
@@ -118,9 +124,11 @@ def register_setup_routes(app: FastAPI, connection_manager: ConnectionManager):
             current_ratio=current_ratio,
             current_orientation=current_orientation,
             setup_config_json=setup_config_json,
+            setup_gpio_section=setup_gpio_section,
         )
         cache_bust = str(int(time.time() * 1000))
         html_content = html_content.replace("__CACHE_BUST__", cache_bust)
+        html_content = html_content.replace("__GLANCERF_GPIO_MENU__", get_gpio_menu_html())
         return HTMLResponse(content=html_content)
 
 

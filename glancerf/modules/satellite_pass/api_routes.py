@@ -7,8 +7,8 @@ import asyncio
 from fastapi import FastAPI, Query
 from fastapi.responses import JSONResponse
 
-from glancerf.logging_config import get_logger
-from .satellite_service import get_satellite_list_cached, compute_passes
+from glancerf.config import get_logger
+from .satellite_service import get_satellite_list_cached, compute_passes, fetch_tle_failure_hint
 
 _log = get_logger("satellite_pass.api_routes")
 
@@ -60,7 +60,20 @@ def register_routes(app: FastAPI) -> None:
             sat_list = await asyncio.to_thread(get_satellite_list_cached)
             name_by_norad = {s["norad_id"]: s["name"] for s in (sat_list or []) if s.get("name")}
             result = await asyncio.to_thread(compute_passes, ids, lat, lng, alt, name_by_norad)
-            return {"passes": result}
+            in_pass = any(
+                (p.get("current") or {}).get("up") for p in (result or []) if isinstance(p, dict)
+            )
+            try:
+                from glancerf.gpio import set_output
+                set_output("satellite_pass", "in_pass", bool(in_pass))
+            except Exception:
+                pass
+            out = {"passes": result}
+            if not result and ids:
+                hint = await asyncio.to_thread(fetch_tle_failure_hint, ids[0])
+                if hint:
+                    out["message"] = hint
+            return out
         except Exception as e:
             _log.debug("Satellite passes failed: %s", e)
             return JSONResponse(

@@ -9,12 +9,9 @@ import webbrowser
 from pathlib import Path
 
 # Avoid WGL/OpenGL context failures on Windows (RDP, VMs, basic drivers).
-# ANGLE uses Direct3D instead of OpenGL; set before Qt is loaded.
 if sys.platform == "win32":
     os.environ.setdefault("QT_OPENGL", "angle")
 
-# Reduce Chromium GPU/compositor errors (SharedImageManager, DisplayCompositor GL).
-# Set before Qt WebEngine is used. Add "--disable-gpu" for full software rendering if needed.
 _existing = os.environ.get("QTWEBENGINE_CHROMIUM_FLAGS", "")
 if "--disable-gpu-sandbox" not in _existing and "--disable-gpu" not in _existing:
     os.environ["QTWEBENGINE_CHROMIUM_FLAGS"] = (_existing + " --disable-gpu-sandbox").strip()
@@ -39,10 +36,10 @@ from PyQt5.QtWidgets import (
 from PyQt5.QtWebEngineWidgets import QWebEngineView
 
 from glancerf.config import get_config
-from glancerf.aspect_ratio import calculate_dimensions, get_closest_aspect_ratio
+from glancerf.utils import calculate_dimensions, get_closest_aspect_ratio
 
-# Project folder (parent of glancerf package); logos/logo.png may live here
-_PROJECT_DIR = Path(__file__).resolve().parent.parent
+# Project folder (parent of glancerf package)
+_PROJECT_DIR = Path(__file__).resolve().parent.parent.parent
 _LOGO_PATH = _PROJECT_DIR / "logos" / "logo.png"
 
 
@@ -138,7 +135,6 @@ class GlanceRFWindow(QMainWindow):
         self.raise_()
         self.activateWindow()
 
-        # Re-apply max size after show; some platforms apply limits at show time
         self.setMaximumSize(16777215, 16777215)
         self.browser.setMaximumSize(16777215, 16777215)
 
@@ -147,7 +143,7 @@ class GlanceRFWindow(QMainWindow):
         self.config_timer.start(2000)
 
     def _make_loading_widget(self):
-        """Build loading overlay so user sees something instead of a white box."""
+        """Build loading overlay."""
         w = QWidget()
         w.setStyleSheet("background-color: #0d1117;")
         layout = QVBoxLayout(w)
@@ -170,19 +166,16 @@ class GlanceRFWindow(QMainWindow):
         return w
 
     def _on_page_loaded(self, ok):
-        """Switch from loading overlay to browser when page has loaded."""
         if ok and self._stack.currentIndex() == 0:
             self._stack.setCurrentIndex(1)
 
     def eventFilter(self, obj, event):
-        """Capture F11 for fullscreen toggle even when browser has focus."""
         if obj is self.browser and event.type() == QEvent.KeyPress and event.key() == Qt.Key_F11:
             self._toggle_fullscreen()
             return True
         return super().eventFilter(obj, event)
 
     def _toggle_fullscreen(self):
-        """Toggle between fullscreen and normal window. F11."""
         if self.isFullScreen():
             self.showNormal()
             if self._was_maximized_before_fullscreen:
@@ -192,15 +185,13 @@ class GlanceRFWindow(QMainWindow):
             self.showFullScreen()
 
     def _get_height_ratio(self) -> float:
-        """Get height/width ratio for current aspect ratio"""
-        from glancerf.aspect_ratio import get_aspect_ratio_value
+        from glancerf.utils import get_aspect_ratio_value
         ratio = get_aspect_ratio_value(self.aspect_ratio)
         if ratio:
             return ratio[1] / ratio[0]
         return 9 / 16
 
     def _save_window_geometry_and_ratio(self):
-        """Save current window size and position; update aspect_ratio to closest match."""
         geo = self.geometry()
         self.config.set("desktop_window_width", geo.width())
         self.config.set("desktop_window_height", geo.height())
@@ -212,7 +203,6 @@ class GlanceRFWindow(QMainWindow):
             self.config.set("aspect_ratio", closest)
 
     def resizeEvent(self, event):
-        """On resize, schedule save of size and closest aspect ratio."""
         super().resizeEvent(event)
         if self._resize_save_timer is not None:
             self._resize_save_timer.stop()
@@ -222,7 +212,6 @@ class GlanceRFWindow(QMainWindow):
         self._resize_save_timer.start(500)
 
     def moveEvent(self, event):
-        """On move, schedule save of position."""
         super().moveEvent(event)
         if self._resize_save_timer is not None:
             self._resize_save_timer.stop()
@@ -230,9 +219,8 @@ class GlanceRFWindow(QMainWindow):
         self._resize_save_timer.setSingleShot(True)
         self._resize_save_timer.timeout.connect(self._save_window_geometry_and_ratio)
         self._resize_save_timer.start(500)
-    
+
     def check_config_changes(self):
-        """Check for config changes and reload if any settings changed"""
         try:
             new_config = get_config()
             new_aspect_ratio = new_config.get("aspect_ratio") or "16:9"
@@ -261,7 +249,6 @@ class GlanceRFWindow(QMainWindow):
             pass
 
     def _resize_to_aspect_ratio(self):
-        """Resize window to match current aspect ratio; save new size to config."""
         geo = self.geometry()
         x, y = geo.x(), geo.y()
         width = geo.width()
@@ -291,13 +278,10 @@ class GlanceRFWindow(QMainWindow):
         self._save_window_geometry_and_ratio()
 
     def closeEvent(self, event):
-        """Handle window close event"""
-        # Allow normal close
         event.accept()
 
 
 def _create_tray_icon(app, window, port):
-    """Create system tray icon; click opens read-write localhost in browser."""
     tray = QSystemTrayIcon(window)
     icon = _app_icon()
     if icon is None:
@@ -330,44 +314,23 @@ def _create_tray_icon(app, window, port):
 
 
 def run_desktop(port: int = 8080, server_thread=None):
-    """
-    Run GlanceRF in desktop mode
-    
-    Args:
-        port: Port number for the web server
-        server_thread: Thread running the server (optional)
-    """
-    # Create QApplication
+    """Run GlanceRF in desktop mode."""
     app = QApplication(sys.argv)
     app.setApplicationName("GlanceRF")
-    
-    # Create and show main window
+
     window = GlanceRFWindow(port)
-    
-    # System tray icon: shows app is running; click opens read-write URL in browser
     tray = _create_tray_icon(app, window, port)
-    
-    # Run the application
-    # This blocks until the window is closed
+
     exit_code = app.exec_()
     sys.exit(exit_code)
 
 
 def run_virtual_desktop(port: int = 8080):
-    """
-    Run GlanceRF as virtual desktop in background
-    Web browsers will mirror this virtual desktop
-    
-    Args:
-        port: Port number for the web server
-    """
-    # Create QApplication (headless - no window shown)
+    """Run GlanceRF as virtual desktop in background."""
     app = QApplication(sys.argv)
     app.setApplicationName("GlanceRF (Virtual)")
-    
-    # Create window but don't show it
+
     window = GlanceRFWindow(port)
-    window.hide()  # Hide the window - it runs in background
-    
-    # Run the application (keeps virtual desktop alive)
+    window.hide()
+
     app.exec_()

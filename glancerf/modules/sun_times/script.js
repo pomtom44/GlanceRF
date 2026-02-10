@@ -47,6 +47,29 @@
                 var match = timePart.match(/^(\d{1,2}):(\d{2})/);
                 return match ? match[1].padStart(2, '0') + ':' + match[2] : '';
             }
+            function formatDateToIso(d) {
+                if (!d || !(d instanceof Date)) return '';
+                var y = d.getFullYear(), m = (d.getMonth() + 1), day = d.getDate();
+                var h = d.getHours(), min = d.getMinutes();
+                return y + '-' + String(m).padStart(2, '0') + '-' + String(day).padStart(2, '0') + 'T' +
+                    String(h).padStart(2, '0') + ':' + String(min).padStart(2, '0') + ':00';
+            }
+            function loadSunCalc(cb) {
+                if (typeof window.SunCalc === 'function') { cb(); return; }
+                var id = 'script-suncalc-glancerf';
+                if (document.getElementById(id)) {
+                    var t = setInterval(function() {
+                        if (typeof window.SunCalc === 'function') { clearInterval(t); cb(); }
+                    }, 50);
+                    return;
+                }
+                var s = document.createElement('script');
+                s.id = id;
+                s.src = 'https://cdn.jsdelivr.net/npm/suncalc@1.9.0/SunCalc.min.js';
+                s.onload = function() { cb(); };
+                s.onerror = function() { cb(); };
+                document.head.appendChild(s);
+            }
             function showElements(cell, data, ms) {
                 var riseEl = cell.querySelector('.sun_times_sunrise');
                 var setEl = cell.querySelector('.sun_times_sunset');
@@ -117,6 +140,9 @@
                         try {
                             window['sun_times_cache_' + cellKey] = { data: data, ts: Date.now() };
                         } catch (e) {}
+                        try {
+                            fetch('/api/sun_times/status?lat=' + encodeURIComponent(coord.lat) + '&lng=' + encodeURIComponent(coord.lng)).catch(function() {});
+                        } catch (e) {}
                     } else {
                         var msg = 'Sun times unavailable';
                         if (data && typeof data.reason === 'string') msg = data.reason;
@@ -142,13 +168,42 @@
                     var cached = window[cacheKey];
                     if (cached && (Date.now() - cached.ts) < CACHE_MS) {
                         showLoading(cell, false);
-                        showElements(cell, cached.data, ms);
+                        var data = cached.data;
+                        if (isOn(ms.show_moon) && coord) {
+                            loadSunCalc(function() {
+                                if (typeof window.SunCalc === 'function') {
+                                    try {
+                                        var mt = window.SunCalc.getMoonTimes(new Date(), coord.lat, coord.lng);
+                                        if (!data.daily) data.daily = {};
+                                        if (mt.rise) data.daily.moonrise = [formatDateToIso(mt.rise)];
+                                        if (mt.set) data.daily.moonset = [formatDateToIso(mt.set)];
+                                    } catch (e) {}
+                                }
+                                showElements(cell, data, ms);
+                            });
+                        } else {
+                            showElements(cell, data, ms);
+                        }
                         return;
                     }
                 } catch (e) {}
                 fetchSunTimes(cell, cellKey, ms, coord, function(data, errorMsg) {
                     if (data) {
-                        showElements(cell, data, ms);
+                        if (isOn(ms.show_moon) && coord) {
+                            loadSunCalc(function() {
+                                if (typeof window.SunCalc === 'function') {
+                                    try {
+                                        var mt = window.SunCalc.getMoonTimes(new Date(), coord.lat, coord.lng);
+                                        if (!data.daily) data.daily = {};
+                                        if (mt.rise) data.daily.moonrise = [formatDateToIso(mt.rise)];
+                                        if (mt.set) data.daily.moonset = [formatDateToIso(mt.set)];
+                                    } catch (e) {}
+                                }
+                                showElements(cell, data, ms);
+                            });
+                        } else {
+                            showElements(cell, data, ms);
+                        }
                     } else {
                         showError(cell, errorMsg || 'Sun times unavailable');
                     }

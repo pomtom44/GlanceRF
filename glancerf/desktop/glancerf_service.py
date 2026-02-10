@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
 """
 Windows service wrapper for GlanceRF headless (server-only) mode.
-Install: python glancerf_service.py install (requires Administrator)
-Start:   python glancerf_service.py start
-Stop:    python glancerf_service.py stop
-Remove:  python glancerf_service.py remove
+Install: python -m glancerf.desktop.glancerf_service install (requires Administrator)
+Start:   python -m glancerf.desktop.glancerf_service start
+Stop:    python -m glancerf.desktop.glancerf_service stop
+Remove:  python -m glancerf.desktop.glancerf_service remove
 """
 
 import os
@@ -12,16 +12,14 @@ import sys
 import subprocess
 import time
 
-# Project folder = parent of the folder containing this script (glancerf/)
-PROJECT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+# Project folder = glancerf/desktop/ -> go up twice to glancerf, once more to Project
+PROJECT_DIR = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-# Add Project to path so run.py can be executed from there
 if PROJECT_DIR not in sys.path:
     sys.path.insert(0, PROJECT_DIR)
 
 
 def _run_py():
-    """Return python.exe to run run.py. When hosted by the service manager, sys.executable is pythonservice.exe, which cannot run scripts."""
     exe = sys.executable
     if exe.lower().endswith("pythonservice.exe"):
         exe = os.path.join(os.path.dirname(exe), "python.exe")

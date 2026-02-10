@@ -12,5 +12,9 @@ MODULE = {
             "type": "satellite_checkboxes",
             "default": "[]",
         },
+        {"id": "show_countdown", "label": "Show countdown to next pass", "type": "checkbox", "default": True},
     ],
+    "gpio": {
+        "outputs": [{"id": "in_pass", "name": "Satellite in pass LED"}],
+    },
 }

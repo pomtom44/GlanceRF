@@ -21,7 +21,8 @@ This guide explains how to add a new **cell module** to GlanceRF. A module is a 
 11. [Custom modules (survive updates)](#11-custom-modules-survive-updates)
 12. [Module API routes (optional)](#12-module-api-routes-optional)  
     - [12.5. Satellite_pass API methods (reference)](#125-satellite_pass-api-methods-reference)
-13. [Checklist](#13-checklist)
+13. [GPIO support (optional)](#13-gpio-support-optional)
+14. [Checklist](#14-checklist)
 
 ---
 
@@ -85,6 +86,7 @@ Optional:
   - **`type`** – `"text"` or `"select"`.
   - **`default`** – Default value.
   - For **`type: "select"`**: **`options`** – list of `{"value": "...", "label": "..."}`.
+- **`gpio`** (dict, optional) – If your module can use Raspberry Pi (or similar) GPIO pins, add **`inputs`** and/or **`outputs`** so users can assign them on the GPIO setup page. See [GPIO support (optional)](#13-gpio-support-optional).
 
 Example (no settings):
 
@@ -387,7 +389,82 @@ Example request: `GET /api/satellite/passes?norad_ids=25544,48274&lat=-43.5&lng=
 
 ---
 
-## 13. Checklist
+## 13. GPIO support (optional)
+
+On systems with GPIO (e.g. Raspberry Pi with **RPi.GPIO**), GlanceRF can assign module inputs and outputs to physical pins. Users configure this on the **GPIO** setup page (Menu → GPIO when GPIO is available). Your module only declares what it supports; the core discovers it and shows your functions in the Pin → Module → Function table.
+
+### 13.1. Declaring GPIO in module.py
+
+Add a **`gpio`** key to **MODULE** with **`inputs`** and/or **`outputs`**. Each item is a dict with **`id`** (used in code) and **`name`** (shown in the GPIO setup dropdown). Pin direction (input or output) is determined by the function the user picks, so you list each function once under either inputs or outputs.
+
+Example:
+
+```python
+MODULE = {
+    "id": "my_rig",
+    "name": "My Rig",
+    "color": "#1a1a2e",
+    "gpio": {
+        "inputs": [
+            {"id": "ptt_trigger", "name": "PTT trigger"},
+        ],
+        "outputs": [
+            {"id": "led", "name": "Status LED"},
+        ],
+    },
+}
+```
+
+After the user assigns a pin to your module and function on the GPIO setup page, the core configures the pin and either calls your input handler or lets you drive the output.
+
+### 13.2. Handling GPIO inputs
+
+When a pin assigned to one of your **inputs** changes state, the core looks for a dict named **`GPIO_INPUT_HANDLERS`** in your **module.py**. Keys are your input **function_id**; values are callables that take a single argument **`value`** (bool: pin state).
+
+Define **`GPIO_INPUT_HANDLERS`** in the same **module.py** as **MODULE**:
+
+```python
+def _on_ptt_trigger(value: bool):
+    # value is True (high) or False (low)
+    if value:
+        # start transmitting, etc.
+        pass
+    else:
+        # stop transmitting, etc.
+        pass
+
+GPIO_INPUT_HANDLERS = {
+    "ptt_trigger": _on_ptt_trigger,
+}
+```
+
+The core loads your module and calls the handler when the physical pin changes. Handlers run in the main process; keep them short (e.g. set a flag or queue work).
+
+### 13.3. Driving GPIO outputs
+
+For **outputs**, your module turns the pin on or off by calling the core’s **`set_output`** function. Import it from **glancerf.gpio_manager** and call it with your module id, function id, and a boolean:
+
+```python
+from glancerf.gpio_manager import set_output
+
+# Turn the assigned "led" pin on
+set_output("my_rig", "led", True)
+
+# Turn it off
+set_output("my_rig", "led", False)
+```
+
+Only the pin that the user assigned to this module and function on the GPIO setup page is updated. If no pin is assigned or GPIO is not available, **set_output** does nothing (no error). You can call it from **api_routes.py**, a background task, or any code that runs after the app has started.
+
+### 13.4. When GPIO is available
+
+- The **GPIO** menu item and the **GPIO** setup page appear only when the system has GPIO support (e.g. RPi.GPIO on a Raspberry Pi).
+- On other systems, the menu and setup show no GPIO option, and **set_output** and input handlers are never used.
+- Assignments are stored in config as **gpio_assignments** and applied at startup; changing assignments on the GPIO page restarts the GPIO manager with the new mapping.
+
+---
+
+## 14. Checklist
 
 - [ ] Copied **`glancerf/modules/_custom/example/`** and renamed the folder to your module id (no leading `_`).
 - [ ] **module.py**: Set `id`, `name`, `color`; add `settings` if needed.
@@ -397,5 +474,6 @@ Example request: `GET /api/satellite/passes?norad_ids=25544,48274&lat=-43.5&lng=
 - [ ] Restart the app (or reload the page) and pick your module in the layout editor.
 - [ ] Put your module in **`glancerf/modules/_custom/`** so it survives updates (see [Custom modules (survive updates)](#11-custom-modules-survive-updates)).
 - [ ] If your module needs API endpoints: add **api_routes.py** with **`register_routes(app)`** and keep backend logic in the module folder (see [Module API routes (optional)](#12-module-api-routes-optional)).
+- [ ] If your module uses GPIO: add **`gpio`** with **`inputs`** and/or **`outputs`** to **MODULE**; define **`GPIO_INPUT_HANDLERS`** in **module.py** for inputs; use **`set_output(module_id, function_id, value)`** from **glancerf.gpio_manager** for outputs (see [GPIO support (optional)](#13-gpio-support-optional)).
 
 For a minimal, commented reference, see the **`example`** module in `glancerf/modules/_custom/example/`. For a module with API routes and cached data, see **`satellite_pass`** in `glancerf/modules/satellite_pass/`.

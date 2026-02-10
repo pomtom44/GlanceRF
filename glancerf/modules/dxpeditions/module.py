@@ -9,6 +9,7 @@ MODULE = {
     "color": "#0d1117",
     "settings": [
         {"id": "max_entries", "label": "Max entries to show", "type": "number", "default": "15"},
+        {"id": "refresh_hours", "label": "Refresh interval (hours)", "type": "number", "default": "6"},
         {
             "id": "enabled_sources",
             "label": "Data sources",
@@ -16,4 +17,7 @@ MODULE = {
             "default": '["NG3K","NG3K RSS","DXCAL"]',
         },
     ],
+    "gpio": {
+        "outputs": [{"id": "alert", "name": "Active DXpedition LED"}],
+    },
 }

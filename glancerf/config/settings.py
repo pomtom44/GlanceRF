@@ -9,7 +9,7 @@ from copy import deepcopy
 from pathlib import Path
 from typing import Any, Dict, Optional
 
-from glancerf.logging_config import get_logger
+from glancerf.config.logging_config import get_logger
 
 _log = get_logger("config")
 
@@ -52,6 +52,7 @@ DEFAULT_CONFIG: Dict[str, Any] = {
     "layout": _default_layout(3, 3),
     "cell_spans": {},
     "module_settings": {},
+    "gpio_assignments": {},
 }
 
 
@@ -128,6 +129,18 @@ def _validate_config(config: Dict[str, Any]) -> None:
     if "module_settings" in config and config["module_settings"] is not None:
         _check_type("module_settings", config["module_settings"], dict)
 
+    if "gpio_assignments" in config and config["gpio_assignments"] is not None:
+        _check_type("gpio_assignments", config["gpio_assignments"], dict)
+        for pin_str, val in config["gpio_assignments"].items():
+            if not isinstance(pin_str, str):
+                raise ConfigValidationError("Config key 'gpio_assignments': keys must be strings (pin numbers)")
+            if not isinstance(val, dict):
+                raise ConfigValidationError(f"Config key 'gpio_assignments': value for pin {pin_str!r} must be object")
+            if "module_id" in val and val["module_id"] is not None and not isinstance(val["module_id"], str):
+                raise ConfigValidationError(f"Config key 'gpio_assignments': {pin_str!r}.module_id must be string")
+            if "function_id" in val and val["function_id"] is not None and not isinstance(val["function_id"], str):
+                raise ConfigValidationError(f"Config key 'gpio_assignments': {pin_str!r}.function_id must be string")
+
     if "first_run" in config and config["first_run"] is not None:
         _check_type("first_run", config["first_run"], bool)
 
@@ -172,19 +185,17 @@ def _validate_config(config: Dict[str, Any]) -> None:
 
 class Config:
     """Manages GlanceRF configuration"""
-    
+
     def __init__(self, config_dir: Optional[Path] = None):
         """
         Initialize configuration
-        
+
         Args:
             config_dir: Directory where config file will be stored.
-                       If None, uses the directory where the script is located.
+                       If None, uses the Project directory (parent of glancerf package).
         """
         if config_dir is None:
-            # Use the directory where this module is located
-            config_dir = Path(__file__).parent.parent
-        
+            config_dir = Path(__file__).resolve().parent.parent.parent
         self.config_dir = Path(config_dir)
         self.config_file = self.config_dir / "glancerf_config.json"
         self._config: Dict[str, Any] = {}
@@ -215,19 +226,17 @@ class Config:
             _log.debug("Config saved to %s", self.config_file)
         except IOError as e:
             raise IOError(f"Error saving config file {self.config_file}: {e}")
-    
+
     def get(self, key: str) -> Any:
         """Get a configuration value (returns None if key doesn't exist)"""
         return self._config.get(key)
-    
+
     def set(self, key: str, value: Any) -> None:
         """Set a configuration value"""
         self._config[key] = value
         self.save()
-    
 
 
-# Global config instance
 _config_instance: Optional[Config] = None
 
 

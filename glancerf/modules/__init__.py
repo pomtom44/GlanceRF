@@ -211,6 +211,44 @@ def get_module_api_packages() -> List[str]:
     return packages
 
 
+def get_gpio_features() -> List[Dict[str, Any]]:
+    """
+    Return GPIO features advertised by modules. Each feature has:
+    module_id, module_name, direction ("in" or "out"), function_id, function_name.
+    Used by the GPIO setup page to build Module/Function dropdowns; pin direction
+    is determined by the selected function.
+    """
+    _discover_modules()
+    result: List[Dict[str, Any]] = []
+    for m in (_loaded or []):
+        mid = m.get("id") or ""
+        if not mid:
+            continue
+        gpio = m.get("gpio")
+        if not isinstance(gpio, dict):
+            continue
+        name = m.get("name") or mid
+        for item in gpio.get("inputs") or []:
+            if isinstance(item, dict) and item.get("id") and item.get("name"):
+                result.append({
+                    "module_id": mid,
+                    "module_name": name,
+                    "direction": "in",
+                    "function_id": str(item["id"]),
+                    "function_name": str(item["name"]),
+                })
+        for item in gpio.get("outputs") or []:
+            if isinstance(item, dict) and item.get("id") and item.get("name"):
+                result.append({
+                    "module_id": mid,
+                    "module_name": name,
+                    "direction": "out",
+                    "function_id": str(item["id"]),
+                    "function_name": str(item["name"]),
+                })
+    return result
+
+
 def validate_module_dependencies() -> List[Tuple[str, str]]:
     """
     Try to import each module that provides api_routes.py. Returns a list of

@@ -72,6 +72,25 @@ fi
 echo "Requirements OK."
 echo ""
 
+# --- 2b. Check / install ffmpeg (for webcam Local server) ---
+if ! command -v ffmpeg &>/dev/null; then
+    echo "ffmpeg not found (optional; needed for Webcam module Local server source)."
+    read -r -p "Install ffmpeg now? (y/n) " install_ffmpeg
+    if [ "$install_ffmpeg" = "y" ] || [ "$install_ffmpeg" = "Y" ]; then
+        if command -v brew &>/dev/null; then
+            brew install ffmpeg
+            command -v ffmpeg &>/dev/null && echo "ffmpeg installed." || echo "ffmpeg install failed."
+        else
+            echo "Homebrew not found. Install ffmpeg from https://ffmpeg.org/download.html or install Homebrew and run: brew install ffmpeg"
+        fi
+    else
+        echo "You can install ffmpeg later (brew install ffmpeg) for Webcam Local server."
+    fi
+else
+    echo "ffmpeg OK."
+fi
+echo ""
+
 # --- 3. Run on startup? ---
 WANT_STARTUP=false
 read -r -p "Run GlanceRF at logon? (y/n) " startup_resp

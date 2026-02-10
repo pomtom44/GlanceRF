@@ -13,7 +13,8 @@ from fastapi.responses import HTMLResponse, RedirectResponse
 
 from glancerf.config import get_config
 from glancerf.modules import clear_module_cache, get_modules, get_module_dir
-from glancerf.logging_config import get_logger
+from glancerf.gpio import get_gpio_menu_html
+from glancerf.config import get_logger
 
 _log = get_logger("modules_routes")
 _MODULES_DIR = Path(__file__).parent.parent / "modules"
@@ -103,7 +104,8 @@ def register_modules_routes(app: FastAPI, connection_manager=None):
                 <li><a href="/layout">Layout editor</a></li>
                 <li><a href="/modules">Modules</a></li>
                 <li><a href="/updates">Updates</a></li>
-            """
+                <li><button type="button" class="menu-link" id="menu-restart-services">Restart services</button></li>
+            """ + get_gpio_menu_html()
 
         html_content = f"""
 <!DOCTYPE html>
@@ -151,6 +153,7 @@ def register_modules_routes(app: FastAPI, connection_manager=None):
             {modules_html}
         </div>
     </div>
+    <script src="/static/js/menu.js"></script>
     <script>
         document.addEventListener('keydown', function(event) {{
             var isInputFocused = document.activeElement && (document.activeElement.tagName === 'INPUT' || document.activeElement.tagName === 'TEXTAREA' || document.activeElement.tagName === 'SELECT' || document.activeElement.isContentEditable);

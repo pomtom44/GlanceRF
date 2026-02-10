@@ -16,8 +16,8 @@ import httpx
 
 from glancerf import __version__
 from glancerf.config import get_config
-from glancerf.logging_config import DETAILED_LEVEL, get_logger
-from glancerf.updater import perform_auto_update
+from glancerf.config import DETAILED_LEVEL, get_logger
+from glancerf.updates.updater import perform_auto_update
 
 _log = get_logger("update_checker")
 
@@ -190,7 +190,7 @@ class UpdateChecker:
         await asyncio.sleep(delay_seconds)
         
         # Restart the application
-        from glancerf.updater import create_restart_script
+        from glancerf.updates.updater import create_restart_script
         
         restart_script = create_restart_script()
         if restart_script:

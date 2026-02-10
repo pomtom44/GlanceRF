@@ -36,11 +36,8 @@ If you don't know how to use GitHub, run projects from the command line, or wher
 
 1. **Download** the project and open a terminal in the **Project** folder (the one that contains `run.py`).
 2. **Install Python** (3.8 or higher) if needed.
-3. **Install dependencies:**
-   - With desktop GUI:  
-     `pip install -r requirements.txt`
-   - Headless (server only, no GUI):  
-     `pip install -r requirements_headless.txt`
+3. **Install dependencies:**  
+   `pip install -r requirements.txt`
 4. **Optional (headless):** Edit `glancerf_config.json` in this folder to set `"use_desktop": false`.
 5. **Run:**  
    `python run.py`  
@@ -86,16 +83,8 @@ Configuration is stored in **`glancerf_config.json`** in the same folder as `run
 ## Requirements
 
 - **Python** 3.8 or higher
-- Dependencies in `requirements.txt` (full) or `requirements_headless.txt` (server only)
-
-**Installation options:**
-
-- **Full (with desktop GUI):** `pip install -r requirements.txt`  
-  Includes PyQt5 and PyQtWebEngine for the desktop window.
-- **Headless (server only):** `pip install -r requirements_headless.txt`  
-  No GUI; access via web browser. Set `use_desktop` to `false` in `glancerf_config.json`.
-
-The app skips GUI imports if desktop mode is disabled in config.
+- Dependencies: `pip install -r requirements.txt`  
+  Includes PyQt5 and PyQtWebEngine for the desktop window. The app skips GUI imports if desktop mode is disabled in config (headless); use the same requirements.txt for both.
 
 ---
 

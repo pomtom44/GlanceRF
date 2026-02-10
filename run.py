@@ -14,7 +14,7 @@ sys.path.insert(0, str(Path(__file__).parent))
 from glancerf.main import run_server, run_readonly_server
 from glancerf.config import get_config
 from glancerf.utils import get_local_ip
-from glancerf.logging_config import setup_logging, get_logger
+from glancerf.config import setup_logging, get_logger
 from glancerf.modules import validate_module_dependencies
 
 

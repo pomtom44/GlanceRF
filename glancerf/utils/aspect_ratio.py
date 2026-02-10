@@ -24,10 +24,10 @@ def get_aspect_ratio_list() -> List[str]:
 def get_aspect_ratio_value(ratio_name: str) -> Optional[Tuple[int, int]]:
     """
     Get aspect ratio value from name
-    
+
     Args:
         ratio_name: Aspect ratio name (e.g., "16:9")
-    
+
     Returns:
         Tuple of (width, height) or None if invalid
     """
@@ -55,7 +55,7 @@ def calculate_dimensions(
     ratio = get_aspect_ratio_value(ratio_name)
     if not ratio:
         ratio = ASPECT_RATIOS["16:9"]
-    
+
     width_ratio, height_ratio = ratio
     if orientation == "portrait":
         width_ratio, height_ratio = height_ratio, width_ratio
@@ -90,16 +90,16 @@ def get_closest_aspect_ratio(width: int, height: int) -> str:
 def get_aspect_ratio_css(ratio_name: str) -> str:
     """
     Get CSS aspect-ratio property value
-    
+
     Args:
         ratio_name: Aspect ratio name (e.g., "16:9")
-    
+
     Returns:
         CSS aspect-ratio value (e.g., "16 / 9")
     """
     ratio = get_aspect_ratio_value(ratio_name)
     if not ratio:
         ratio = ASPECT_RATIOS["16:9"]
-    
+
     width_ratio, height_ratio = ratio
     return f"{width_ratio} / {height_ratio}"

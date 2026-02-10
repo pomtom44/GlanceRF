@@ -87,12 +87,29 @@
     padding: 10px 8px;
 }
 
+.grid-cell-contests.contests_state_loading .contests_empty {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex: 1;
+    font-size: 1.25rem;
+    color: #aaa;
+    min-height: 3em;
+}
+
+.grid-cell-contests .contests_last_refresh {
+    font-size: 10px;
+    color: #555;
+    text-align: center;
+    flex-shrink: 0;
+    margin-top: 4px;
+}
+
 .grid-cell-contests .contests_error {
     color: #c00;
 }
 
-.grid-cell-contests.contests_state_empty .contests_empty,
-.grid-cell-contests.contests_state_loading .contests_empty {
+.grid-cell-contests.contests_state_empty .contests_empty {
     display: block;
 }
 

@@ -14,8 +14,10 @@
     justify-content: center;
     gap: 0.2em;
     text-align: center;
-    font-size: 12px;
-    font-size: 12cqmin;
+    font-size: 4vmin;
+}
+@supports (container-type: size) {
+    .grid-cell-callsign .callsign_display { font-size: 12cqmin; }
 }
 .grid-cell-callsign .callsign_line {
     font-size: 1.1em;

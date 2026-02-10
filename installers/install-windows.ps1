@@ -121,16 +121,12 @@ if (-not $PythonCmd) {
     }
 }
 
-# --- 2. Desktop or headless? (asked early so we know which requirements to install)
+# --- 2. Desktop or headless? ---
 $WantHeadless = $false
 $modeResp = Read-Host "Run in desktop (window) or headless (browser only)? (desktop/headless)"
 if ($modeResp -match "headless") { $WantHeadless = $true }
 
 # --- 3. Check / install requirements ---
-$RequirementsHeadlessPath = Join-Path $ProjectPath "requirements_headless.txt"
-if ($WantHeadless) {
-    $RequirementsPath = $RequirementsHeadlessPath
-}
 Write-Host "Checking requirements..."
 $pipOk = $false
 try {
@@ -156,6 +152,44 @@ if (-not $pipOk) {
     }
 }
 Write-Host "Requirements OK."
+
+# --- 2b. Check / install ffmpeg (for webcam Local server) ---
+$ffmpegOk = $false
+try {
+    $null = & ffmpeg -version 2>&1
+    if ($LASTEXITCODE -eq 0) { $ffmpegOk = $true }
+} catch {
+    # ffmpeg not in PATH
+}
+if (-not $ffmpegOk) {
+    Write-Host "ffmpeg not found (optional; needed for Webcam module Local server source)."
+    $installFfmpeg = Read-Host "Install ffmpeg now? (Y/N)"
+    if ($installFfmpeg -eq "Y" -or $installFfmpeg -eq "y") {
+        $installed = $false
+        if (Get-Command winget -ErrorAction SilentlyContinue) {
+            try {
+                winget install --id Gyan.FFmpeg -e --accept-source-agreements --accept-package-agreements
+                if ($LASTEXITCODE -eq 0) { $installed = $true }
+            } catch {}
+        }
+        if (-not $installed -and (Get-Command choco -ErrorAction SilentlyContinue)) {
+            try {
+                choco install ffmpeg -y
+                if ($LASTEXITCODE -eq 0) { $installed = $true }
+            } catch {}
+        }
+        if ($installed) {
+            Write-Host "ffmpeg installed. You may need to restart this window for PATH to update."
+        } else {
+            Write-Host "Could not install ffmpeg automatically. Download from https://ffmpeg.org/download.html and add to PATH."
+        }
+    } else {
+        Write-Host "You can install ffmpeg later (winget install Gyan.FFmpeg or from https://ffmpeg.org/download.html) for Webcam Local server."
+    }
+} else {
+    Write-Host "ffmpeg OK."
+}
+
 # Headless on Windows: install pywin32 for the service
 if ($WantHeadless) {
     Write-Host "Installing pywin32 for Windows service..."

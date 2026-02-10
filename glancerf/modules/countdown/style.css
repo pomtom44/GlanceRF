@@ -9,16 +9,27 @@
     text-align: center;
 }
 .grid-cell-countdown .countdown_label {
-    font-size: 6cqmin;
+    font-size: 2vmin;
     color: #888;
 }
 .grid-cell-countdown .countdown_value {
-    font-size: 12cqmin;
+    font-size: 4vmin;
     font-weight: bold;
     color: #0f0;
     font-variant-numeric: tabular-nums;
 }
 .grid-cell-countdown .countdown_message {
-    font-size: 8cqmin;
+    font-size: 2.5vmin;
     color: #888;
+}
+@supports (container-type: size) {
+    .grid-cell-countdown .countdown_label {
+        font-size: 6cqmin;
+    }
+    .grid-cell-countdown .countdown_value {
+        font-size: 12cqmin;
+    }
+    .grid-cell-countdown .countdown_message {
+        font-size: 8cqmin;
+    }
 }

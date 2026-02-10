@@ -8,7 +8,7 @@ import asyncio
 from fastapi import FastAPI
 from fastapi.responses import JSONResponse
 
-from glancerf.logging_config import get_logger
+from glancerf.config import get_logger
 from .contest_service import get_contests_cached
 
 _log = get_logger("contests.api_routes")
@@ -47,6 +47,17 @@ def register_routes(app: FastAPI) -> None:
             result = await asyncio.to_thread(
                 get_contests_cached, enabled_sources=enabled, custom_sources=custom
             )
+            from datetime import datetime, timezone
+            now = datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
+            contest_active = any(
+                (c.get("start_utc") or "") <= now <= (c.get("end_utc") or "")
+                for c in (result or []) if isinstance(c, dict)
+            )
+            try:
+                from glancerf.gpio import set_output
+                set_output("contests", "contest_active", bool(contest_active))
+            except Exception:
+                pass
             return {
                 "contests": result,
                 "credits": credits,

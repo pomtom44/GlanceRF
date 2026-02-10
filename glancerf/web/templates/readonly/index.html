@@ -34,6 +34,8 @@
                 <li><a href="/layout">Layout editor</a></li>
                 <li><a href="/modules">Modules</a></li>
                 <li><a href="/updates">Updates</a></li>
+                <li><button type="button" class="menu-link" id="menu-restart-services">Restart services</button></li>
+                __GLANCERF_GPIO_MENU__
             </ul>
         </div>
     </div>
@@ -48,6 +50,7 @@
         window.GLANCERF_SETUP_LOCATION = {setup_location_json};
         window.GLANCERF_MAIN_PORT = {main_port};
     </script>
+    <script src="/static/js/menu.js"></script>
     <script src="/static/js/readonly.js"></script>
     <script>{module_js}</script>
 </body>

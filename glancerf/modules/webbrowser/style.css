@@ -1,0 +1,44 @@
+.grid-cell-webbrowser {
+    min-height: 0;
+    overflow: hidden;
+}
+.grid-cell-webbrowser .webbrowser_wrap {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    display: flex;
+    flex-direction: column;
+}
+.grid-cell-webbrowser .webbrowser_frame {
+    flex: 1;
+    width: 100%;
+    min-height: 0;
+    border: none;
+    background: #0d1117;
+}
+.grid-cell-webbrowser .webbrowser_placeholder {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    color: #6e7681;
+    font-size: 14px;
+    pointer-events: none;
+}
+.grid-cell-webbrowser .webbrowser_wrap.has-url .webbrowser_placeholder {
+    display: none;
+}
+.grid-cell-webbrowser .webbrowser_open_link {
+    position: absolute;
+    bottom: 8px;
+    right: 8px;
+    font-size: 12px;
+    color: #58a6ff;
+    text-decoration: none;
+    z-index: 1;
+}
+.grid-cell-webbrowser .webbrowser_open_link:hover {
+    text-decoration: underline;
+}

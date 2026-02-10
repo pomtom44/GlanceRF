@@ -12,7 +12,7 @@ from typing import Any
 import httpx
 from skyfield.api import EarthSatellite, load, wgs84
 
-from glancerf.logging_config import get_logger
+from glancerf.config import get_logger
 
 _log = get_logger("satellite_pass.satellite_service")
 
@@ -207,6 +207,35 @@ def fetch_tle(norad_id: int) -> tuple[str, str] | None:
         return lines[0], lines[1]
     if len(lines) >= 3 and lines[1].startswith("1 ") and lines[2].startswith("2 "):
         return lines[1], lines[2]
+    return None
+
+
+def fetch_tle_failure_hint(norad_id: int) -> str | None:
+    """
+    Try to fetch TLE for one satellite; on failure return a short user-facing hint.
+    Used when all passes are empty to explain why (e.g. network, CelesTrak format).
+    """
+    try:
+        with httpx.Client(timeout=_TLE_TIMEOUT) as client:
+            r = client.get(
+                _CELESTRAK_GP,
+                params={"CATNR": norad_id, "FORMAT": "tle"},
+            )
+            r.raise_for_status()
+            text = (r.text or "").strip()
+    except httpx.ConnectError:
+        return "Network error. Check connection and CelesTrak availability."
+    except httpx.TimeoutException:
+        return "Request timed out. Try again later."
+    except httpx.HTTPStatusError as e:
+        return f"CelesTrak returned {e.response.status_code}. Try again later."
+    except Exception as e:
+        return "TLE unavailable. Check network and try again."
+    lines = [ln.strip() for ln in text.splitlines() if ln.strip()]
+    if len(lines) < 2 or not (lines[0].startswith("1 ") and lines[1].startswith("2 ")):
+        if len(lines) >= 3 and lines[1].startswith("1 ") and lines[2].startswith("2 "):
+            return None
+        return "CelesTrak did not return valid TLE format. Try again later."
     return None
 
 

@@ -31,13 +31,6 @@ This guide explains how to use GlanceRF: first run, setup, the menu (press M), t
    pip install -r requirements.txt
    ```
 
-   **For headless/server-only installations (no GUI):**
-   ```bash
-   pip install -r requirements_headless.txt
-   ```
-
-   Note: The application automatically handles missing GUI libraries if desktop mode is disabled in configuration.
-
 3. **Basic configuration**
 
    Most of the setup will be done via the GUI. The config file is **`glancerf_config.json`** in the same folder as `run.py` (the Project folder). If you want to run headless, edit it to set `"use_desktop": false`.

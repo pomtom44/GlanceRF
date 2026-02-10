@@ -1,5 +1,5 @@
 (function() {
-    var UPDATE_MS = 300000;  // 5 minutes
+    var DEFAULT_REFRESH_HOURS = 6;
 
     function formatDateRange(startUtc, endUtc) {
         if (!startUtc || !endUtc) return '';
@@ -33,6 +33,59 @@
         if (state) cell.classList.add('contests_state_' + state);
     }
 
+    function setLastRefresh(cell, date) {
+        var el = cell.querySelector('.contests_last_refresh');
+        if (!el) return;
+        if (!date) {
+            el.textContent = '';
+            el.style.display = 'none';
+            return;
+        }
+        try {
+            var d = date instanceof Date ? date : new Date(date);
+            var day = d.getDate();
+            var m = d.getMonth() + 1;
+            var y = d.getFullYear();
+            var h = d.getHours();
+            var min = d.getMinutes();
+            var t = String(h).padStart(2, '0') + ':' + String(min).padStart(2, '0');
+            el.textContent = 'Last refreshed: ' + day + ' ' + ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][m - 1] + ' ' + t;
+            el.style.display = '';
+        } catch (e) {
+            el.textContent = '';
+            el.style.display = 'none';
+        }
+    }
+
+    function renderList(cell, contests, credits, maxEntries, emptyEl, listEl, creditsEl) {
+        if (creditsEl) creditsEl.textContent = credits || '';
+        if (!contests || contests.length === 0) {
+            if (emptyEl) emptyEl.textContent = 'No contests listed.';
+            setState(cell, 'empty');
+            listEl.innerHTML = '';
+            return;
+        }
+        setState(cell, '');
+        listEl.innerHTML = '';
+        var slice = contests.slice(0, maxEntries);
+        slice.forEach(function(d) {
+            var item = document.createElement('div');
+            item.className = 'contests_item';
+            var title = (d.title || '').trim();
+            var url = (d.url || '').trim();
+            var dates = formatDateRange(d.start_utc, d.end_utc);
+            var info = (d.info || '').trim();
+            var source = (d.source || '').trim();
+            var titleHtml = url ? '<a href="' + url.replace(/"/g, '&quot;') + '" target="_blank" rel="noopener">' + title + '</a>' : title;
+            item.innerHTML =
+                '<span class="contests_name">' + titleHtml + '</span>' +
+                (source ? ' <span class="contests_source" title="Source">[' + source + ']</span>' : '') +
+                '<br><span class="contests_dates">' + dates + '</span>' +
+                (info ? '<br><span class="contests_info">' + info.substring(0, 80) + (info.length > 80 ? '...' : '') + '</span>' : '');
+            listEl.appendChild(item);
+        });
+    }
+
     function updateCell(cell) {
         var listEl = cell.querySelector('.contests_list');
         var creditsEl = cell.querySelector('.contests_credits');
@@ -40,10 +93,6 @@
         var errorEl = cell.querySelector('.contests_error');
 
         if (!listEl) return;
-
-        setState(cell, 'loading');
-        if (emptyEl) emptyEl.textContent = 'Loading...';
-        listEl.innerHTML = '';
 
         var settings = getCellSettings(cell);
         var maxEntries = 20;
@@ -68,60 +117,63 @@
             if (customList.length) params.push('custom_sources=' + encodeURIComponent(JSON.stringify(customList)));
         }
         var query = params.length ? '?' + params.join('&') : '';
+
+        var isBackgroundRefresh = cell.getAttribute('data-contests-loaded') === '1';
+
+        if (!isBackgroundRefresh) {
+            setState(cell, 'loading');
+            if (emptyEl) emptyEl.textContent = 'Loading contests';
+            listEl.innerHTML = '';
+        }
+
         fetch('/api/contests/list' + query)
             .then(function(r) { return r.json(); })
             .then(function(data) {
-                setState(cell, '');
                 if (errorEl) errorEl.textContent = '';
                 if (data.error) {
                     if (errorEl) errorEl.textContent = data.error;
                     setState(cell, 'error');
+                    if (isBackgroundRefresh) return;
+                    listEl.innerHTML = '';
                     return;
                 }
                 var contests = (data.contests && Array.isArray(data.contests)) ? data.contests : [];
                 var credits = data.credits || '';
-
-                if (creditsEl) creditsEl.textContent = credits;
-
-                if (contests.length === 0) {
-                    if (emptyEl) emptyEl.textContent = 'No contests listed.';
-                    setState(cell, 'empty');
-                    listEl.innerHTML = '';
-                    return;
-                }
-
-                listEl.innerHTML = '';
-                var slice = contests.slice(0, maxEntries);
-                slice.forEach(function(d) {
-                    var item = document.createElement('div');
-                    item.className = 'contests_item';
-                    var title = (d.title || '').trim();
-                    var url = (d.url || '').trim();
-                    var dates = formatDateRange(d.start_utc, d.end_utc);
-                    var info = (d.info || '').trim();
-                    var source = (d.source || '').trim();
-                    var titleHtml = url ? '<a href="' + url.replace(/"/g, '&quot;') + '" target="_blank" rel="noopener">' + title + '</a>' : title;
-                    item.innerHTML =
-                        '<span class="contests_name">' + titleHtml + '</span>' +
-                        (source ? ' <span class="contests_source" title="Source">[' + source + ']</span>' : '') +
-                        '<br><span class="contests_dates">' + dates + '</span>' +
-                        (info ? '<br><span class="contests_info">' + info.substring(0, 80) + (info.length > 80 ? '...' : '') + '</span>' : '');
-                    listEl.appendChild(item);
-                });
+                renderList(cell, contests, credits, maxEntries, emptyEl, listEl, creditsEl);
+                cell.setAttribute('data-contests-loaded', '1');
+                cell.setAttribute('data-contests-last-ts', String(Date.now()));
+                setLastRefresh(cell, new Date());
             })
             .catch(function() {
-                setState(cell, 'error');
-                if (errorEl) errorEl.textContent = 'Failed to load contests.';
-                listEl.innerHTML = '';
+                if (!isBackgroundRefresh) {
+                    setState(cell, 'error');
+                    if (errorEl) errorEl.textContent = 'Failed to load contests.';
+                    listEl.innerHTML = '';
+                }
             });
     }
 
+    function getRefreshMs(cell) {
+        var settings = getCellSettings(cell);
+        var refreshHours = DEFAULT_REFRESH_HOURS;
+        try {
+            var rh = parseFloat(settings.refresh_hours, 10);
+            if (rh > 0 && rh <= 168) refreshHours = rh;
+        } catch (e) {}
+        return Math.max(60000, refreshHours * 60 * 60 * 1000);
+    }
+
     function run() {
+        var now = Date.now();
         document.querySelectorAll('.grid-cell-contests').forEach(function(cell) {
-            updateCell(cell);
+            var lastTs = parseInt(cell.getAttribute('data-contests-last-ts') || '0', 10);
+            var refreshMs = getRefreshMs(cell);
+            if (lastTs === 0 || (now - lastTs) >= refreshMs) {
+                updateCell(cell);
+            }
         });
     }
 
     run();
-    setInterval(run, UPDATE_MS);
+    setInterval(run, 60 * 1000);
 })();

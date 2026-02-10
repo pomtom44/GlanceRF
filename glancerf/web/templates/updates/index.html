@@ -18,6 +18,8 @@
                 <li><a href="/layout">Layout editor</a></li>
                 <li><a href="/modules">Modules</a></li>
                 <li><a href="/updates">Updates</a></li>
+                <li><button type="button" class="menu-link" id="menu-restart-services">Restart services</button></li>
+                __GLANCERF_GPIO_MENU__
             </ul>
         </div>
     </div>
@@ -33,6 +35,7 @@
         </div>
         <p class="update-result" id="update-result" style="display:none;"></p>
     </div>
+    <script src="/static/js/menu.js"></script>
     <script>
         (function() {
             var versionsEl = document.getElementById('update-versions');

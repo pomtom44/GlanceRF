@@ -5,7 +5,7 @@ import asyncio
 from fastapi import FastAPI, Query
 from fastapi.responses import JSONResponse
 
-from glancerf.logging_config import get_logger
+from glancerf.config import get_logger
 from .aprs_client import get_aprs_locations_from_cache
 from .propagation_service import get_propagation_coordinates
 

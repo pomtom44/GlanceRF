@@ -8,16 +8,17 @@
     gap: 0.15em;
     text-align: center;
 }
+/* Fallback for desktop (Qt WebEngine) and older browsers that don't support container queries */
 .grid-cell-weather .weather_place {
-    font-size: 6cqmin;
+    font-size: 2vmin;
     color: #888;
 }
 .grid-cell-weather .weather_conditions {
-    font-size: 8cqmin;
+    font-size: 2.5vmin;
     color: #ccc;
 }
 .grid-cell-weather .weather_temp {
-    font-size: 12cqmin;
+    font-size: 4vmin;
     font-weight: bold;
     color: #fff;
 }
@@ -25,11 +26,33 @@
 .grid-cell-weather .weather_humidity,
 .grid-cell-weather .weather_wind,
 .grid-cell-weather .weather_pressure {
-    font-size: 6cqmin;
+    font-size: 2vmin;
     color: #aaa;
 }
 .grid-cell-weather .weather_error,
 .grid-cell-weather .weather_loading {
-    font-size: 6cqmin;
+    font-size: 2vmin;
     color: #888;
+}
+/* When container queries are supported (modern browsers), scale by cell size */
+@supports (container-type: size) {
+    .grid-cell-weather .weather_place {
+        font-size: 6cqmin;
+    }
+    .grid-cell-weather .weather_conditions {
+        font-size: 8cqmin;
+    }
+    .grid-cell-weather .weather_temp {
+        font-size: 12cqmin;
+    }
+    .grid-cell-weather .weather_feels,
+    .grid-cell-weather .weather_humidity,
+    .grid-cell-weather .weather_wind,
+    .grid-cell-weather .weather_pressure {
+        font-size: 6cqmin;
+    }
+    .grid-cell-weather .weather_error,
+    .grid-cell-weather .weather_loading {
+        font-size: 6cqmin;
+    }
 }

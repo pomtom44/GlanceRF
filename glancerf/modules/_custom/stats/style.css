@@ -1,0 +1,168 @@
+.grid-cell-stats {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    justify-content: center;
+    overflow: hidden;
+    min-width: 0;
+}
+
+.grid-cell-stats .stats_wrap {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+    align-content: start;
+    gap: 8px;
+    height: 100%;
+    width: 100%;
+    min-width: 0;
+    padding: 10px 12px;
+    box-sizing: border-box;
+    overflow: hidden;
+}
+
+.grid-cell-stats .stats_title {
+    grid-column: 1 / -1;
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: rgba(0, 255, 0, 0.85);
+    text-align: center;
+    margin-bottom: 2px;
+}
+
+.grid-cell-stats .stats_card {
+    min-width: 0;
+    text-align: center;
+    padding: 8px 10px;
+    border-radius: 6px;
+    background: rgba(0, 255, 0, 0.06);
+    border: 1px solid rgba(0, 255, 0, 0.2);
+    display: flex;
+    flex-direction: column;
+}
+
+.grid-cell-stats .stats_card_main {
+    padding: 10px 12px;
+}
+
+.grid-cell-stats .stats_total_installs_label {
+    font-size: 10px;
+    letter-spacing: 0.04em;
+    color: rgba(136, 136, 136, 0.95);
+    text-align: center;
+    margin-bottom: 4px;
+}
+
+.grid-cell-stats .stats_total_installs_value {
+    font-size: 22px;
+    font-weight: 700;
+    color: #0f0;
+    font-variant-numeric: tabular-nums;
+    letter-spacing: 0.02em;
+    text-align: center;
+    line-height: 1.2;
+}
+
+.grid-cell-stats .stats_seen_label {
+    font-size: 10px;
+    letter-spacing: 0.04em;
+    color: rgba(136, 136, 136, 0.95);
+    text-align: center;
+    margin-bottom: 4px;
+}
+
+.grid-cell-stats .stats_seen_value {
+    font-size: 13px;
+    font-weight: 600;
+    color: rgba(0, 255, 0, 0.9);
+    font-variant-numeric: tabular-nums;
+    text-align: center;
+    letter-spacing: 0.02em;
+}
+
+.grid-cell-stats .stats_card_countries .stats_countries_list,
+.grid-cell-stats .stats_card_versions .stats_versions_list,
+.grid-cell-stats .stats_card_platforms .stats_platforms_list {
+    margin-top: 4px;
+    max-height: 48px;
+    overflow: hidden;
+    font-size: 10px;
+    color: rgba(0, 255, 0, 0.85);
+    font-variant-numeric: tabular-nums;
+    text-align: left;
+}
+
+.grid-cell-stats .stats_breakdown_row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 6px;
+    padding: 1px 0;
+    border-bottom: 1px solid rgba(0, 255, 0, 0.12);
+}
+
+.grid-cell-stats .stats_breakdown_row:last-child {
+    border-bottom: none;
+}
+
+.grid-cell-stats .stats_countries_label,
+.grid-cell-stats .stats_versions_label,
+.grid-cell-stats .stats_platforms_label {
+    font-size: 10px;
+    letter-spacing: 0.04em;
+    color: rgba(136, 136, 136, 0.95);
+    text-align: center;
+    margin-bottom: 0;
+}
+
+.grid-cell-stats .stats_countries_value {
+    font-size: 14px;
+    font-weight: 600;
+    color: #0f0;
+    font-variant-numeric: tabular-nums;
+    text-align: center;
+}
+
+.grid-cell-stats .stats_error,
+.grid-cell-stats .stats_loading {
+    grid-column: 1 / -1;
+    font-size: 11px;
+    color: rgba(136, 136, 136, 0.9);
+    text-align: center;
+}
+
+.grid-cell-stats .stats_error {
+    color: rgba(220, 80, 80, 0.95);
+}
+
+.grid-cell-stats .stats_loading {
+    display: none;
+    color: rgba(136, 136, 136, 0.8);
+}
+
+.grid-cell-stats.stats_state_loading .stats_loading {
+    display: block;
+}
+
+.grid-cell-stats.stats_state_loading .stats_total_installs_value,
+.grid-cell-stats.stats_state_loading .stats_seen_value,
+.grid-cell-stats.stats_state_error .stats_total_installs_value,
+.grid-cell-stats.stats_state_error .stats_seen_value {
+    display: none;
+}
+
+.grid-cell-stats.stats_state_loading .stats_card_countries .stats_countries_value,
+.grid-cell-stats.stats_state_loading .stats_countries_list,
+.grid-cell-stats.stats_state_loading .stats_versions_list,
+.grid-cell-stats.stats_state_loading .stats_platforms_list,
+.grid-cell-stats.stats_state_error .stats_card_countries .stats_countries_value,
+.grid-cell-stats.stats_state_error .stats_countries_list,
+.grid-cell-stats.stats_state_error .stats_versions_list,
+.grid-cell-stats.stats_state_error .stats_platforms_list {
+    display: none;
+}
+
+.grid-cell-stats.stats_state_error .stats_error {
+    display: block;
+}

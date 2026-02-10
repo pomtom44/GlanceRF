@@ -10,7 +10,7 @@ import sqlite3
 import time
 from typing import Any
 
-from glancerf.logging_config import get_logger
+from glancerf.config import get_logger
 
 _log = get_logger("map.aprs_client")
 

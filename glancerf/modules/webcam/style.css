@@ -1,0 +1,32 @@
+.grid-cell-webcam {
+    min-height: 0;
+    overflow: hidden;
+}
+.grid-cell-webcam .webcam_wrap {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #0d1117;
+}
+.grid-cell-webcam .webcam_video,
+.grid-cell-webcam .webcam_img {
+    max-width: 100%;
+    max-height: 100%;
+    width: auto;
+    height: auto;
+    object-fit: contain;
+}
+.grid-cell-webcam .webcam_placeholder {
+    position: absolute;
+    color: #6e7681;
+    font-size: 14px;
+    pointer-events: none;
+}
+.grid-cell-webcam .webcam_wrap.has-feed .webcam_placeholder {
+    display: none;
+}

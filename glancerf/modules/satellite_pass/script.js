@@ -1,5 +1,23 @@
 (function() {
     var UPDATE_MS = 45000;
+    var countdownIntervals = {};
+
+    function formatCountdown(ms) {
+        if (ms == null || ms < 0) return '';
+        var sec = Math.floor(ms / 1000);
+        var m = Math.floor(sec / 60);
+        var h = Math.floor(m / 60);
+        var d = Math.floor(h / 24);
+        sec = sec % 60;
+        m = m % 60;
+        h = h % 24;
+        var parts = [];
+        if (d > 0) parts.push(d + 'd');
+        if (h > 0) parts.push(h + 'h');
+        parts.push((m < 10 && (d > 0 || h > 0) ? '0' : '') + m + 'm');
+        parts.push((sec < 10 ? '0' : '') + sec + 's');
+        return parts.join(' ');
+    }
 
     function maidenheadToLatLng(s) {
         var str = (s || '').toString().trim().toUpperCase();
@@ -215,6 +233,8 @@
         var c = cell.getAttribute('data-col');
         var cellKey = (r != null && c != null) ? r + '_' + c : '';
         var ms = (cellKey && allSettings[cellKey]) ? allSettings[cellKey] : {};
+        var showCountdown = ms.show_countdown;
+        if (showCountdown !== true && showCountdown !== 'true' && showCountdown !== 1 && showCountdown !== '1') showCountdown = false;
         var locStr = (ms.location || window.GLANCERF_SETUP_LOCATION || '').toString().trim();
         var selectedStr = (ms.selected_satellites || '[]').toString().trim();
         var selected = [];
@@ -224,11 +244,21 @@
         } catch (e) { selected = []; }
 
         var nameEl = cell.querySelector('.satellite_pass_name');
+        var countdownEl = cell.querySelector('.satellite_pass_countdown');
         var eventsEl = cell.querySelector('.satellite_pass_events');
         var infoEl = cell.querySelector('.satellite_pass_info');
         var azelEl = cell.querySelector('.satellite_pass_azel');
         var canvas = cell.querySelector('.satellite_pass_canvas');
         var wrap = cell.querySelector('.satellite_pass_wrap');
+
+        if (countdownIntervals[cellKey]) {
+            clearInterval(countdownIntervals[cellKey]);
+            countdownIntervals[cellKey] = null;
+        }
+        if (countdownEl) {
+            countdownEl.textContent = '';
+            countdownEl.style.display = showCountdown ? '' : 'none';
+        }
 
         if (!selected.length) {
             setState(cell, 'empty');
@@ -249,6 +279,8 @@
             return;
         }
 
+        if (countdownEl) countdownEl.style.display = showCountdown ? '' : 'none';
+
         setState(cell, 'loading');
         var noradIds = selected.slice(0, 20).join(',');
         var url = '/api/satellite/passes?norad_ids=' + encodeURIComponent(noradIds) + '&lat=' + loc.lat + '&lng=' + loc.lng + '&alt=0';
@@ -256,8 +288,14 @@
             setState(cell, '');
             var passes = (data && data.passes) ? data.passes : [];
             if (passes.length === 0) {
+                if (countdownIntervals[cellKey]) {
+                    clearInterval(countdownIntervals[cellKey]);
+                    countdownIntervals[cellKey] = null;
+                }
                 if (nameEl) nameEl.textContent = '';
-                if (eventsEl) eventsEl.textContent = 'No pass data';
+                if (countdownEl) countdownEl.textContent = '';
+                var msg = (data && typeof data.message === 'string') ? data.message : 'No pass data. Check network and CelesTrak, or try other satellites.';
+                if (eventsEl) eventsEl.textContent = msg;
                 if (infoEl) infoEl.textContent = '';
                 if (azelEl) azelEl.textContent = '';
                 if (canvas) drawSkyDome(canvas, null, null, null);
@@ -308,6 +346,34 @@
                 else azelParts.push('Below horizon');
                 azelEl.textContent = azelParts.join('  ');
             }
+            if (showCountdown && countdownEl && np) {
+                var targetIso = cur.up && np.set_utc ? np.set_utc : np.rise_utc;
+                var countdownLabel = cur.up && np.set_utc ? 'Set in' : 'Next pass in';
+                if (targetIso) {
+                    function tick() {
+                        try {
+                            var targetDate = new Date(targetIso.replace('Z', ''));
+                            var rem = targetDate - new Date();
+                            if (rem <= 0) {
+                                if (countdownIntervals[cellKey]) {
+                                    clearInterval(countdownIntervals[cellKey]);
+                                    countdownIntervals[cellKey] = null;
+                                }
+                                countdownEl.textContent = cur.up ? 'Set' : 'In pass';
+                                return;
+                            }
+                            countdownEl.textContent = countdownLabel + ' ' + formatCountdown(rem);
+                        } catch (e) {}
+                    }
+                    tick();
+                    if (countdownIntervals[cellKey]) clearInterval(countdownIntervals[cellKey]);
+                    countdownIntervals[cellKey] = setInterval(tick, 1000);
+                } else {
+                    countdownEl.textContent = '';
+                }
+            } else if (countdownEl) {
+                countdownEl.textContent = '';
+            }
             if (canvas) {
                 var container = cell.querySelector('.satellite_pass_dome_wrap');
                 var rect = container ? container.getBoundingClientRect() : { width: 200, height: 160 };
@@ -321,9 +387,14 @@
             }
         }).catch(function() {
             setState(cell, 'error');
+            if (countdownIntervals[cellKey]) {
+                clearInterval(countdownIntervals[cellKey]);
+                countdownIntervals[cellKey] = null;
+            }
             var errEl = cell.querySelector('.satellite_pass_error');
             if (errEl) errEl.textContent = 'Failed to load pass data.';
             if (nameEl) nameEl.textContent = '';
+            if (countdownEl) countdownEl.textContent = '';
             if (eventsEl) eventsEl.textContent = '';
             if (infoEl) infoEl.textContent = '';
             if (azelEl) azelEl.textContent = '';

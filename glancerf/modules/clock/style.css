@@ -15,9 +15,10 @@
     gap: 0.25em;
     color: #ccc;
     text-align: center;
-    /* Fallback until JS scales; keep small so small cells are not huge */
-    font-size: 12px;
-    font-size: 12cqmin;
+    font-size: 4vmin;
+}
+@supports (container-type: size) {
+    .grid-cell-clock .clock_display { font-size: 12cqmin; }
 }
 .grid-cell-clock .clock_date { color: #888; font-size: 0.85em; }
 .grid-cell-clock .clock_local,

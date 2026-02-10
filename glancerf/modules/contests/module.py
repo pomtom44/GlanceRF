@@ -13,6 +13,7 @@ MODULE = {
     "color": "#0d1117",
     "settings": [
         {"id": "max_entries", "label": "Max entries to show", "type": "number", "default": "20"},
+        {"id": "refresh_hours", "label": "Refresh interval (hours)", "type": "number", "default": "6"},
         {
             "id": "enabled_sources",
             "label": "Data sources",
@@ -26,4 +27,7 @@ MODULE = {
             "default": "[]",
         },
     ],
+    "gpio": {
+        "outputs": [{"id": "contest_active", "name": "Contest active LED"}],
+    },
 }

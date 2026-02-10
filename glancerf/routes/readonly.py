@@ -10,11 +10,11 @@ from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
 
 from glancerf.config import get_config
-from glancerf.aspect_ratio import get_aspect_ratio_css
-from glancerf.view_utils import build_merged_cells_from_spans, build_grid_html
+from glancerf.utils import get_aspect_ratio_css, build_merged_cells_from_spans, build_grid_html
 from glancerf.views import render_readonly_page
 from glancerf.modules import get_module_assets
-from glancerf.logging_config import get_logger
+from glancerf.gpio import get_gpio_menu_html
+from glancerf.config import get_logger
 
 _log = get_logger("readonly")
 
@@ -78,6 +78,7 @@ def register_readonly_routes(readonly_app: FastAPI):
             setup_location_json=setup_location_json,
             main_port=main_port,
         )
+        html_content = html_content.replace("__GLANCERF_GPIO_MENU__", get_gpio_menu_html())
         return HTMLResponse(content=html_content)
 
 

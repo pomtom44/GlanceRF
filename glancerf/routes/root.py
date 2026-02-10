@@ -8,11 +8,11 @@ from fastapi import Request
 from fastapi.responses import HTMLResponse, RedirectResponse
 
 from glancerf.config import get_config
-from glancerf.aspect_ratio import get_aspect_ratio_css
-from glancerf.view_utils import build_merged_cells_from_spans, build_grid_html
+from glancerf.utils import get_aspect_ratio_css, build_merged_cells_from_spans, build_grid_html
 from glancerf.views import render_main_page
 from glancerf.modules import get_module_assets
-from glancerf.logging_config import get_logger
+from glancerf.gpio import get_gpio_menu_html
+from glancerf.config import get_logger
 
 _log = get_logger("root")
 
@@ -76,4 +76,5 @@ def register_root(app):
             setup_callsign_json=setup_callsign_json,
             setup_location_json=setup_location_json,
         )
+        html_content = html_content.replace("__GLANCERF_GPIO_MENU__", get_gpio_menu_html())
         return HTMLResponse(content=html_content)

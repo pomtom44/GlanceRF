@@ -12,11 +12,12 @@ from fastapi import Depends, FastAPI, Request
 from fastapi.responses import HTMLResponse, RedirectResponse, JSONResponse, Response
 
 from glancerf.config import get_config
-from glancerf.view_utils import build_merged_cells_from_spans
+from glancerf.utils import build_merged_cells_from_spans
 from glancerf.modules import get_modules, get_module_by_id, get_module_dir, get_module_ids
-from glancerf.rate_limit import rate_limit_dependency
-from glancerf.websocket_manager import ConnectionManager
-from glancerf.logging_config import get_logger
+from glancerf.utils import rate_limit_dependency
+from glancerf.web import ConnectionManager
+from glancerf.gpio import get_gpio_menu_html
+from glancerf.config import get_logger
 
 _log = get_logger("layout_routes")
 _WEB_DIR = Path(__file__).resolve().parent.parent / "web"
@@ -209,6 +210,7 @@ def register_layout_routes(app: FastAPI, connection_manager: ConnectionManager):
         html_content = html_content.replace("__SETUP_CALLSIGN_JSON__", setup_callsign_json)
         html_content = html_content.replace("__SETUP_LOCATION_JSON__", setup_location_json)
         html_content = html_content.replace("__MODULE_SETTINGS_SCRIPTS__", module_settings_scripts_html)
+        html_content = html_content.replace("__GLANCERF_GPIO_MENU__", get_gpio_menu_html())
 
         _log.debug("layout: rendered page grid=%sx%s", grid_columns, grid_rows)
         return HTMLResponse(content=html_content)

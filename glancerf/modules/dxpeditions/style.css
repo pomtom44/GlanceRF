@@ -39,6 +39,12 @@
     display: flex;
     flex-direction: column;
     gap: 4px;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+}
+
+.grid-cell-dxpeditions .dxpeditions_list::-webkit-scrollbar {
+    display: none;
 }
 
 .grid-cell-dxpeditions .dxpeditions_item {
@@ -92,12 +98,29 @@
     padding: 10px 8px;
 }
 
+.grid-cell-dxpeditions.dxpeditions_state_loading .dxpeditions_empty {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex: 1;
+    font-size: 1.25rem;
+    color: #aaa;
+    min-height: 3em;
+}
+
+.grid-cell-dxpeditions .dxpeditions_last_refresh {
+    font-size: 10px;
+    color: #555;
+    text-align: center;
+    flex-shrink: 0;
+    margin-top: 4px;
+}
+
 .grid-cell-dxpeditions .dxpeditions_error {
     color: #c00;
 }
 
-.grid-cell-dxpeditions.dxpeditions_state_empty .dxpeditions_empty,
-.grid-cell-dxpeditions.dxpeditions_state_loading .dxpeditions_empty {
+.grid-cell-dxpeditions.dxpeditions_state_empty .dxpeditions_empty {
     display: block;
 }
 

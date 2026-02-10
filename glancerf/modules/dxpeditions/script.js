@@ -1,5 +1,5 @@
 (function() {
-    var UPDATE_MS = 300000;  // 5 minutes
+    var DEFAULT_REFRESH_HOURS = 6;
 
     function formatDateRange(startUtc, endUtc) {
         if (!startUtc || !endUtc) return '';
@@ -42,6 +42,61 @@
         if (state) cell.classList.add('dxpeditions_state_' + state);
     }
 
+    function setLastRefresh(cell, date) {
+        var el = cell.querySelector('.dxpeditions_last_refresh');
+        if (!el) return;
+        if (!date) {
+            el.textContent = '';
+            el.style.display = 'none';
+            return;
+        }
+        try {
+            var d = date instanceof Date ? date : new Date(date);
+            var day = d.getDate();
+            var m = d.getMonth() + 1;
+            var y = d.getFullYear();
+            var h = d.getHours();
+            var min = d.getMinutes();
+            var t = String(h).padStart(2, '0') + ':' + String(min).padStart(2, '0');
+            el.textContent = 'Last refreshed: ' + day + ' ' + ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][m - 1] + ' ' + t;
+            el.style.display = '';
+        } catch (e) {
+            el.textContent = '';
+            el.style.display = 'none';
+        }
+    }
+
+    function renderList(cell, dxpeds, credits, maxEntries, emptyEl, listEl, creditsEl) {
+        if (creditsEl) creditsEl.textContent = credits || '';
+        if (!dxpeds || dxpeds.length === 0) {
+            if (emptyEl) emptyEl.textContent = 'No DXpeditions listed.';
+            setState(cell, 'empty');
+            listEl.innerHTML = '';
+            return;
+        }
+        setState(cell, '');
+        listEl.innerHTML = '';
+        var slice = dxpeds.slice(0, maxEntries);
+        slice.forEach(function(d) {
+            var item = document.createElement('div');
+            item.className = 'dxpeditions_item';
+            var call = (d.call || '').trim();
+            var url = (d.url || '').trim();
+            var loc = (d.location || '').trim();
+            var dates = formatDateRange(d.start_utc, d.end_utc);
+            var info = (d.info || '').trim();
+            var source = (d.source || '').trim();
+            var callHtml = url ? '<a href="' + url.replace(/"/g, '&quot;') + '" target="_blank" rel="noopener">' + call + '</a>' : call;
+            item.innerHTML =
+                '<span class="dxpeditions_call">' + callHtml + '</span>' +
+                (loc ? ' <span class="dxpeditions_location">' + loc + '</span>' : '') +
+                (source ? ' <span class="dxpeditions_source" title="Source">[' + source + ']</span>' : '') +
+                '<br><span class="dxpeditions_dates">' + dates + '</span>' +
+                (info ? '<br><span class="dxpeditions_info">' + escapeHtml(info) + '</span>' : '');
+            listEl.appendChild(item);
+        });
+    }
+
     function updateCell(cell) {
         var wrap = cell.querySelector('.dxpeditions_wrap');
         var listEl = cell.querySelector('.dxpeditions_list');
@@ -50,10 +105,6 @@
         var errorEl = cell.querySelector('.dxpeditions_error');
 
         if (!wrap || !listEl) return;
-
-        setState(cell, 'loading');
-        if (emptyEl) emptyEl.textContent = 'Loading...';
-        if (listEl) listEl.innerHTML = '';
 
         var settings = getCellSettings(cell);
         var maxEntries = 15;
@@ -73,63 +124,62 @@
                 sourcesParam = '?sources=' + encodeURIComponent(allowed.join(','));
             }
         }
+
+        var isBackgroundRefresh = cell.getAttribute('data-dxpeditions-loaded') === '1';
+
+        if (!isBackgroundRefresh) {
+            setState(cell, 'loading');
+            if (emptyEl) emptyEl.textContent = 'Loading dxpeditions';
+            listEl.innerHTML = '';
+        }
+
         fetch('/api/dxpeditions/list' + sourcesParam)
             .then(function(r) { return r.json(); })
             .then(function(data) {
-                setState(cell, '');
                 if (errorEl) errorEl.textContent = '';
                 if (data.error) {
                     if (errorEl) errorEl.textContent = data.error;
                     setState(cell, 'error');
-                    if (emptyEl) emptyEl.style.display = 'none';
+                    if (!isBackgroundRefresh) listEl.innerHTML = '';
                     return;
                 }
                 var dxpeds = (data.dxpeditions && Array.isArray(data.dxpeditions)) ? data.dxpeditions : [];
                 var credits = data.credits || '';
-
-                if (creditsEl) creditsEl.textContent = credits;
-
-                if (dxpeds.length === 0) {
-                    if (emptyEl) emptyEl.textContent = 'No DXpeditions listed.';
-                    setState(cell, 'empty');
-                    listEl.innerHTML = '';
-                    return;
-                }
-
-                listEl.innerHTML = '';
-                var slice = dxpeds.slice(0, maxEntries);
-                slice.forEach(function(d) {
-                    var item = document.createElement('div');
-                    item.className = 'dxpeditions_item';
-                    var call = (d.call || '').trim();
-                    var url = (d.url || '').trim();
-                    var loc = (d.location || '').trim();
-                    var dates = formatDateRange(d.start_utc, d.end_utc);
-                    var info = (d.info || '').trim();
-                    var source = (d.source || '').trim();
-                    var callHtml = url ? '<a href="' + url.replace(/"/g, '&quot;') + '" target="_blank" rel="noopener">' + call + '</a>' : call;
-                    item.innerHTML =
-                        '<span class="dxpeditions_call">' + callHtml + '</span>' +
-                        (loc ? ' <span class="dxpeditions_location">' + loc + '</span>' : '') +
-                        (source ? ' <span class="dxpeditions_source" title="Source">[' + source + ']</span>' : '') +
-                        '<br><span class="dxpeditions_dates">' + dates + '</span>' +
-                        (info ? '<br><span class="dxpeditions_info">' + escapeHtml(info) + '</span>' : '');
-                    listEl.appendChild(item);
-                });
+                renderList(cell, dxpeds, credits, maxEntries, emptyEl, listEl, creditsEl);
+                cell.setAttribute('data-dxpeditions-loaded', '1');
+                cell.setAttribute('data-dxpeditions-last-ts', String(Date.now()));
+                setLastRefresh(cell, new Date());
             })
             .catch(function() {
-                setState(cell, 'error');
-                if (errorEl) errorEl.textContent = 'Failed to load DXpeditions.';
-                listEl.innerHTML = '';
+                if (!isBackgroundRefresh) {
+                    setState(cell, 'error');
+                    if (errorEl) errorEl.textContent = 'Failed to load DXpeditions.';
+                    listEl.innerHTML = '';
+                }
             });
     }
 
+    function getRefreshMs(cell) {
+        var settings = getCellSettings(cell);
+        var refreshHours = DEFAULT_REFRESH_HOURS;
+        try {
+            var rh = parseFloat(settings.refresh_hours, 10);
+            if (rh > 0 && rh <= 168) refreshHours = rh;
+        } catch (e) {}
+        return Math.max(60000, refreshHours * 60 * 60 * 1000);
+    }
+
     function run() {
+        var now = Date.now();
         document.querySelectorAll('.grid-cell-dxpeditions').forEach(function(cell) {
-            updateCell(cell);
+            var lastTs = parseInt(cell.getAttribute('data-dxpeditions-last-ts') || '0', 10);
+            var refreshMs = getRefreshMs(cell);
+            if (lastTs === 0 || (now - lastTs) >= refreshMs) {
+                updateCell(cell);
+            }
         });
     }
 
     run();
-    setInterval(run, UPDATE_MS);
+    setInterval(run, 60 * 1000);
 })();

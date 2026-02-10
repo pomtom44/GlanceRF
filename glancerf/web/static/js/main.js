@@ -69,6 +69,12 @@
                         showUpdateNotification(message.data);
                         return;
                     }
+                    if (message.type === 'gpio_input' && message.data) {
+                        try {
+                            window.dispatchEvent(new CustomEvent('glancerf_gpio_input', { detail: message.data }));
+                        } catch (e) {}
+                        return;
+                    }
                     if (message.type === 'dom') return;
                 };
                 ws.onopen = function() {
@@ -270,6 +276,12 @@
                     }
                     if (message.type === 'update_available') {
                         showUpdateNotification(message.data);
+                        return;
+                    }
+                    if (message.type === 'gpio_input' && message.data) {
+                        try {
+                            window.dispatchEvent(new CustomEvent('glancerf_gpio_input', { detail: message.data }));
+                        } catch (e) {}
                         return;
                     }
                     if (message.type === 'dom') return;

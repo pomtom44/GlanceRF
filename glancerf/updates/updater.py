@@ -17,7 +17,7 @@ from typing import Optional, Tuple
 import httpx
 
 from glancerf import __version__
-from glancerf.logging_config import DETAILED_LEVEL, get_logger
+from glancerf.config import DETAILED_LEVEL, get_logger
 
 _log = get_logger("updater")
 
@@ -54,8 +54,8 @@ def _set_progress(step: str, message: str = "") -> None:
 
 def get_app_root() -> Path:
     """Get the root directory of the application."""
-    # This file is in glancerf/, so go up one level to Project/
-    return Path(__file__).parent.parent.resolve()
+    # This file is in glancerf/updates/, so go up two levels to Project/
+    return Path(__file__).parent.parent.parent.resolve()
 
 
 def get_staging_dir() -> Path:

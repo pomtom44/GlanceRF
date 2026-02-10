@@ -10,7 +10,7 @@ import httpx
 from fastapi import FastAPI, Query
 from fastapi.responses import JSONResponse
 
-from glancerf.logging_config import get_logger
+from glancerf.config import get_logger
 
 _log = get_logger("rss.api_routes")
 

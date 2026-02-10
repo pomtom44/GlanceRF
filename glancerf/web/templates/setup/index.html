@@ -18,6 +18,8 @@
                 <li><a href="/layout">Layout editor</a></li>
                 <li><a href="/modules">Modules</a></li>
                 <li><a href="/updates">Updates</a></li>
+                <li><button type="button" class="menu-link" id="menu-restart-services">Restart services</button></li>
+                __GLANCERF_GPIO_MENU__
             </ul>
         </div>
     </div>
@@ -135,6 +137,10 @@
                 <h2 style="color:#0f0; font-size:20px; margin-bottom:16px;">Menu</h2>
                 <p style="color:#ccc; font-size:14px; line-height:1.6; margin-bottom:12px;">Press <strong style="color:#0f0;">M</strong> to open the menu. From the menu you can go to Setup, Layout editor, Modules, or run Manual Updates.</p>
                 <p style="color:#ccc; font-size:14px; line-height:1.6; margin-bottom:16px;">The shortcut is ignored when the cursor is in a text field, so you can type normally in inputs.</p>
+                <h2 style="color:#0f0; font-size:20px; margin-bottom:16px;">GPIO</h2>
+                {setup_gpio_section}
+                <h2 style="color:#0f0; font-size:20px; margin-bottom:16px;">Setup guides</h2>
+                <p style="color:#ccc; font-size:14px; line-height:1.6; margin-bottom:12px;">Check the <a href="https://glancerf.zl4st.com" target="_blank" rel="noopener noreferrer" style="color:#0f0;">GlanceRF website</a> for setup guides (quick start, GPIO wiring, and more).</p>
                 <h2 style="color:#0f0; font-size:20px; margin-bottom:16px;">Report problems</h2>
                 <p style="color:#ccc; font-size:14px; line-height:1.6;">Found a bug or have a suggestion? <a href="https://github.com/pomtom44/GlanceRF/issues" target="_blank" rel="noopener noreferrer" style="color:#0f0;">Open an issue on GitHub</a> to report it.</p>
             </div>
@@ -166,6 +172,7 @@
         var o = document.getElementById('glancerf-menu-overlay');
         if (o) o.addEventListener('click', function() {{ var m = document.getElementById('glancerf-menu'); if (m) m.classList.remove('open'); }});
     </script>
+    <script src="/static/js/menu.js"></script>
     <script src="/static/js/setup.js?v=__CACHE_BUST__"></script>
 </body>
 </html>

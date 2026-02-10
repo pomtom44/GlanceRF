@@ -6,10 +6,10 @@ import importlib
 from fastapi import FastAPI
 from fastapi.responses import JSONResponse
 
-from glancerf.logging_config import DETAILED_LEVEL, get_logger
+from glancerf.config import DETAILED_LEVEL, get_logger
 from glancerf.modules import get_module_api_packages
-from glancerf.telemetry import send_telemetry
-from glancerf.time_utils import get_current_time
+from glancerf.services import send_telemetry
+from glancerf.utils import get_current_time
 
 _log = get_logger("api")
 

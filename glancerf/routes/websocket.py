@@ -3,8 +3,8 @@ WebSocket routes for GlanceRF
 """
 
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
-from glancerf.websocket_manager import ConnectionManager
-from glancerf.logging_config import DETAILED_LEVEL, get_logger
+from glancerf.web import ConnectionManager
+from glancerf.config import DETAILED_LEVEL, get_logger
 
 _log = get_logger("websocket")
 

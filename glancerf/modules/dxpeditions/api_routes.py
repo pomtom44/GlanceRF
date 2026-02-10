@@ -7,7 +7,7 @@ import asyncio
 from fastapi import FastAPI
 from fastapi.responses import JSONResponse
 
-from glancerf.logging_config import get_logger
+from glancerf.config import get_logger
 from .dxpedition_service import get_dxpeditions_cached
 
 _log = get_logger("dxpeditions.api_routes")
@@ -29,6 +29,17 @@ def register_routes(app: FastAPI) -> None:
         credits = "; ".join(enabled) if enabled else _DEFAULT_CREDITS
         try:
             result = await asyncio.to_thread(get_dxpeditions_cached, enabled_sources=enabled)
+            from datetime import datetime, timezone
+            now = datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
+            active = any(
+                (d.get("start_utc") or "") <= now <= (d.get("end_utc") or "")
+                for d in (result or []) if isinstance(d, dict)
+            )
+            try:
+                from glancerf.gpio import set_output
+                set_output("dxpeditions", "alert", bool(active))
+            except Exception:
+                pass
             return {
                 "dxpeditions": result,
                 "credits": credits,

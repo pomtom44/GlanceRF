@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GlanceRF - GPIO Setup</title>
+    <link rel="icon" href="/logo.png" type="image/png">
+    <link rel="stylesheet" href="/static/css/setup.css">
+    <link rel="stylesheet" href="/static/css/menu.css">
+    <style>
+        .gpio-container { max-width: 900px; margin: 0 auto; padding: 20px; }
+        .gpio-container h1 { margin-bottom: 10px; color: #fff; }
+        .gpio-container p { color: #aaa; margin-bottom: 20px; font-size: 14px; }
+        .gpio-table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
+        .gpio-table th, .gpio-table td { padding: 10px; text-align: left; border: 1px solid #333; }
+        .gpio-table th { background: #222; color: #0f0; }
+        .gpio-table select { width: 100%; background: #111; color: #fff; border: 1px solid #444; padding: 6px; }
+        .gpio-table select option { background: #111; color: #fff; }
+        .gpio-save { padding: 10px 24px; background: #0f0; color: #000; border: none; font-weight: bold; cursor: pointer; font-family: inherit; }
+        .gpio-save:hover { background: #0c0; }
+        .gpio-save:disabled { background: #333; color: #888; cursor: not-allowed; }
+        .gpio-message { margin-top: 12px; color: #0f0; font-size: 14px; }
+        .gpio-message.error { color: #f66; }
+    </style>
+</head>
+<body>
+    <div id="glancerf-menu" role="dialog" aria-modal="true" aria-label="Menu">
+        <div class="glancerf-menu-overlay" id="glancerf-menu-overlay"></div>
+        <div class="glancerf-menu-panel">
+            <h2>Menu</h2>
+            <ul class="glancerf-menu-list">
+                <li><a href="/setup">Setup</a></li>
+                <li><a href="/layout">Layout editor</a></li>
+                <li><a href="/modules">Modules</a></li>
+                <li><a href="/updates">Updates</a></li>
+                <li><button type="button" class="menu-link" id="menu-restart-services">Restart services</button></li>
+                __GPIO_MENU_ITEM__
+            </ul>
+        </div>
+    </div>
+    <div class="gpio-container">
+        <a href="/setup" style="color:#0f0; font-size:14px; text-decoration:none;">&larr; Back to Setup</a>
+        <h1>GPIO Setup</h1>
+        <p>Assign module functions to GPIO pins. Pin direction (input or output) is set by the function you choose.</p>
+        <p style="margin-bottom: 16px;">For wiring help (buttons, switches, LEDs, resistors, pull-up/pull-down), check the <a href="https://glancerf.zl4st.com/gpio.html" target="_blank" rel="noopener noreferrer" style="color:#0f0;">website GPIO wiring guide</a>.</p>
+        <table class="gpio-table">
+            <thead>
+                <tr>
+                    <th>Pin</th>
+                    <th>Module</th>
+                    <th>Function</th>
+                </tr>
+            </thead>
+            <tbody id="gpio-tbody"></tbody>
+        </table>
+        <button type="button" class="gpio-save" id="gpio-save-btn">Save</button>
+        <div id="gpio-message" class="gpio-message"></div>
+    </div>
+    <script src="/static/js/menu.js"></script>
+    <script>
+        (function() {
+            var pins = __PINS_JSON__;
+            var modules = __MODULES_JSON__;
+            var featuresByModule = __FEATURES_BY_MODULE_JSON__;
+            var assignments = __ASSIGNMENTS_JSON__;
+
+            var tbody = document.getElementById('gpio-tbody');
+            var saveBtn = document.getElementById('gpio-save-btn');
+            var messageEl = document.getElementById('gpio-message');
+
+            function showMessage(text, isError) {
+                messageEl.textContent = text;
+                messageEl.className = 'gpio-message' + (isError ? ' error' : '');
+            }
+
+            function buildRows() {
+                tbody.innerHTML = '';
+                pins.forEach(function(pin) {
+                    var bcm = String(pin.bcm);
+                    var label = pin.label;
+                    var a = assignments[bcm] || {};
+                    var row = document.createElement('tr');
+                    row.innerHTML = '<td>' + label + '</td><td><select class="gpio-module" data-pin="' + bcm + '"><option value="">-- Unassigned --</option></select></td><td><select class="gpio-function" data-pin="' + bcm + '"><option value="">-- Unassigned --</option></select></td>';
+                    tbody.appendChild(row);
+                    var moduleSelect = row.querySelector('.gpio-module');
+                    var functionSelect = row.querySelector('.gpio-function');
+                    modules.forEach(function(m) {
+                        var opt = document.createElement('option');
+                        opt.value = m.id;
+                        opt.textContent = m.name;
+                        if (a.module_id === m.id) opt.selected = true;
+                        moduleSelect.appendChild(opt);
+                    });
+                    function populateFunctions(moduleId) {
+                        functionSelect.innerHTML = '<option value="">-- Unassigned --</option>';
+                        if (!moduleId || !featuresByModule[moduleId]) return;
+                        featuresByModule[moduleId].forEach(function(f) {
+                            var opt = document.createElement('option');
+                            opt.value = f.function_id;
+                            opt.textContent = f.function_name + ' (' + f.direction + ')';
+                            if (a.module_id === moduleId && a.function_id === f.function_id) opt.selected = true;
+                            functionSelect.appendChild(opt);
+                        });
+                    }
+                    if (a.module_id) populateFunctions(a.module_id);
+                    moduleSelect.addEventListener('change', function() {
+                        functionSelect.innerHTML = '<option value="">-- Unassigned --</option>';
+                        populateFunctions(moduleSelect.value);
+                    });
+                });
+            }
+
+            buildRows();
+
+            saveBtn.addEventListener('click', function() {
+                var out = {};
+                document.querySelectorAll('.gpio-module').forEach(function(moduleSelect) {
+                    var pin = moduleSelect.getAttribute('data-pin');
+                    var functionSelect = document.querySelector('.gpio-function[data-pin="' + pin + '"]');
+                    var mid = moduleSelect.value;
+                    var fid = functionSelect ? functionSelect.value : '';
+                    if (mid && fid) out[pin] = { module_id: mid, function_id: fid };
+                });
+                saveBtn.disabled = true;
+                showMessage('Saving...', false);
+                fetch('/gpio', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ assignments: out })
+                }).then(function(r) { return r.json(); })
+                  .then(function(data) {
+                      saveBtn.disabled = false;
+                      if (data.error) showMessage(data.error, true);
+                      else showMessage('Saved.', false);
+                  })
+                  .catch(function(err) {
+                      saveBtn.disabled = false;
+                      showMessage('Save failed.', true);
+                  });
+            });
+
+            document.addEventListener('keydown', function(event) {
+                var isInputFocused = document.activeElement && (document.activeElement.tagName === 'INPUT' || document.activeElement.tagName === 'SELECT' || document.activeElement.tagName === 'TEXTAREA');
+                if (isInputFocused) return;
+                if (event.key === 'm' || event.key === 'M') {
+                    event.preventDefault();
+                    var menu = document.getElementById('glancerf-menu');
+                    if (menu) menu.classList.toggle('open');
+                }
+                if (event.key === 'Escape') {
+                    var menu = document.getElementById('glancerf-menu');
+                    if (menu && menu.classList.contains('open')) { menu.classList.remove('open'); event.preventDefault(); }
+                }
+            });
+            var overlay = document.getElementById('glancerf-menu-overlay');
+            if (overlay) overlay.addEventListener('click', function() {
+                var m = document.getElementById('glancerf-menu');
+                if (m) m.classList.remove('open');
+            });
+        })();
+    </script>
+</body>
+</html>

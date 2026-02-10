@@ -13,17 +13,17 @@ from fastapi.responses import HTMLResponse, FileResponse, Response
 from fastapi.staticfiles import StaticFiles
 
 from glancerf.config import get_config
-from glancerf.logging_config import DETAILED_LEVEL, get_logger, setup_logging
-from glancerf.rate_limit import RateLimitExceeded, rate_limit_exceeded_handler
-from glancerf.websocket_manager import ConnectionManager
+from glancerf.config import DETAILED_LEVEL, get_logger, setup_logging
+from glancerf.utils import RateLimitExceeded, rate_limit_exceeded_handler
+from glancerf.web import ConnectionManager
 from glancerf import __version__
-from glancerf.update_checker import UpdateChecker, check_for_updates, get_latest_release_info, compare_versions
-from glancerf.telemetry import TelemetrySender
-from glancerf.aprs_cache import start_aprs_cache
+from glancerf.updates.update_checker import UpdateChecker, check_for_updates, get_latest_release_info, compare_versions
+from glancerf.services import TelemetrySender, start_aprs_cache
 from glancerf.routes import api, websocket, layout_routes, setup_routes
 from glancerf.routes.root import register_root
 from glancerf.routes.readonly import run_readonly_server
 from glancerf.routes.modules_routes import register_modules_routes
+from glancerf.routes.gpio_routes import register_gpio_routes
 
 # Initialize FastAPI app
 app = FastAPI(title="GlanceRF")
@@ -107,6 +107,7 @@ register_root(app)
 layout_routes.register_layout_routes(app, connection_manager)
 setup_routes.register_setup_routes(app, connection_manager)
 register_modules_routes(app, connection_manager)
+register_gpio_routes(app)
 api.register_api_routes(app)
 websocket.register_websocket_routes(app, connection_manager)
 
@@ -122,7 +123,9 @@ async def updates_page():
         _updates_template_cache = _UPDATES_TEMPLATE_PATH.read_text(encoding="utf-8")
     if _updates_template_cache is None:
         return HTMLResponse(content="<h1>Updates</h1><p>Template not found.</p>", status_code=500)
-    return HTMLResponse(content=_updates_template_cache)
+    from glancerf.gpio import get_gpio_menu_html
+    content = _updates_template_cache.replace("__GLANCERF_GPIO_MENU__", get_gpio_menu_html())
+    return HTMLResponse(content=content)
 
 
 @app.get("/api/update-status")
@@ -162,14 +165,30 @@ async def manual_check_updates():
 @app.get("/api/update-progress")
 async def get_update_progress():
     """Return current update progress (step, message, running, success, final_message) for the web UI."""
-    from glancerf.updater import get_update_progress as _get_progress
+    from glancerf.updates.updater import get_update_progress as _get_progress
     return _get_progress()
+
+
+@app.post("/api/restart")
+async def trigger_restart_services():
+    """Restart GlanceRF services (Windows service, systemd, launchd, or run.py). Returns immediately; process may exit shortly after."""
+    from glancerf.utils import trigger_restart
+    import os
+
+    _log.debug("POST /api/restart")
+    success, message = trigger_restart()
+    if success:
+        async def _exit_after_response():
+            await asyncio.sleep(1)
+            os._exit(0)
+        asyncio.create_task(_exit_after_response())
+    return {"success": success, "message": message}
 
 
 @app.post("/api/apply-update")
 async def trigger_apply_update():
     """If an update is available, start the update in the background. Returns immediately; client should poll /api/update-progress."""
-    from glancerf.updater import perform_auto_update, get_update_progress
+    from glancerf.updates.updater import perform_auto_update, get_update_progress
 
     _log.debug("POST /api/apply-update")
     latest = await check_for_updates()
@@ -204,6 +223,10 @@ async def _start_background_tasks():
     update_checker.start()
     telemetry_sender.start()
     start_aprs_cache()
+    from glancerf.gpio import start_gpio_manager, set_broadcast
+    import asyncio
+    set_broadcast(connection_manager, asyncio.get_running_loop())
+    start_gpio_manager()
 
 
 @app.on_event("shutdown")
@@ -211,6 +234,8 @@ async def _stop_background_tasks():
     """Stop background tasks."""
     update_checker.stop()
     telemetry_sender.stop()
+    from glancerf.gpio import stop_gpio_manager
+    stop_gpio_manager()
 
 
 def run_server(host: str = "0.0.0.0", port: int = 8080, quiet: bool = False):

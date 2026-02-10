@@ -15,4 +15,7 @@ MODULE = {
         {"id": "show_sunset", "label": "Show sunset", "type": "select", "options": ON_OFF_OPTIONS, "default": "1"},
         {"id": "show_moon", "label": "Show moonrise and moonset", "type": "select", "options": ON_OFF_OPTIONS, "default": "0"},
     ],
+    "gpio": {
+        "outputs": [{"id": "sun_up", "name": "Sun above horizon LED"}],
+    },
 }

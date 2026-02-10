@@ -9,8 +9,9 @@ import sqlite3
 import threading
 import time
 from pathlib import Path
+from typing import Optional, Tuple
 
-from glancerf.logging_config import get_logger
+from glancerf.config import get_config, get_logger
 
 _log = get_logger("aprs_cache")
 
@@ -22,8 +23,7 @@ _DB_FILENAME = "aprs.db"
 _CACHE_DIR = "cache"
 
 
-def _get_cache_db_path() -> Path | None:
-    from glancerf.config import get_config
+def _get_cache_db_path() -> Optional[Path]:
     config = get_config()
     callsign = (config.get("setup_callsign") or "").strip()
     if not callsign:
@@ -33,8 +33,7 @@ def _get_cache_db_path() -> Path | None:
     return cache_dir / _DB_FILENAME
 
 
-def _get_login() -> tuple[str, int] | None:
-    from glancerf.config import get_config
+def _get_login() -> Optional[Tuple[str, int]]:
     config = get_config()
     callsign = (config.get("setup_callsign") or "").strip()
     if not callsign:
@@ -123,7 +122,7 @@ def _run_aprs_cache_thread() -> None:
         time.sleep(_RECONNECT_DELAY)
 
 
-_thread: threading.Thread | None = None
+_thread: Optional[threading.Thread] = None
 
 
 def start_aprs_cache() -> None:

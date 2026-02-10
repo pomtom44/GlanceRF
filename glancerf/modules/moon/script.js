@@ -47,6 +47,29 @@
                 var match = timePart.match(/^(\d{1,2}):(\d{2})/);
                 return match ? match[1].padStart(2, '0') + ':' + match[2] : '';
             }
+            function formatDateToIso(d) {
+                if (!d || !(d instanceof Date)) return '';
+                var y = d.getFullYear(), m = (d.getMonth() + 1), day = d.getDate();
+                var h = d.getHours(), min = d.getMinutes();
+                return y + '-' + String(m).padStart(2, '0') + '-' + String(day).padStart(2, '0') + 'T' +
+                    String(h).padStart(2, '0') + ':' + String(min).padStart(2, '0') + ':00';
+            }
+            function loadSunCalc(cb) {
+                if (typeof window.SunCalc === 'function') { cb(); return; }
+                var id = 'script-suncalc-glancerf';
+                if (document.getElementById(id)) {
+                    var t = setInterval(function() {
+                        if (typeof window.SunCalc === 'function') { clearInterval(t); cb(); }
+                    }, 50);
+                    return;
+                }
+                var s = document.createElement('script');
+                s.id = id;
+                s.src = 'https://cdn.jsdelivr.net/npm/suncalc@1.9.0/SunCalc.min.js';
+                s.onload = function() { cb(); };
+                s.onerror = function() { cb(); };
+                document.head.appendChild(s);
+            }
             var LUNAR_CYCLE_DAYS = 29.530588;
             var KNOWN_NEW_MOON_JD = 2451550.1;
             function moonPhaseName(ageDays) {
@@ -116,33 +139,17 @@
                     if (loadEl) { loadEl.textContent = 'Loading...'; loadEl.style.display = ''; }
                 } else if (loadEl) loadEl.style.display = 'none';
             }
-            function fetchMoonTimes(cell, cellKey, ms, coord, cb) {
-                showLoading(cell, true);
-                var url = 'https://api.open-meteo.com/v1/forecast?latitude=' + encodeURIComponent(coord.lat) + '&longitude=' + encodeURIComponent(coord.lng) +
-                    '&daily=moonrise,moonset&timezone=auto';
-                fetch(url).then(function(r) {
-                    return r.json().then(function(data) {
-                        return { ok: r.ok, status: r.status, data: data };
-                    });
-                }).then(function(result) {
-                    showLoading(cell, false);
-                    var data = result.data;
-                    if (result.ok && data) {
-                        cb(data);
-                        try {
-                            window['moon_cache_' + cellKey] = { data: data, ts: Date.now() };
-                        } catch (e) {}
-                    } else {
-                        var msg = 'Moon times unavailable';
-                        if (data && typeof data.reason === 'string') msg = data.reason;
-                        else if (data && typeof data.error === 'string') msg = data.error;
-                        else if (!result.ok && result.status) msg = 'Moon times unavailable (' + result.status + ')';
-                        cb(null, msg);
-                    }
-                }).catch(function(err) {
-                    showLoading(cell, false);
-                    var msg = (err && err.message) ? err.message : 'Network error';
-                    cb(null, msg);
+            function getMoonTimesData(coord, cb) {
+                loadSunCalc(function() {
+                    var data = { daily: {} };
+                    if (typeof window.SunCalc !== 'function') { cb(data); return; }
+                    try {
+                        var today = new Date();
+                        var mt = window.SunCalc.getMoonTimes(today, coord.lat, coord.lng);
+                        if (mt.rise) data.daily.moonrise = [formatDateToIso(mt.rise)];
+                        if (mt.set) data.daily.moonset = [formatDateToIso(mt.set)];
+                    } catch (e) {}
+                    cb(data);
                 });
             }
             function updateCell(cell, cellKey, ms) {
@@ -153,21 +160,22 @@
                     return;
                 }
                 var cacheKey = 'moon_cache_' + cellKey;
+                var todayKey = new Date().toDateString();
                 try {
                     var cached = window[cacheKey];
-                    if (cached && (Date.now() - cached.ts) < CACHE_MS) {
+                    if (cached && cached.dateKey === todayKey && (Date.now() - cached.ts) < CACHE_MS) {
                         showLoading(cell, false);
                         showElements(cell, cached.data, ms);
                         return;
                     }
                 } catch (e) {}
-                fetchMoonTimes(cell, cellKey, ms, coord, function(data, errorMsg) {
-                    if (data) {
-                        showElements(cell, data, ms);
-                    } else {
-                        showElements(cell, null, ms);
-                        showError(cell, errorMsg || 'Moon times unavailable');
-                    }
+                showLoading(cell, true);
+                getMoonTimesData(coord, function(data) {
+                    showLoading(cell, false);
+                    try {
+                        window[cacheKey] = { data: data, ts: Date.now(), dateKey: todayKey };
+                    } catch (e) {}
+                    showElements(cell, data, ms);
                 });
             }
             function runAll() {
