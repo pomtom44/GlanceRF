@@ -24,9 +24,11 @@ A clear and concise description of what you expected to happen.
 If applicable, add screenshots to help explain your problem.
 
 **System Info**
- - OS: [e.g. iOS]
- - Browser [e.g. chrome, safari]
- - GlanceRF Version [e.g. 0.1.3]
+ - OS:
+ - Headless or desktop:
+ - If headless, and different server, what server OS:
+ - Browser (chrome, edge firefox etc) and version:
+ - GlanceRF Version:
 
 **Additional context**
 Add any other context about the problem here.
