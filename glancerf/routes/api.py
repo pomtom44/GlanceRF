@@ -8,6 +8,7 @@ from fastapi.responses import JSONResponse
 
 from glancerf.config import DETAILED_LEVEL, get_logger
 from glancerf.modules import get_module_api_packages
+from glancerf.utils.numpy_fallback import try_numpy_baseline_fallback
 from glancerf.services import send_telemetry
 from glancerf.utils import get_current_time
 
@@ -24,6 +25,8 @@ def register_module_api_routes(app: FastAPI) -> None:
                 register_routes(app)
                 _log.debug("Registered API routes for module package: %s", pkg)
         except Exception as e:
+            if try_numpy_baseline_fallback(e):
+                return
             _log.warning("Failed to register API routes for %s: %s", pkg, e)
 
 

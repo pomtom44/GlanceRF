@@ -20,4 +20,5 @@ MODULE = {
     "gpio": {
         "outputs": [{"id": "alert", "name": "Active DXpedition LED"}],
     },
+    "cache_warmer": True,
 }

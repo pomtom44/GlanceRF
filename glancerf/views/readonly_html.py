@@ -29,11 +29,12 @@ def render_readonly_page(
     setup_callsign_json: str = '""',
     setup_location_json: str = '""',
     main_port: int = 8080,
+    cache_bust: str = "",
 ) -> str:
     """Render the read-only clock page HTML (same structure as main, no interactions)."""
     module_css = module_css if module_css is not None else ""
     module_js = module_js if module_js is not None else ""
-    return _get_readonly_template().format(
+    html = _get_readonly_template().format(
         aspect_ratio_css=aspect_ratio_css,
         grid_css=grid_css,
         grid_html=grid_html,
@@ -44,3 +45,6 @@ def render_readonly_page(
         setup_location_json=setup_location_json,
         main_port=main_port,
     )
+    if cache_bust:
+        html = html.replace("__CACHE_BUST__", cache_bust)
+    return html

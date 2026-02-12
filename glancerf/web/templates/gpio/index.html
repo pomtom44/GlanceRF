@@ -5,8 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>GlanceRF - GPIO Setup</title>
     <link rel="icon" href="/logo.png" type="image/png">
-    <link rel="stylesheet" href="/static/css/setup.css">
-    <link rel="stylesheet" href="/static/css/menu.css">
+    <link rel="stylesheet" href="/static/css/setup.css?v=__CACHE_BUST__">
+    <link rel="stylesheet" href="/static/css/menu.css?v=__CACHE_BUST__">
     <style>
         .gpio-container { max-width: 900px; margin: 0 auto; padding: 20px; }
         .gpio-container h1 { margin-bottom: 10px; color: #fff; }
@@ -30,8 +30,8 @@
             <h2>Menu</h2>
             <ul class="glancerf-menu-list">
                 <li><a href="/setup">Setup</a></li>
-                <li><a href="/layout">Layout editor</a></li>
-                <li><a href="/modules">Modules</a></li>
+                <li><a href="/layout">Layout & Config editor</a></li>
+                <li><a href="/modules">Modules list</a></li>
                 <li><a href="/updates">Updates</a></li>
                 <li><button type="button" class="menu-link" id="menu-restart-services">Restart services</button></li>
                 __GPIO_MENU_ITEM__
@@ -56,7 +56,7 @@
         <button type="button" class="gpio-save" id="gpio-save-btn">Save</button>
         <div id="gpio-message" class="gpio-message"></div>
     </div>
-    <script src="/static/js/menu.js"></script>
+    <script src="/static/js/menu.js?v=__CACHE_BUST__"></script>
     <script>
         (function() {
             var pins = __PINS_JSON__;

@@ -4,6 +4,7 @@ Only registered when GPIO is available. Serves /gpio setup page and saves assign
 """
 
 import json
+import time
 from pathlib import Path
 
 from fastapi import Depends, FastAPI, Request
@@ -80,11 +81,13 @@ def register_gpio_routes(app: FastAPI):
         if not template:
             return HTMLResponse(content="<h1>GPIO</h1><p>Template not found.</p>", status_code=500)
         gpio_menu = get_gpio_menu_html()
+        cache_bust = str(int(time.time() * 1000))
         html = template.replace("__PINS_JSON__", json.dumps([{"bcm": b, "label": l} for b, l in pins]))
         html = html.replace("__MODULES_JSON__", json.dumps(modules))
         html = html.replace("__FEATURES_BY_MODULE_JSON__", json.dumps(features_by_module))
         html = html.replace("__ASSIGNMENTS_JSON__", json.dumps(assignments))
         html = html.replace("__GPIO_MENU_ITEM__", gpio_menu)
+        html = html.replace("__CACHE_BUST__", cache_bust)
         return HTMLResponse(content=html)
 
     @app.post("/gpio")

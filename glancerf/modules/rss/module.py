@@ -9,4 +9,5 @@ MODULE = {
         {"id": "max_items", "label": "Max items to show", "type": "number", "min": 1, "max": 50, "default": "10"},
         {"id": "refresh_min", "label": "Refresh interval (minutes)", "type": "number", "min": 1, "max": 120, "default": "15"},
     ],
+    "cache_warmer": True,
 }

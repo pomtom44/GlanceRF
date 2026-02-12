@@ -1,5 +1,12 @@
 (function() {
             var VALID_MAP_STYLES = ['carto', 'opentopomap', 'esri', 'nasagibs'];
+            function getMapApiBase() {
+                var mainPort = typeof window.GLANCERF_MAIN_PORT !== 'undefined' ? window.GLANCERF_MAIN_PORT : null;
+                if (mainPort != null && String(location.port) !== String(mainPort)) {
+                    return (location.protocol === 'https:' ? 'https://' : 'http://') + location.hostname + ':' + mainPort;
+                }
+                return '';
+            }
             function maidenheadToLatLng(s) {
                 var str = (s || '').toString().trim().toUpperCase();
                 if (str.length < 2) return null;
@@ -435,7 +442,7 @@
                 else if (sourceId === 'tropo') { valMin = 250; valMax = 400; }
                 else if (sourceId === 'vhf_aprs') { valMin = 20; valMax = 600; }
                 else { valMin = 0; valMax = 1; }
-                var url = '/api/map/propagation-data?source=' + encodeURIComponent(sourceId);
+                var url = getMapApiBase() + '/api/map/propagation-data?source=' + encodeURIComponent(sourceId);
                 if (sourceId === 'vhf_aprs' && cfg && cfg.propagation_aprs_hours) {
                     url += '&hours=' + encodeURIComponent(cfg.propagation_aprs_hours);
                 }
@@ -682,8 +689,8 @@
             }
             var APRS_SYMBOL_SIZE = 32;
             var APRS_SPRITE_BASE = 'https://cdn.jsdelivr.net/gh/hessu/aprs-symbols@master/png';
-            function getAprsSymbolDivIcon(symbolTable, symbol) {
-                var tableIdx = (symbolTable === '\\') ? 1 : 0;
+            function getAprsSymbolDivIcon(symbolTable, symbol, anchorBottomCenter) {
+                var tableIdx = (symbolTable === '\\' || symbolTable === '\u005C') ? 1 : 0;
                 var code = (symbol && symbol.length) ? symbol.charCodeAt(0) : 63;
                 code = Math.max(33, Math.min(127, code));
                 var index = code - 33;
@@ -696,12 +703,65 @@
                 var aprsCode = (symbolTable || '/') + (symbol || '?');
                 var aprsCodeEsc = aprsCode.replace(/&/g, '&amp;').replace(/"/g, '&quot;');
                 var html = '<div class="aprs-symbol-cell" style="width:' + cell + 'px;height:' + cell + 'px;background:url(\'' + spriteUrl + '\') ' + posX + 'px ' + posY + 'px no-repeat;" data-aprs-code="' + aprsCodeEsc + '" title="APRS ' + aprsCodeEsc + '"><span class="aprs-symbol-code-debug" aria-hidden="true" style="position:absolute;left:-9999px;width:1px;height:1px;overflow:hidden;">' + aprsCodeEsc + '</span></div>';
+                var anchor = anchorBottomCenter ? [cell / 2, cell] : [cell / 2, cell / 2];
                 return L.divIcon({
                     html: html,
                     className: 'aprs-symbol-icon-wrap',
                     iconSize: [cell, cell],
-                    iconAnchor: [0, cell / 2]
+                    iconAnchor: anchor
                 });
+            }
+            function getQthFromCallsignModule() {
+                var allSettings = window.GLANCERF_MODULE_SETTINGS || {};
+                var cells = document.querySelectorAll('.grid-cell-callsign');
+                for (var i = 0; i < cells.length; i++) {
+                    var cell = cells[i];
+                    var r = cell.getAttribute('data-row');
+                    var c = cell.getAttribute('data-col');
+                    if (r == null || c == null) continue;
+                    var key = r + '_' + c;
+                    var ms = allSettings[key];
+                    if (!ms) continue;
+                    if (ms.show_qth_on_map !== '1' && ms.show_qth_on_map !== true) continue;
+                    var grid = (ms.grid || window.GLANCERF_SETUP_LOCATION || '').toString().trim();
+                    if (!grid) continue;
+                    var latLng = maidenheadToLatLng(grid);
+                    if (!latLng) continue;
+                    var callsign = (ms.callsign || window.GLANCERF_SETUP_CALLSIGN || '').toString().trim() || 'QTH';
+                    var iconVal = (ms.qth_map_icon != null && ms.qth_map_icon !== '') ? String(ms.qth_map_icon).trim() : '/-';
+                    if (iconVal.length === 0) iconVal = '/-';
+                    var symbolTable = iconVal.charAt(0) || '/';
+                    var symbol = iconVal.length >= 2 ? iconVal.charAt(1) : (iconVal.charAt(0) || '[');
+                    return { lat: latLng.lat, lng: latLng.lng, callsign: callsign, symbolTable: symbolTable, symbol: symbol };
+                }
+                return null;
+            }
+            function addQthMarkerOverlay(map) {
+                var layerGroup = map._qthMarkerLayerGroup;
+                if (!layerGroup) {
+                    layerGroup = L.layerGroup();
+                    map._qthMarkerLayerGroup = layerGroup;
+                    layerGroup.addTo(map);
+                }
+                layerGroup.clearLayers();
+                var qth = getQthFromCallsignModule();
+                if (!qth || typeof L === 'undefined') return;
+                var icon = getAprsSymbolDivIcon(qth.symbolTable, qth.symbol, false);
+                var m = L.marker([qth.lat, qth.lng], { icon: icon });
+                if (qth.callsign) m.bindTooltip(qth.callsign, { permanent: false, direction: 'top', offset: [0, -16] });
+                m.addTo(layerGroup);
+            }
+            function parseNoradIdList(raw) {
+                var list = [];
+                if (raw == null || (typeof raw === 'string' && !raw.trim())) return list;
+                try {
+                    if (typeof raw === 'string') {
+                        var trimmed = raw.trim();
+                        if (trimmed.indexOf('[') === 0) list = JSON.parse(trimmed);
+                        else list = trimmed.split(',').map(function(s) { return parseInt(s.trim(), 10); }).filter(function(n) { return !isNaN(n); });
+                    } else if (Array.isArray(raw)) list = raw;
+                } catch (e) {}
+                return list;
             }
             function applyAprsLocationsFilter(locs, filterStr) {
                 if (!filterStr || !locs || !locs.length) return locs;
@@ -736,7 +796,7 @@
                 var hours = (cfg && cfg.propagation_aprs_hours) ? cfg.propagation_aprs_hours : 6;
                 var ageLimitHours = typeof hours === 'number' ? hours : parseFloat(hours, 10) || 6;
                 var displayMode = (cfg && cfg.aprs_display_mode === 'icons') ? 'icons' : 'dots';
-                var url = '/api/map/aprs-locations?hours=' + encodeURIComponent(hours);
+                var url = getMapApiBase() + '/api/map/aprs-locations?hours=' + encodeURIComponent(hours);
                 fetch(url).then(function(r) {
                     if (!r.ok) return { locations: [] };
                     return r.json();
@@ -778,6 +838,42 @@
                     }
                 }).catch(function() {});
             }
+            /* sat_new: cache is updated by the backend regardless of whether the map is in the layout.
+               We only fetch and display sat_new locations when the map module is loaded (this script
+               runs only when map is in the layout and there are .grid-cell-map .map_container elements). */
+            function addSatNewLocationsOverlay(map) {
+                if (typeof L === 'undefined') return;
+                var layerGroup = map._satNewLocationsLayerGroup;
+                if (!layerGroup) {
+                    layerGroup = L.layerGroup();
+                    map._satNewLocationsLayerGroup = layerGroup;
+                    layerGroup.addTo(map);
+                }
+                var url = getMapApiBase() + '/api/sat_new/locations';
+                fetch(url).then(function(r) {
+                    if (!r.ok) return { locations: [] };
+                    return r.json();
+                }).then(function(data) {
+                    var locs = (data && data.locations) ? data.locations : [];
+                    layerGroup.clearLayers();
+                    if (!map.hasLayer(layerGroup)) layerGroup.addTo(map);
+                    for (var i = 0; i < locs.length; i++) {
+                        var loc = locs[i];
+                        var lat = loc.lat != null ? Number(loc.lat) : NaN;
+                        var lon = loc.lon != null ? Number(loc.lon) : NaN;
+                        if (!isNaN(lat) && !isNaN(lon)) {
+                            L.circleMarker([lat, lon], {
+                                radius: 4,
+                                fillColor: '#00b4ff',
+                                color: '#fff',
+                                weight: 1,
+                                fillOpacity: 0.9
+                            }).addTo(layerGroup);
+                        }
+                    }
+                    layerGroup.bringToFront();
+                }).catch(function() {});
+            }
             function applyOverlays(map, cfg) {
                 if (cfg.grid_style && cfg.grid_style !== 'none') addGridOverlay(map, cfg.grid_style);
                 if (cfg.show_terminator) addTerminatorOverlay(map);
@@ -785,6 +881,8 @@
                 if (cfg.show_aurora) addAuroraOverlay(map, cfg);
                 if (cfg.propagation_source && cfg.propagation_source !== 'none') addPropagationOverlay(map, cfg);
                 if (cfg.show_aprs_locations) addAprsLocationsOverlay(map, cfg);
+                addQthMarkerOverlay(map);
+                addSatNewLocationsOverlay(map);
             }
             function syncMapSize(el) {
                 if (!el._map) return;
@@ -833,6 +931,7 @@
                         el._resizeObserver.observe(el);
                     }
                 });
+                /* Refresh overlays only for map containers (map module must be in layout to get here). */
                 if (!window._glancerfPropagationRefreshStarted) {
                     window._glancerfPropagationRefreshStarted = true;
                     setInterval(function() {
@@ -841,6 +940,7 @@
                             var cfg = getMapSettings(el);
                             if (cfg.propagation_source && cfg.propagation_source !== 'none') addPropagationOverlay(el._map, cfg);
                             if (cfg.show_aprs_locations) addAprsLocationsOverlay(el._map, cfg);
+                            addSatNewLocationsOverlay(el._map);
                         });
                     }, PROPAGATION_REFRESH_MS);
                 }

@@ -26,8 +26,8 @@
             <h2>Menu</h2>
             <ul class="glancerf-menu-list">
                 <li><a href="/setup">Setup</a></li>
-                <li><a href="/layout">Layout editor</a></li>
-                <li><a href="/modules">Modules</a></li>
+                <li><a href="/layout">Layout & Config editor</a></li>
+                <li><a href="/modules">Modules list</a></li>
                 <li><a href="/updates">Updates</a></li>
                 <li><button type="button" class="menu-link" id="menu-restart-services">Restart services</button></li>
                 __GLANCERF_GPIO_MENU__
@@ -51,7 +51,7 @@
             "setup_location": __SETUP_LOCATION_JSON__
         };
     </script>
-    <script src="/static/js/menu.js"></script>
+    <script src="/static/js/menu.js?v=__CACHE_BUST__"></script>
     <script src="/static/js/layout.js?v=__CACHE_BUST__"></script>
     __MODULE_SETTINGS_SCRIPTS__
 </body>

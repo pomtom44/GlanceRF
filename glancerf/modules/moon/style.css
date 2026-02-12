@@ -8,32 +8,54 @@
     gap: 0.25em;
     text-align: center;
 }
-.grid-cell-moon .moon_phase_icon {
-    font-size: 4.5vmin;
-    line-height: 1;
+.grid-cell-moon .moon_phase_visual {
+    flex-shrink: 0;
+    line-height: 0;
+}
+.grid-cell-moon .moon_phase_label {
+    margin-bottom: 0.35em;
+}
+.grid-cell-moon .moon_moonrise {
+    margin-top: 0.35em;
+}
+.grid-cell-moon .moon_moonset {
+    margin-bottom: 0.35em;
+}
+.grid-cell-moon .moon_phase_svg,
+.grid-cell-moon .moon_phase_img {
+    width: 100%;
+    height: auto;
+    max-width: 64px;
+    max-height: 64px;
+    display: block;
+}
+.grid-cell-moon .moon_phase_img {
+    object-fit: contain;
 }
 .grid-cell-moon .moon_phase_label,
 .grid-cell-moon .moon_moonrise,
 .grid-cell-moon .moon_moonset {
-    font-size: 3vmin;
+    font-size: clamp(11px, 2.8vmin, 22px);
     color: #ccc;
 }
 .grid-cell-moon .moon_error,
 .grid-cell-moon .moon_loading {
-    font-size: 2vmin;
+    font-size: clamp(10px, 2vmin, 16px);
     color: #888;
 }
 @supports (container-type: size) {
-    .grid-cell-moon .moon_phase_icon {
-        font-size: 14cqmin;
+    .grid-cell-moon .moon_phase_svg,
+    .grid-cell-moon .moon_phase_img {
+        max-width: 18cqmin;
+        max-height: 18cqmin;
     }
     .grid-cell-moon .moon_phase_label,
     .grid-cell-moon .moon_moonrise,
     .grid-cell-moon .moon_moonset {
-        font-size: 9cqmin;
+        font-size: clamp(11px, 9cqmin, 22px);
     }
     .grid-cell-moon .moon_error,
     .grid-cell-moon .moon_loading {
-        font-size: 6cqmin;
+        font-size: clamp(10px, 6cqmin, 16px);
     }
 }

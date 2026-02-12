@@ -1,8 +1,8 @@
 # Requested features
 
 - Themes, fonts, colors etc
-- Satellite passes (on map)
 - Predicted radiosonde landing locations
 - Docker implementation
 - GPS Integation
-- GPIO
+- Drag and drop layout
+- Expand to the left and up

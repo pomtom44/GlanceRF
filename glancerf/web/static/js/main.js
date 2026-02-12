@@ -1,3 +1,14 @@
+        (function hidePageLoading() {
+            function hide() {
+                var el = document.getElementById('glancerf-page-loading');
+                if (el) el.style.display = 'none';
+            }
+            if (document.readyState === 'loading') {
+                document.addEventListener('DOMContentLoaded', hide);
+            } else {
+                hide();
+            }
+        })();
         // Each view uses its own viewport sizing; no desktop/browser size sync.
         let ws = null;
         const urlParams = new URLSearchParams(window.location.search);
@@ -307,7 +318,7 @@
             attachBrowserHandlers();
         }
         
-        // Keyboard shortcut: M opens menu (Setup, Layout editor, Modules, Manual Updates)
+        // Keyboard shortcut: M opens menu (Setup, Layout & Config editor, Modules list, Manual Updates)
         document.addEventListener('keydown', function(event) {
             const isInputFocused = document.activeElement && (
                 document.activeElement.tagName === 'INPUT' ||

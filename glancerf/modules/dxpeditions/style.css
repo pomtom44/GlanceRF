@@ -15,15 +15,6 @@
     overflow: hidden;
 }
 
-.grid-cell-dxpeditions .dxpeditions_title {
-    font-size: 16px;
-    font-weight: 600;
-    color: #0f0;
-    text-align: center;
-    flex-shrink: 0;
-    margin-bottom: 2px;
-}
-
 .grid-cell-dxpeditions .dxpeditions_credits {
     font-size: 10px;
     color: #888;
@@ -98,7 +89,8 @@
     padding: 10px 8px;
 }
 
-.grid-cell-dxpeditions.dxpeditions_state_loading .dxpeditions_empty {
+.grid-cell-dxpeditions.dxpeditions_state_loading .dxpeditions_empty,
+.grid-cell-dxpeditions.dxpeditions_show_empty .dxpeditions_empty {
     display: flex;
     align-items: center;
     justify-content: center;
@@ -108,9 +100,15 @@
     min-height: 3em;
 }
 
+.grid-cell-dxpeditions.dxpeditions_show_empty .dxpeditions_list,
+.grid-cell-dxpeditions.dxpeditions_state_loading .dxpeditions_list {
+    flex: 0;
+    min-height: 0;
+}
+
 .grid-cell-dxpeditions .dxpeditions_last_refresh {
     font-size: 10px;
-    color: #555;
+    color: #fff;
     text-align: center;
     flex-shrink: 0;
     margin-top: 4px;
@@ -128,13 +126,10 @@
     display: block;
 }
 
-.grid-cell-dxpeditions.dxpeditions_state_empty .dxpeditions_title,
 .grid-cell-dxpeditions.dxpeditions_state_empty .dxpeditions_credits,
 .grid-cell-dxpeditions.dxpeditions_state_empty .dxpeditions_list,
-.grid-cell-dxpeditions.dxpeditions_state_loading .dxpeditions_title,
 .grid-cell-dxpeditions.dxpeditions_state_loading .dxpeditions_credits,
 .grid-cell-dxpeditions.dxpeditions_state_loading .dxpeditions_list,
-.grid-cell-dxpeditions.dxpeditions_state_error .dxpeditions_title,
 .grid-cell-dxpeditions.dxpeditions_state_error .dxpeditions_credits,
 .grid-cell-dxpeditions.dxpeditions_state_error .dxpeditions_list {
     display: none;

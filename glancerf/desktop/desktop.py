@@ -16,7 +16,7 @@ _existing = os.environ.get("QTWEBENGINE_CHROMIUM_FLAGS", "")
 if "--disable-gpu-sandbox" not in _existing and "--disable-gpu" not in _existing:
     os.environ["QTWEBENGINE_CHROMIUM_FLAGS"] = (_existing + " --disable-gpu-sandbox").strip()
 
-from PyQt5.QtCore import QUrl, QTimer, QPoint, QEvent, Qt
+from PyQt5.QtCore import QUrl, QTimer, QPoint, QEvent, Qt, QCoreApplication
 from PyQt5.QtGui import QKeySequence, QFont, QIcon
 from PyQt5.QtWidgets import (
     QApplication,
@@ -78,6 +78,7 @@ class GlanceRFWindow(QMainWindow):
         self.browser.page().settings().setAttribute(
             self.browser.page().settings().WebAttribute.JavascriptEnabled, True
         )
+        self.browser.loadStarted.connect(self._on_load_started)
         self.browser.loadFinished.connect(self._on_page_loaded)
         self.browser.installEventFilter(self)
         self.browser.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
@@ -164,6 +165,11 @@ class GlanceRFWindow(QMainWindow):
         )
         layout.addWidget(bar, 0, Qt.AlignHCenter)
         return w
+
+    def _on_load_started(self):
+        """Show loading overlay when a load (including reload) starts, so the view does not go black."""
+        if self._stack.currentIndex() == 1:
+            self._stack.setCurrentIndex(0)
 
     def _on_page_loaded(self, ok):
         if ok and self._stack.currentIndex() == 0:
@@ -278,6 +284,15 @@ class GlanceRFWindow(QMainWindow):
         self._save_window_geometry_and_ratio()
 
     def closeEvent(self, event):
+        # Tear down WebEngine before the window closes to reduce Chromium GPU
+        # compositor errors (SharedImageManager / GL_INVALID_OPERATION on exit).
+        if hasattr(self, "_stack") and hasattr(self, "browser"):
+            self._stack.removeWidget(self.browser)
+            self.browser.setParent(None)
+            self.browser.deleteLater()
+            self.browser = None
+            for _ in range(3):
+                QCoreApplication.processEvents()
         event.accept()
 
 

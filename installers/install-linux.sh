@@ -98,6 +98,10 @@ case "${DISTRO_ID}" in
         ;;
 esac
 
+# Apt-based distros (Debian, Ubuntu, Raspberry Pi OS) can use system PyQt5 for desktop to avoid building from source
+IS_APT_DISTRO=false
+[[ "$DISTRO_NAME" == *apt* ]] && IS_APT_DISTRO=true
+
 echo "Detected distro: $DISTRO_NAME"
 if [ -n "$DISTRO_ID" ]; then
     echo "  (/etc/os-release ID: $DISTRO_ID)"
@@ -136,6 +140,12 @@ case "$shortcut_resp" in
 esac
 echo ""
 
+# Use system PyQt5 on apt distros for desktop to avoid building from source (fixes Raspberry Pi / low-memory)
+USE_SYSTEM_PYQT=false
+if [ "$WANT_HEADLESS" = false ] && [ "$IS_APT_DISTRO" = true ]; then
+    USE_SYSTEM_PYQT=true
+fi
+
 # --- 1. Install system packages once (Python, venv, ffmpeg) ---
 if [ -n "$PKG_INSTALL_ALL" ]; then
     echo "Installing system packages (Python, pip, venv, ffmpeg)..."
@@ -145,8 +155,26 @@ if [ -n "$PKG_INSTALL_ALL" ]; then
     echo ""
 fi
 
+# On apt + desktop: install PyQt5 from distro so we do not build from source (avoids Pi OOM/long build)
+if [ "$USE_SYSTEM_PYQT" = true ]; then
+    echo "Installing PyQt5 from system packages (avoids building from source on Raspberry Pi / low-memory)..."
+    if ! sudo apt-get install -y python3-pyqt5 python3-pyqt5.qtwebengine python3-dev; then
+        echo "Could not install python3-pyqt5 / python3-pyqt5.qtwebengine. Falling back to pip install (may be slow or fail on low memory)."
+        USE_SYSTEM_PYQT=false
+    else
+        echo "PyQt5 system packages OK."
+    fi
+    echo ""
+fi
+
 # --- 2. Find Python ---
 PYTHON3=""
+if [ "$USE_SYSTEM_PYQT" = true ] && [ -x /usr/bin/python3 ]; then
+    if /usr/bin/python3 -c "import sys; sys.exit(0 if sys.version_info >= (3, 8) else 1)" 2>/dev/null; then
+        PYTHON3="/usr/bin/python3"
+    fi
+fi
+if [ -z "$PYTHON3" ]; then
 for cmd in python3 python3.12 python3.11 python3.10 python; do
     if command -v "$cmd" &>/dev/null; then
         if "$cmd" -c "import sys; sys.exit(0 if sys.version_info >= (3, 8) else 1)" 2>/dev/null; then
@@ -155,6 +183,7 @@ for cmd in python3 python3.12 python3.11 python3.10 python; do
         fi
     fi
 done
+fi
 
 if [ -z "$PYTHON3" ]; then
     echo "Python 3.8 or higher not found. Install it from your distro or https://www.python.org/downloads/"
@@ -178,16 +207,33 @@ if [ -d "$VENV_DIR" ] && ! "$VENV_PYTHON" -m pip --version &>/dev/null; then
     rm -rf "$VENV_DIR"
 fi
 
+# When using system PyQt5 we need a venv with system site-packages; recreate if existing venv does not
+if [ "$USE_SYSTEM_PYQT" = true ] && [ -d "$VENV_DIR" ]; then
+    if ! grep -q "include-system-site-packages = true" "$VENV_DIR/pyvenv.cfg" 2>/dev/null; then
+        echo "Recreating venv with system site-packages so PyQt5 from apt is visible."
+        rm -rf "$VENV_DIR"
+    fi
+fi
+
 if [ ! -d "$VENV_DIR" ]; then
     echo "Creating virtual environment..."
-    if ! "$PYTHON3" -m venv "$VENV_DIR"; then
+    VENV_ARGS=()
+    [ "$USE_SYSTEM_PYQT" = true ] && VENV_ARGS+=(--system-site-packages)
+    if ! "$PYTHON3" -m venv "$VENV_DIR" "${VENV_ARGS[@]}"; then
         echo "Failed to create venv. Install python3-venv (e.g. sudo apt-get install -y python3-venv) and run this script again."
         exit 1
     fi
 fi
 
+# Headless: no PyQt5 needed. Desktop on apt: we use system PyQt5 and only server deps in venv.
+if [ "$WANT_HEADLESS" = true ] || [ "$USE_SYSTEM_PYQT" = true ]; then
+    REQUIREMENTS_PATH="$PROJECT_DIR/requirements-server.txt"
+    [ "$WANT_HEADLESS" = true ] && echo "Using server-only requirements (no GUI dependencies)."
+else
+    REQUIREMENTS_PATH="$PROJECT_DIR/requirements.txt"
+fi
+
 echo "Checking requirements..."
-REQUIREMENTS_PATH="$PROJECT_DIR/requirements.txt"
 if ! "$VENV_PYTHON" -c "import fastapi" 2>/dev/null; then
     echo "Installing requirements..."
     if ! "$VENV_PYTHON" -m pip install -r "$REQUIREMENTS_PATH"; then
@@ -195,6 +241,16 @@ if ! "$VENV_PYTHON" -c "import fastapi" 2>/dev/null; then
         echo "  Check $REQUIREMENTS_PATH and your network. On some distros you may need development headers (e.g. python3-dev on Debian/Ubuntu, python3-devel on Fedora/RHEL) to build packages."
         exit 1
     fi
+fi
+
+# When using system PyQt5, verify it is importable (from system site-packages)
+if [ "$USE_SYSTEM_PYQT" = true ]; then
+    if ! "$VENV_PYTHON" -c "import PyQt5; import PyQt5.QtWebEngineWidgets" 2>/dev/null; then
+        echo "PyQt5 or PyQt5.QtWebEngineWidgets could not be imported after installing system packages."
+        echo "Try running in headless mode (browser only), or install PyQt5 manually: sudo apt-get install -y python3-pyqt5 python3-pyqt5.qtwebengine"
+        exit 1
+    fi
+    echo "PyQt5 (system) OK."
 fi
 echo "Requirements OK."
 echo ""

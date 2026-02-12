@@ -30,4 +30,5 @@ MODULE = {
     "gpio": {
         "outputs": [{"id": "contest_active", "name": "Contest active LED"}],
     },
+    "cache_warmer": True,
 }

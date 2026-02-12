@@ -12,16 +12,19 @@
 .grid-cell-sun_times .sun_times_sunset,
 .grid-cell-sun_times .sun_times_moonrise,
 .grid-cell-sun_times .sun_times_moonset {
-    font-size: 3vmin;
+    font-size: clamp(11px, 2.8vmin, 22px);
     color: #ccc;
 }
 .grid-cell-sun_times .sun_times_moonrise,
 .grid-cell-sun_times .sun_times_moonset {
     color: #aaa;
 }
+.grid-cell-sun_times .sun_times_moonrise {
+    margin-top: 0.5em;
+}
 .grid-cell-sun_times .sun_times_error,
 .grid-cell-sun_times .sun_times_loading {
-    font-size: 2vmin;
+    font-size: clamp(10px, 2vmin, 16px);
     color: #888;
 }
 @supports (container-type: size) {
@@ -29,10 +32,10 @@
     .grid-cell-sun_times .sun_times_sunset,
     .grid-cell-sun_times .sun_times_moonrise,
     .grid-cell-sun_times .sun_times_moonset {
-        font-size: 9cqmin;
+        font-size: clamp(11px, 9cqmin, 22px);
     }
     .grid-cell-sun_times .sun_times_error,
     .grid-cell-sun_times .sun_times_loading {
-        font-size: 6cqmin;
+        font-size: clamp(10px, 6cqmin, 16px);
     }
 }

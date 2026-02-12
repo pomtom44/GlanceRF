@@ -153,4 +153,5 @@ MODULE = {
             "hintText": "APRS-IS filter guide",
         },
     ],
+    "cache_warmer": True,
 }

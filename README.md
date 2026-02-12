@@ -57,7 +57,7 @@ Configuration is stored in **`glancerf_config.json`** in the same folder as `run
 
 ![Sample Dash](screenshots/Sample%20Dash.png)
 
-**Layout editor**
+**Layout & Config editor**
 
 ![Layout Editor](screenshots/Layout%20Editor.png)
 

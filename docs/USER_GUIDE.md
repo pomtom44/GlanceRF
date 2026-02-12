@@ -60,7 +60,7 @@ Once that is done, you will be taken to **Layout** where you can:
 2. **Configure modules** – On the **Modules** page (menu > Modules), expand a module to edit its settings and click Save for that module.
 3. **Resize modules** – Each module can be resized to take up other module spaces.
 
-You can open the Layout Editor again anytime by pressing **M** to open the menu, then choosing Layout editor.
+You can open the Layout Editor again anytime by pressing **M** to open the menu, then choosing Layout & Config editor.
 
 ---
 
@@ -69,7 +69,7 @@ You can open the Layout Editor again anytime by pressing **M** to open the menu,
 Press **M** on the main dashboard (or on Setup, Layout, or Modules pages) to open the **menu**. The menu lets you go to:
 
 - **Setup** – First-run setup, aspect ratio, grid, station & updates, telemetry
-- **Layout editor** – Add or rearrange cells, resize modules
+- **Layout & Config editor** – Add or rearrange cells, resize modules
 - **Modules** – View all modules and their status; expand a module to edit its settings and use Save
 - **Updates** – Open the Updates page to see current and latest version, release notes, and trigger an update
 

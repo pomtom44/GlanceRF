@@ -176,11 +176,21 @@ def register_layout_routes(app: FastAPI, connection_manager: ConnectionManager):
                         if cell_value and raw_module_settings.get(cell_value):
                             key = f"{r}_{c}"
                             module_settings_by_cell[key] = raw_module_settings[cell_value]
-        # Schema: module_id -> list of setting dicts (for JS to build in-cell UI)
+        # Schema: module_id -> list of setting dicts (for JS to build in-cell UI).
+        # Prepend show_title for every non-empty module so users can show/hide the module title per cell.
         modules_settings_schema = {}
+        show_title_setting = {
+            "id": "show_title",
+            "label": "Show module title",
+            "type": "checkbox",
+            "default": True,
+        }
         for m in get_modules():
-            if m.get("settings"):
-                modules_settings_schema[m["id"]] = m["settings"]
+            mid = m.get("id", "")
+            if not mid:
+                continue
+            existing = list(m.get("settings") or [])
+            modules_settings_schema[mid] = [show_title_setting] + existing
         module_settings_by_cell_json = _json.dumps(module_settings_by_cell)
         modules_settings_schema_json = _json.dumps(modules_settings_schema)
         setup_callsign_json = _json.dumps(current_config.get("setup_callsign") or "")

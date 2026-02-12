@@ -5,8 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>GlanceRF</title>
     <link rel="icon" href="/logo.png" type="image/png">
-    <link rel="stylesheet" href="/static/css/main.css">
-    <link rel="stylesheet" href="/static/css/menu.css">
+    <link rel="stylesheet" href="/static/css/main.css?v=__CACHE_BUST__">
+    <link rel="stylesheet" href="/static/css/menu.css?v=__CACHE_BUST__">
     <style>
         #aspect-container {{
             width: 100%;
@@ -20,6 +20,7 @@
     <style>{module_css}</style>
 </head>
 <body>
+    <div id="glancerf-page-loading" style="position:fixed;inset:0;background:#0d1117;display:none;align-items:center;justify-content:center;color:#8b949e;font-size:16px;z-index:9999;">Loading...</div>
     <div id="ws-lost-warning">
         <span class="ws-lost-label">WebSocket lost</span>
         <span id="ws-lost-timer">Disconnected: 0m 0s</span>
@@ -34,8 +35,8 @@
             <h2>Menu</h2>
             <ul class="glancerf-menu-list">
                 <li><a href="/setup">Setup</a></li>
-                <li><a href="/layout">Layout editor</a></li>
-                <li><a href="/modules">Modules</a></li>
+                <li><a href="/layout">Layout & Config editor</a></li>
+                <li><a href="/modules">Modules list</a></li>
                 <li><a href="/updates">Updates</a></li>
                 <li><button type="button" class="menu-link" id="menu-restart-services">Restart services</button></li>
                 __GLANCERF_GPIO_MENU__
@@ -52,8 +53,8 @@
         window.GLANCERF_SETUP_CALLSIGN = {setup_callsign_json};
         window.GLANCERF_SETUP_LOCATION = {setup_location_json};
     </script>
-    <script src="/static/js/menu.js"></script>
-    <script src="/static/js/main.js?v=2"></script>
+    <script src="/static/js/menu.js?v=__CACHE_BUST__"></script>
+    <script src="/static/js/main.js?v=__CACHE_BUST__"></script>
     <script>{module_js}</script>
 </body>
 </html>

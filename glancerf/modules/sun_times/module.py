@@ -18,4 +18,5 @@ MODULE = {
     "gpio": {
         "outputs": [{"id": "sun_up", "name": "Sun above horizon LED"}],
     },
+    "cache_warmer": True,
 }

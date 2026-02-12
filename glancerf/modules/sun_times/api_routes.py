@@ -10,8 +10,11 @@ from fastapi import FastAPI, Query
 from fastapi.responses import JSONResponse
 
 from glancerf.config import get_logger
+from glancerf.utils.cache import get_cache
 
 _log = get_logger("sun_times.api_routes")
+
+_SUN_STATUS_CACHE_TTL = 60
 
 _PROJECT_DIR = Path(__file__).resolve().parent.parent.parent.parent
 _DE421_PATH = _PROJECT_DIR / "cache" / "de421.bsp"
@@ -26,8 +29,9 @@ def _sun_up_at_location(lat: float, lng: float) -> bool:
         sun = eph["sun"]
         earth = eph["earth"]
         t = ts.now()
-        loc = wgs84.latlon(lat, lng)
-        astro = loc.at(t).observe(sun).apparent()
+        topos = wgs84.latlon(lat, lng)
+        observer = earth + topos
+        astro = observer.at(t).observe(sun).apparent()
         alt, _, _ = astro.altaz()
         return float(alt.degrees) > 0
     except Exception as e:
@@ -44,6 +48,16 @@ def register_routes(app: FastAPI) -> None:
         lng: float = Query(..., ge=-180, le=180),
     ):
         """Return whether sun is above horizon at the given location. Also updates the sun_up GPIO output."""
+        cache_key = f"sun_times:status:{lat}|{lng}"
+        cache = get_cache()
+        cached = cache.get(cache_key)
+        if cached is not None:
+            try:
+                from glancerf.gpio import set_output
+                set_output("sun_times", "sun_up", cached.get("sun_up", False))
+            except Exception:
+                pass
+            return cached
         try:
             sun_up = await asyncio.to_thread(_sun_up_at_location, lat, lng)
             try:
@@ -51,7 +65,9 @@ def register_routes(app: FastAPI) -> None:
                 set_output("sun_times", "sun_up", sun_up)
             except Exception:
                 pass
-            return {"sun_up": sun_up}
+            out = {"sun_up": sun_up}
+            cache.set(cache_key, out, _SUN_STATUS_CACHE_TTL)
+            return out
         except Exception as e:
             _log.debug("sun_times status failed: %s", e)
             return JSONResponse(

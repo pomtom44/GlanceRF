@@ -13,7 +13,7 @@ import importlib
 import importlib.util
 import sys
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Callable, Dict, List, Optional, Tuple
 
 _MODULES_DIR = Path(__file__).resolve().parent
 # User modules live under glancerf/modules/_custom/; updater merges modules/ so this survives updates
@@ -192,6 +192,30 @@ def get_module_dir(module_id: str) -> Optional[Path]:
     return (_folder_by_id or {}).get(module_id)
 
 
+def get_module_warmer(module_id: str) -> Optional[Callable[[dict, Any], Any]]:
+    """
+    Return the cache-warmer callable for a module, or None.
+    Module must set MODULE["cache_warmer"] = True and provide warmer.py with:
+        async def warm(settings: dict, config: Any) -> None
+    Used by the cache_warmer service so new modules can opt in without core changes.
+    """
+    m = get_module_by_id(module_id)
+    if not m or not m.get("cache_warmer"):
+        return None
+    folder = get_module_dir(module_id)
+    if not folder or not (folder / "warmer.py").is_file():
+        return None
+    try:
+        parent = _MODULES_DIR.parent
+        rel = folder.relative_to(parent)
+        pkg = parent.name + "." + rel.as_posix().replace("/", ".")
+        mod = importlib.import_module(pkg + ".warmer")
+        warm = getattr(mod, "warm", None)
+        return warm if callable(warm) else None
+    except Exception:
+        return None
+
+
 def get_module_api_packages() -> List[str]:
     """
     Return package names for modules that provide api_routes.py (e.g. glancerf.modules.satellite_pass).
@@ -255,6 +279,8 @@ def validate_module_dependencies() -> List[Tuple[str, str]]:
     (module_name, error_message) for any that fail. Used at startup to fail fast
     if a module's dependencies (e.g. skyfield for satellite_pass) are missing.
     """
+    from glancerf.utils.numpy_fallback import try_numpy_baseline_fallback
+
     failures: List[Tuple[str, str]] = []
     for pkg in get_module_api_packages():
         module_name = pkg.split(".")[-1] if "." in pkg else pkg
@@ -264,5 +290,7 @@ def validate_module_dependencies() -> List[Tuple[str, str]]:
             missing = e.name or "unknown"
             failures.append((module_name, "Missing dependency '%s'. Install with: pip install %s" % (missing, missing)))
         except Exception as e:
+            if try_numpy_baseline_fallback(e):
+                return validate_module_dependencies()
             failures.append((module_name, str(e)))
     return failures

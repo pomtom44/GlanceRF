@@ -68,6 +68,7 @@
 
     function renderList(cell, dxpeds, credits, maxEntries, emptyEl, listEl, creditsEl) {
         if (creditsEl) creditsEl.textContent = credits || '';
+        cell.classList.remove('dxpeditions_show_empty');
         if (!dxpeds || dxpeds.length === 0) {
             if (emptyEl) emptyEl.textContent = 'No DXpeditions listed.';
             setState(cell, 'empty');
@@ -125,12 +126,12 @@
             }
         }
 
-        var isBackgroundRefresh = cell.getAttribute('data-dxpeditions-loaded') === '1';
+        var hasContent = listEl && listEl.children.length > 0;
+        var isBackgroundRefresh = cell.getAttribute('data-dxpeditions-loaded') === '1' || hasContent;
 
         if (!isBackgroundRefresh) {
-            setState(cell, 'loading');
-            if (emptyEl) emptyEl.textContent = 'Loading dxpeditions';
-            listEl.innerHTML = '';
+            if (emptyEl) emptyEl.textContent = 'Loading dxpeditions...';
+            cell.classList.add('dxpeditions_show_empty');
         }
 
         fetch('/api/dxpeditions/list' + sourcesParam)
@@ -138,6 +139,7 @@
             .then(function(data) {
                 if (errorEl) errorEl.textContent = '';
                 if (data.error) {
+                    cell.classList.remove('dxpeditions_show_empty');
                     if (errorEl) errorEl.textContent = data.error;
                     setState(cell, 'error');
                     if (!isBackgroundRefresh) listEl.innerHTML = '';
@@ -145,12 +147,14 @@
                 }
                 var dxpeds = (data.dxpeditions && Array.isArray(data.dxpeditions)) ? data.dxpeditions : [];
                 var credits = data.credits || '';
+                cell.classList.remove('dxpeditions_show_empty');
                 renderList(cell, dxpeds, credits, maxEntries, emptyEl, listEl, creditsEl);
                 cell.setAttribute('data-dxpeditions-loaded', '1');
                 cell.setAttribute('data-dxpeditions-last-ts', String(Date.now()));
                 setLastRefresh(cell, new Date());
             })
             .catch(function() {
+                cell.classList.remove('dxpeditions_show_empty');
                 if (!isBackgroundRefresh) {
                     setState(cell, 'error');
                     if (errorEl) errorEl.textContent = 'Failed to load DXpeditions.';
@@ -181,5 +185,5 @@
     }
 
     run();
-    setInterval(run, 60 * 1000);
+    setInterval(run, 25 * 1000);
 })();

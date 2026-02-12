@@ -17,8 +17,8 @@ from glancerf.config import DETAILED_LEVEL, get_logger, setup_logging
 from glancerf.utils import RateLimitExceeded, rate_limit_exceeded_handler
 from glancerf.web import ConnectionManager
 from glancerf import __version__
-from glancerf.updates.update_checker import UpdateChecker, check_for_updates, get_latest_release_info, compare_versions
-from glancerf.services import TelemetrySender, start_aprs_cache
+from glancerf.updates.update_checker import UpdateChecker, check_for_updates, get_latest_release_info, compare_versions, is_version_ahead
+from glancerf.services import TelemetrySender, start_aprs_cache, start_cache_warmer, stop_cache_warmer
 from glancerf.routes import api, websocket, layout_routes, setup_routes
 from glancerf.routes.root import register_root
 from glancerf.routes.readonly import run_readonly_server
@@ -123,8 +123,11 @@ async def updates_page():
         _updates_template_cache = _UPDATES_TEMPLATE_PATH.read_text(encoding="utf-8")
     if _updates_template_cache is None:
         return HTMLResponse(content="<h1>Updates</h1><p>Template not found.</p>", status_code=500)
+    import time
     from glancerf.gpio import get_gpio_menu_html
+    cache_bust = str(int(time.time() * 1000))
     content = _updates_template_cache.replace("__GLANCERF_GPIO_MENU__", get_gpio_menu_html())
+    content = content.replace("__CACHE_BUST__", cache_bust)
     return HTMLResponse(content=content)
 
 
@@ -140,11 +143,13 @@ async def get_update_status():
     latest = info["version"]
     release_notes = info.get("release_notes") or ""
     update_available = compare_versions(current, latest)
-    _log.debug("update-status: current=%s latest=%s update_available=%s", current, latest, update_available)
+    ahead_of_github = is_version_ahead(current, latest)
+    _log.debug("update-status: current=%s latest=%s update_available=%s ahead_of_github=%s", current, latest, update_available, ahead_of_github)
     return {
         "current_version": current,
         "latest_version": latest,
         "update_available": update_available,
+        "ahead_of_github": ahead_of_github,
         "release_notes": release_notes,
     }
 
@@ -223,6 +228,7 @@ async def _start_background_tasks():
     update_checker.start()
     telemetry_sender.start()
     start_aprs_cache()
+    start_cache_warmer(connection_manager)
     from glancerf.gpio import start_gpio_manager, set_broadcast
     import asyncio
     set_broadcast(connection_manager, asyncio.get_running_loop())
@@ -234,6 +240,7 @@ async def _stop_background_tasks():
     """Stop background tasks."""
     update_checker.stop()
     telemetry_sender.stop()
+    stop_cache_warmer()
     from glancerf.gpio import stop_gpio_manager
     stop_gpio_manager()
 

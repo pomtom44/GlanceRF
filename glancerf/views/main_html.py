@@ -28,11 +28,12 @@ def render_main_page(
     module_settings_json: str = "{}",
     setup_callsign_json: str = '""',
     setup_location_json: str = '""',
+    cache_bust: str = "",
 ) -> str:
     """Render the main clock page HTML with WebSocket and aspect-ratio support."""
     module_css = module_css if module_css is not None else ""
     module_js = module_js if module_js is not None else ""
-    return _get_main_template().format(
+    html = _get_main_template().format(
         aspect_ratio_css=aspect_ratio_css,
         grid_css=grid_css,
         grid_html=grid_html,
@@ -42,3 +43,6 @@ def render_main_page(
         setup_callsign_json=setup_callsign_json,
         setup_location_json=setup_location_json,
     )
+    if cache_bust:
+        html = html.replace("__CACHE_BUST__", cache_bust)
+    return html

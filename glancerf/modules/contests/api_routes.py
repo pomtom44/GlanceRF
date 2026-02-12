@@ -2,6 +2,7 @@
 Register contests API routes. Called by core at startup if this module is present.
 """
 
+import hashlib
 import json
 import asyncio
 
@@ -9,11 +10,13 @@ from fastapi import FastAPI
 from fastapi.responses import JSONResponse
 
 from glancerf.config import get_logger
+from glancerf.utils.cache import get_cache
 from .contest_service import get_contests_cached
 
 _log = get_logger("contests.api_routes")
 
 _DEFAULT_CREDITS = "WA7BNM; SSA (SE); RSGB (UK)"
+_CACHE_TTL_SEC = 900
 
 
 def register_routes(app: FastAPI) -> None:
@@ -43,6 +46,13 @@ def register_routes(app: FastAPI) -> None:
                     custom_labels.append((c.get("label") or c.get("name") or "").strip() or "Custom")
             if custom_labels:
                 credits = credits + "; " + "; ".join(custom_labels) if credits else "; ".join(custom_labels)
+        cache_key = "contests:list:" + (",".join(sorted(enabled or [])) or "all")
+        if custom:
+            cache_key += ":" + hashlib.sha256(json.dumps(custom, sort_keys=True).encode()).hexdigest()[:16]
+        cache = get_cache()
+        cached = cache.get(cache_key)
+        if cached is not None:
+            return cached
         try:
             result = await asyncio.to_thread(
                 get_contests_cached, enabled_sources=enabled, custom_sources=custom
@@ -58,10 +68,9 @@ def register_routes(app: FastAPI) -> None:
                 set_output("contests", "contest_active", bool(contest_active))
             except Exception:
                 pass
-            return {
-                "contests": result,
-                "credits": credits,
-            }
+            out = {"contests": result, "credits": credits}
+            cache.set(cache_key, out, _CACHE_TTL_SEC)
+            return out
         except Exception as e:
             _log.debug("Contests list failed: %s", e)
             return JSONResponse(

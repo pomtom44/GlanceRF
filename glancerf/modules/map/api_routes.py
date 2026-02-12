@@ -6,10 +6,14 @@ from fastapi import FastAPI, Query
 from fastapi.responses import JSONResponse
 
 from glancerf.config import get_logger
+from glancerf.utils.cache import get_cache
 from .aprs_client import get_aprs_locations_from_cache
 from .propagation_service import get_propagation_coordinates
 
 _log = get_logger("map.api_routes")
+
+_PROPAGATION_CACHE_TTL = 300
+_APRS_CACHE_TTL = 300
 
 
 def register_routes(app: FastAPI) -> None:
@@ -24,8 +28,14 @@ def register_routes(app: FastAPI) -> None:
                 {"error": "Invalid source", "coordinates": [], "valueLabel": ""},
                 status_code=400,
             )
+        cache_key = f"map:propagation:{source}|{hours}"
+        cache = get_cache()
+        cached = cache.get(cache_key)
+        if cached is not None:
+            return cached
         try:
             result = await asyncio.to_thread(get_propagation_coordinates, source, hours=hours)
+            cache.set(cache_key, result, _PROPAGATION_CACHE_TTL)
             return result
         except Exception as e:
             _log.debug("Propagation data failed: %s", e)
@@ -38,8 +48,14 @@ def register_routes(app: FastAPI) -> None:
     async def aprs_locations(hours: float | None = Query(None)):
         """Return APRS station locations from local cache only (no live APRS-IS). Data from config_dir/cache/aprs.db."""
         _log.debug("API: GET /api/map/aprs-locations hours=%s (cache only)", hours)
+        cache_key = f"map:aprs:{hours}"
+        cache = get_cache()
+        cached = cache.get(cache_key)
+        if cached is not None:
+            return cached
         try:
             result = await asyncio.to_thread(get_aprs_locations_from_cache, hours=hours)
+            cache.set(cache_key, result, _APRS_CACHE_TTL)
             return result
         except Exception as e:
             _log.debug("APRS locations failed: %s", e)

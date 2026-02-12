@@ -10,10 +10,13 @@
     bottom: 0;
     display: flex;
     flex-direction: column;
+    align-items: stretch;
+    justify-content: stretch;
 }
 .grid-cell-webbrowser .webbrowser_frame {
-    flex: 1;
+    flex: 1 1 0;
     width: 100%;
+    min-width: 0;
     min-height: 0;
     border: none;
     background: #0d1117;
@@ -29,6 +32,23 @@
 }
 .grid-cell-webbrowser .webbrowser_wrap.has-url .webbrowser_placeholder {
     display: none;
+}
+.grid-cell-webbrowser .webbrowser_frame_blocked {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(0, 0, 0, 0.85);
+    color: #f0f0f0;
+    font-size: 14px;
+    text-align: center;
+    padding: 20px;
+    z-index: 2;
+    pointer-events: none;
 }
 .grid-cell-webbrowser .webbrowser_open_link {
     position: absolute;

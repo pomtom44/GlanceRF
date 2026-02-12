@@ -43,6 +43,7 @@ body {
     align-items: center;
     justify-content: flex-start;
     padding: 0;
+    min-width: 0;
 }
 
 .cell-widget-select {
@@ -173,11 +174,13 @@ body {
 
 .cell-module-settings {
     width: 100%;
+    min-width: 0;
     margin-top: 6px;
-    padding: 30px 30px 30px 30px;
+    padding: 12px 14px 14px 14px;
     font-size: 12px;
     flex: 1 1 0;
     min-height: 0;
+    overflow-x: hidden;
     overflow-y: auto;
     box-sizing: border-box;
     scrollbar-width: thin;
@@ -199,6 +202,8 @@ body {
 }
 .cell-module-settings-inner {
     margin-right: 0;
+    min-width: 0;
+    max-width: 100%;
 }
 .cell-module-settings .cell-setting-separator {
     width: 100%;
@@ -217,6 +222,116 @@ body {
     color: #888;
     margin-bottom: 2px;
     font-size: 12px;
+}
+.cell-module-settings .cell-setting-inline-row {
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+    gap: 8px;
+    margin-bottom: 6px;
+    min-width: 0;
+}
+.cell-module-settings .cell-setting-inline-row.cell-setting-band-row {
+    padding-left: 14px;
+}
+.cell-module-settings .cell-setting-inline-row.cell-setting-band-row .cell-setting-label:first-of-type {
+    min-width: 8.5em;
+}
+.cell-module-settings .cell-setting-inline-row .cell-setting-inline-spacer {
+    flex: 1 1 0;
+    min-width: 12px;
+}
+.cell-module-settings .cell-setting-inline-row.cell-setting-band-row .cell-setting-inline-spacer {
+    flex: 0 0 18px;
+    min-width: 18px;
+    max-width: 18px;
+}
+.cell-module-settings .cell-setting-inline-row .cell-setting-label {
+    display: inline;
+    margin-bottom: 0;
+    flex-shrink: 0;
+}
+.cell-module-settings .cell-setting-inline-row .cell-setting-color-label {
+    margin-right: 6px;
+}
+.cell-module-settings .cell-setting-inline-row.cell-setting-band-row input[type="color"] {
+    margin-left: 0;
+}
+.cell-module-settings .cell-setting-inline-row input[type="checkbox"],
+.cell-module-settings .cell-setting-inline-row input[type="color"] {
+    flex-shrink: 0;
+}
+.cell-module-settings .cell-setting-inline-row input[type="checkbox"] {
+    margin-left: 10px;
+}
+.cell-module-settings input[type="checkbox"] {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 18px;
+    height: 18px;
+    min-width: 18px;
+    min-height: 18px;
+    margin: 0;
+    background-color: #1a1a1a;
+    border: 2px solid #0f0;
+    border-radius: 3px;
+    cursor: pointer;
+    vertical-align: middle;
+    position: relative;
+    box-sizing: border-box;
+}
+.cell-module-settings input[type="checkbox"]:hover {
+    border-color: #0c0;
+    background-color: #222;
+}
+.cell-module-settings input[type="checkbox"]:checked {
+    background-color: #0a2a0a;
+}
+.cell-module-settings input[type="checkbox"]:checked::after {
+    content: '';
+    position: absolute;
+    left: 5px;
+    top: 2px;
+    width: 5px;
+    height: 10px;
+    border: solid #0f0;
+    border-width: 0 2px 2px 0;
+    transform: rotate(45deg);
+    box-sizing: border-box;
+}
+.cell-module-settings input[type="color"] {
+    width: 32px;
+    height: 24px;
+    min-width: 32px;
+    padding: 2px;
+    border: 1px solid #0f0;
+    border-radius: 4px;
+    background: #1a1a1a;
+    cursor: pointer;
+    box-sizing: border-box;
+}
+.cell-module-settings input[type="color"]::-webkit-color-swatch-wrapper {
+    padding: 0;
+}
+.cell-module-settings input[type="color"]::-webkit-color-swatch {
+    border: 1px solid #333;
+    border-radius: 2px;
+}
+.cell-module-settings input[type="color"]::-moz-color-swatch {
+    border: 1px solid #333;
+    border-radius: 2px;
+}
+.cell-module-settings .cell-setting-inline-row input[type="checkbox"].cell-setting-select {
+    width: 18px;
+    min-width: 18px;
+    max-width: none;
+    margin-bottom: 0;
+}
+.cell-module-settings .cell-setting-inline-row input[type="color"].cell-setting-select {
+    width: 32px;
+    min-width: 32px;
+    max-width: none;
+    margin-bottom: 0;
 }
 .cell-module-settings .cell-setting-hint-link {
     display: inline-block;

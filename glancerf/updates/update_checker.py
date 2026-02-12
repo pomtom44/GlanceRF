@@ -41,6 +41,11 @@ def compare_versions(current: str, latest: str) -> bool:
     return latest_tuple > curr_tuple
 
 
+def is_version_ahead(current: str, latest: str) -> bool:
+    """Return True if current version is strictly greater than latest (e.g. local ahead of GitHub)."""
+    return parse_version(current) > parse_version(latest)
+
+
 # GitHub API requires a User-Agent header (returns 403 without it)
 GITHUB_HEADERS = {"Accept": "application/vnd.github.v3+json", "User-Agent": "GlanceRF-update-checker"}
 

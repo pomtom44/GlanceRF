@@ -15,15 +15,6 @@
     overflow: hidden;
 }
 
-.grid-cell-contests .contests_title {
-    font-size: 16px;
-    font-weight: 600;
-    color: #0f0;
-    text-align: center;
-    flex-shrink: 0;
-    margin-bottom: 2px;
-}
-
 .grid-cell-contests .contests_credits {
     font-size: 10px;
     color: #888;
@@ -87,7 +78,8 @@
     padding: 10px 8px;
 }
 
-.grid-cell-contests.contests_state_loading .contests_empty {
+.grid-cell-contests.contests_state_loading .contests_empty,
+.grid-cell-contests.contests_show_empty .contests_empty {
     display: flex;
     align-items: center;
     justify-content: center;
@@ -97,9 +89,15 @@
     min-height: 3em;
 }
 
+.grid-cell-contests.contests_show_empty .contests_list,
+.grid-cell-contests.contests_state_loading .contests_list {
+    flex: 0;
+    min-height: 0;
+}
+
 .grid-cell-contests .contests_last_refresh {
     font-size: 10px;
-    color: #555;
+    color: #fff;
     text-align: center;
     flex-shrink: 0;
     margin-top: 4px;
@@ -117,13 +115,10 @@
     display: block;
 }
 
-.grid-cell-contests.contests_state_empty .contests_title,
 .grid-cell-contests.contests_state_empty .contests_credits,
 .grid-cell-contests.contests_state_empty .contests_list,
-.grid-cell-contests.contests_state_loading .contests_title,
 .grid-cell-contests.contests_state_loading .contests_credits,
 .grid-cell-contests.contests_state_loading .contests_list,
-.grid-cell-contests.contests_state_error .contests_title,
 .grid-cell-contests.contests_state_error .contests_credits,
 .grid-cell-contests.contests_state_error .contests_list {
     display: none;

@@ -30,6 +30,8 @@ var currentDesktopWidth = 0;
                 var inner = document.createElement('div');
                 inner.className = 'cell-module-settings-inner';
                 var hasShowWhenSource = schema.some(function(x) { return x.show_when_source; });
+                var lastBandCheckboxRow = null;
+                var lastBandCheckboxId = null;
                 schema.forEach(function(s) {
                     if (s.type === 'separator') {
                         var sep = document.createElement('div');
@@ -57,7 +59,7 @@ var currentDesktopWidth = 0;
                     var label = document.createElement('label');
                     label.className = 'cell-setting-label';
                     label.textContent = s.label;
-                    if (rowWrap) rowWrap.appendChild(label); else inner.appendChild(label);
+                    if (rowWrap) rowWrap.appendChild(label); else if (s.type !== 'checkbox' && s.type !== 'color') inner.appendChild(label);
                     if (s.type === 'select') {
                         var opts = s.options || [];
                         if (s.optionsBySource && s.parentSettingId) {
@@ -105,9 +107,14 @@ var currentDesktopWidth = 0;
                         inp.type = 'range';
                         inp.className = 'cell-setting-select';
                         inp.setAttribute('name', 'ms_' + row + '_' + col + '__' + s.id);
-                        inp.value = cur;
                         if (s.min !== undefined) inp.min = s.min;
                         if (s.max !== undefined) inp.max = s.max;
+                        if (s.step !== undefined) inp.step = s.step;
+                        var numCur = (cur !== '' && cur !== undefined && cur !== null) ? Number(cur) : NaN;
+                        if (!isNaN(numCur) && s.min !== undefined && s.max !== undefined) {
+                            numCur = Math.max(s.min, Math.min(s.max, numCur));
+                        }
+                        inp.value = (!isNaN(numCur) ? numCur : (s.default !== undefined ? s.default : s.min !== undefined ? s.min : 0));
                         var valSpan = document.createElement('span');
                         valSpan.style.minWidth = '2.5em';
                         valSpan.textContent = inp.value + (s.unit || '');
@@ -121,7 +128,50 @@ var currentDesktopWidth = 0;
                         inp.className = 'cell-setting-select';
                         inp.setAttribute('name', 'ms_' + row + '_' + col + '__' + s.id);
                         inp.checked = (cur === true || cur === 'true' || cur === 1 || cur === '1');
-                        if (rowWrap) { rowWrap.appendChild(inp); inner.appendChild(rowWrap); } else inner.appendChild(inp);
+                        var rowEl = document.createElement('div');
+                        rowEl.className = 'cell-setting-row cell-setting-inline-row';
+                        rowEl.style.display = 'flex';
+                        rowEl.style.alignItems = 'center';
+                        rowEl.style.gap = '8px';
+                        rowEl.appendChild(label);
+                        rowEl.appendChild(inp);
+                        inner.appendChild(rowEl);
+                        if (s.id && s.id.indexOf('band_') === 0 && s.id.indexOf('_color') === -1) {
+                            lastBandCheckboxRow = rowEl;
+                            lastBandCheckboxId = s.id;
+                        } else {
+                            lastBandCheckboxRow = null;
+                            lastBandCheckboxId = null;
+                        }
+                    } else if (s.type === 'color') {
+                        var hex = (cur && /^#[0-9A-Fa-f]{3,8}$/.test(String(cur))) ? String(cur) : (s.default && /^#[0-9A-Fa-f]{3,8}$/.test(String(s.default)) ? String(s.default) : '#0f0');
+                        var inp = document.createElement('input');
+                        inp.type = 'color';
+                        inp.className = 'cell-setting-select';
+                        inp.setAttribute('name', 'ms_' + row + '_' + col + '__' + s.id);
+                        inp.value = hex;
+                        if (lastBandCheckboxRow && lastBandCheckboxId && s.id === lastBandCheckboxId + '_color') {
+                            lastBandCheckboxRow.classList.add('cell-setting-band-row');
+                            var spacer = document.createElement('span');
+                            spacer.className = 'cell-setting-inline-spacer';
+                            var colorLabel = document.createElement('span');
+                            colorLabel.className = 'cell-setting-label cell-setting-color-label';
+                            colorLabel.textContent = s.label;
+                            lastBandCheckboxRow.appendChild(spacer);
+                            lastBandCheckboxRow.appendChild(colorLabel);
+                            lastBandCheckboxRow.appendChild(inp);
+                            lastBandCheckboxRow = null;
+                            lastBandCheckboxId = null;
+                        } else {
+                            var rowEl = document.createElement('div');
+                            rowEl.className = 'cell-setting-row cell-setting-inline-row';
+                            rowEl.style.display = 'flex';
+                            rowEl.style.alignItems = 'center';
+                            rowEl.style.gap = '8px';
+                            rowEl.appendChild(label);
+                            rowEl.appendChild(inp);
+                            inner.appendChild(rowEl);
+                        }
                     } else {
                         var customWrap = document.createElement('div');
                         customWrap.className = 'cell-setting-custom';
@@ -542,7 +592,11 @@ var currentDesktopWidth = 0;
                     const settingId = name.slice(i + 2);
                     if (cellPart && settingId) {
                         if (!module_settings[cellPart]) module_settings[cellPart] = {};
-                        module_settings[cellPart][settingId] = el.value || '';
+                        if (el.type === 'checkbox') {
+                            module_settings[cellPart][settingId] = el.checked;
+                        } else {
+                            module_settings[cellPart][settingId] = el.value || '';
+                        }
                     }
                 });
             

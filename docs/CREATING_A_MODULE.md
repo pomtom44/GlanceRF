@@ -21,14 +21,16 @@ This guide explains how to add a new **cell module** to GlanceRF. A module is a 
 11. [Custom modules (survive updates)](#11-custom-modules-survive-updates)
 12. [Module API routes (optional)](#12-module-api-routes-optional)  
     - [12.5. Satellite_pass API methods (reference)](#125-satellite_pass-api-methods-reference)
+    - [12.6. Using the universal cache](#126-using-the-universal-cache)
 13. [GPIO support (optional)](#13-gpio-support-optional)
 14. [Checklist](#14-checklist)
+15. [Cache warmer (optional, headless)](#15-cache-warmer-optional-headless)
 
 ---
 
 ## 1. Quick start
 
-1. Copy the **`example`** folder from **`glancerf/modules/_custom/example/`**. Keep your copy inside **`glancerf/modules/_custom/`** (e.g. `glancerf/modules/_custom/my_timer/`) so it is not overwritten when you update GlanceRF.
+1. Copy the **`_example`** template folder from **`glancerf/modules/_custom/_example/`**. Rename the copy to your module id (e.g. `my_timer`; no leading `_`) and keep it inside **`glancerf/modules/_custom/`** (e.g. `glancerf/modules/_custom/my_timer/`) so it is not overwritten when you update GlanceRF. The template includes **`__init__.py`**; keep it (required if you add api_routes.py later).
 2. Rename the folder to your module **id** (e.g. `my_timer`). Use letters, numbers, and underscores only. Do **not** start the folder name with `_` (those folders are ignored).
 3. Edit **module.py**: set `id`, `name`, and `color` to match your module.
 4. Edit **index.html**: put the HTML structure for one cell, using classes that start with your module id + underscore (e.g. `my_timer_label`).
@@ -63,8 +65,10 @@ Optional files (if present, the loader uses them; otherwise the module has no HT
 | **index.html** | HTML fragment injected **inside** each grid cell that uses this module. |
 | **style.css**  | CSS for this module. Loaded once per page; scope under `.grid-cell-{id}`. |
 | **script.js**  | JavaScript for this module. Loaded once per page; finds and updates this module's cells. |
-| **api_routes.py** | Optional. If present, the core calls **`register_routes(app)`** at startup so your module can register its own API endpoints (e.g. GET /api/my_module/data). See [Module API routes (optional)](#12-module-api-routes-optional). |
+| **\_\_init\_\_.py** | **Required if you have api_routes.py.** An empty or minimal file that makes the folder a Python package so the core can import `api_routes`. Without it, the module will fail to load with "is not a package" or "Missing dependency". The example template includes this file. |
+| **api_routes.py** | Optional. If present, the core calls **`register_routes(app)`** at startup so your module can register its own API endpoints (e.g. GET /api/my_module/data). See [Module API routes (optional)](#12-module-api-routes-optional). **Requires \_\_init\_\_.py in the same folder.** |
 | **layout_settings.js** | Optional. If present, the layout editor loads it so your module can render custom setting UIs (e.g. checkboxes from an API). See [Custom setting types](#123-custom-setting-types-layout-editor-no-core-changes). |
+| **warmer.py** | Optional. If your module fetches data that is cached and you want that cache to stay warm when the server runs **headless** (no browser open), add **`"cache_warmer": True`** to MODULE and a **warmer.py** with **`async def warm(settings, config)`**. See [Cache warmer (optional, headless)](#15-cache-warmer-optional-headless). |
 
 The loader reads `module.py` first, then overlays `inner_html`, `css`, and `js` from the files above. You do **not** put HTML/CSS/JS strings inside `module.py` when using the folder structure.
 
@@ -87,6 +91,7 @@ Optional:
   - **`default`** – Default value.
   - For **`type: "select"`**: **`options`** – list of `{"value": "...", "label": "..."}`.
 - **`gpio`** (dict, optional) – If your module can use Raspberry Pi (or similar) GPIO pins, add **`inputs`** and/or **`outputs`** so users can assign them on the GPIO setup page. See [GPIO support (optional)](#13-gpio-support-optional).
+- **`cache_warmer`** (bool, optional) – Set to **`True`** if your module has **warmer.py** and you want the core to call it when the server runs headless so the cache stays warm. See [Cache warmer (optional, headless)](#15-cache-warmer-optional-headless).
 
 Example (no settings):
 
@@ -287,8 +292,8 @@ Put your own modules in **`glancerf/modules/_custom/`** so that:
 
 **Setup:**
 
-1. The **`glancerf/modules/_custom/`** folder contains an **`example`** module as a template. Put all your custom module folders inside **`glancerf/modules/_custom/`**. On update, the app merges the modules folder so `_custom/` is preserved.
-2. To create a new module: copy **`glancerf/modules/_custom/example/`**, rename the copy to your module id (e.g. `my_timer`), then edit `module.py`, `index.html`, `style.css`, and `script.js`. Folder names must not start with `_`.
+1. The **`glancerf/modules/_custom/`** folder contains an **`_example`** template (folder name starts with `_` so it is not loaded as a module). Put all your custom module folders inside **`glancerf/modules/_custom/`**. On update, the app merges the modules folder so `_custom/` is preserved.
+2. To create a new module: copy **`glancerf/modules/_custom/_example/`**, rename the copy to your module id (e.g. `my_timer`; no leading `_`), then edit `module.py`, `index.html`, `style.css`, and `script.js`. Keep the **`__init__.py`** file in the copy (needed if you add api_routes.py).
 3. Restart the app. Custom modules are loaded after built-in ones; any module id that appears in both uses your custom version.
 
 ---
@@ -301,9 +306,10 @@ If your module needs **backend API endpoints** (e.g. to fetch data from a server
 
 ### 12.1. Adding api_routes.py
 
-1. Create **api_routes.py** in your module folder (e.g. `glancerf/modules/_custom/my_module/api_routes.py`).
-2. Define a function **`register_routes(app: FastAPI) -> None`** that registers your endpoints on `app`.
-3. Use **relative imports** for other code in your module (e.g. `from .my_service import fetch_data`). Put any backend logic in other files in the same folder (e.g. `my_service.py`).
+1. **Add \_\_init\_\_.py** to your module folder if it is not already there. The folder must be a Python **package** (have an `__init__.py` file) so the core can import `your_module.api_routes`. Without it, you will see a startup error like "`glancerf.modules.your_module` is not a package" or "Missing dependency `glancerf.modules.your_module.api_routes`". The **example template** (`_custom/_example/`) includes `__init__.py`; keep it when you copy the template to create a new module.
+2. Create **api_routes.py** in your module folder (e.g. `glancerf/modules/_custom/my_module/api_routes.py`).
+3. Define a function **`register_routes(app: FastAPI) -> None`** that registers your endpoints on `app`.
+4. Use **relative imports** for other code in your module (e.g. `from .my_service import fetch_data`). Put any backend logic in other files in the same folder (e.g. `my_service.py`).
 
 Example (minimal):
 
@@ -339,6 +345,7 @@ Your **script.js** (or the Modules page) can then call **`fetch("/api/my_module/
 - On startup, after the core registers its own API routes (e.g. `/api/time`, `/api/rss`), it calls **`register_module_api_routes(app)`** (in `glancerf/routes/api.py`).
 - That function uses **`get_module_api_packages()`** (in `glancerf/modules/__init__.py`) to get a list of package names for every module folder that contains **api_routes.py** (e.g. `glancerf.modules.satellite_pass`).
 - For each package, it imports **`<package>.api_routes`** and, if the module defines a callable **`register_routes`**, calls **`register_routes(app)`**.
+- **The module folder must contain \_\_init\_\_.py** so Python treats it as a package; otherwise the import of `<package>.api_routes` fails (e.g. "is not a package").
 - If a module is removed or **api_routes.py** is deleted, the core simply skips it; no extra configuration is needed.
 
 ### 12.3. Custom setting types (layout editor, no core changes)
@@ -386,6 +393,50 @@ If your module or the Modules page needs to call the satellite_pass API, use the
   - **502** – body `{ "error": "...", "detail": "..." }` if pass computation failed.
 
 Example request: `GET /api/satellite/passes?norad_ids=25544,48274&lat=-43.5&lng=172.6&alt=0`
+
+### 12.6. Using the universal cache
+
+When your module's API routes call **external services** or do **heavy computation**, use the shared **TTL cache** so multiple requests (or screens) get the same result without hitting the backend every time.
+
+**Import and get the cache:**
+
+```python
+from glancerf.utils.cache import get_cache
+
+cache = get_cache()
+```
+
+**Key naming:** Use a **prefix per module** to avoid collisions, e.g. `contests:list:...`, `dxpeditions:list:...`, `satellite:passes:...`, `rss:...`. Include enough of the request (sources, URL hash, lat/lng, etc.) in the key so different parameters get different cache entries.
+
+**When to cache:** External HTTP fetches (RSS, contest lists, propagation data), computed results that depend on stable inputs (satellite passes for a given location, sun up/down for lat/lng). Choose a **TTL** that balances freshness and load (e.g. 45–90 seconds for passes, 5–15 minutes for contest/RSS lists).
+
+**Pattern 1 – get then set:** Check the cache first; on miss, compute or fetch, then store and return.
+
+```python
+cache_key = "my_module:data:" + (param or "default")
+cached = cache.get(cache_key)
+if cached is not None:
+    return cached
+result = await fetch_or_compute(...)
+cache.set(cache_key, result, ttl_seconds=900)
+return result
+```
+
+**Pattern 2 – get_or_set:** Let the cache call your factory on miss. Best when the value is computed synchronously (e.g. in a thread). For async routes you can still use **get** / **set** as above.
+
+```python
+def compute():
+    return expensive_operation()
+
+result = cache.get_or_set(
+    "my_module:item:" + key,
+    ttl_seconds=300,
+    factory=compute,
+)
+return {"data": result}
+```
+
+**Examples in the codebase:** **contests** and **dxpeditions** cache list responses by source set (TTL 15 min). **satellite_pass** caches passes by `norad_ids|lat|lng|alt` (45 s) and tracks by `norad_ids|minutes` (90 s). **rss** caches by feed URL hash (10 min). **map** caches propagation and APRS data by source/hours (5 min). **sun_times** caches status by lat|lng (1 min).
 
 ---
 
@@ -466,14 +517,76 @@ Only the pin that the user assigned to this module and function on the GPIO setu
 
 ## 14. Checklist
 
-- [ ] Copied **`glancerf/modules/_custom/example/`** and renamed the folder to your module id (no leading `_`).
+- [ ] Copied **`glancerf/modules/_custom/_example/`** and renamed the folder to your module id (no leading `_`). The template includes **\_\_init\_\_.py**; keep it so the folder is a Python package (required if you add api_routes.py).
 - [ ] **module.py**: Set `id`, `name`, `color`; add `settings` if needed.
 - [ ] **index.html**: Inner content only; all classes use **`{id}_`** prefix (e.g. `my_timer_label`).
 - [ ] **style.css**: All rules scoped under **`.grid-cell-{id}`**; same class names as in HTML.
 - [ ] **script.js**: Find cells with **`querySelectorAll('.grid-cell-{id}')`**; query inside cells with your class names; read per-cell settings from **`window.GLANCERF_MODULE_SETTINGS[cellKey]`** if you have settings; use **`window.GLANCERF_SETUP_CALLSIGN`** or **`window.GLANCERF_SETUP_LOCATION`** as fallbacks if your module uses callsign/location.
 - [ ] Restart the app (or reload the page) and pick your module in the layout editor.
 - [ ] Put your module in **`glancerf/modules/_custom/`** so it survives updates (see [Custom modules (survive updates)](#11-custom-modules-survive-updates)).
-- [ ] If your module needs API endpoints: add **api_routes.py** with **`register_routes(app)`** and keep backend logic in the module folder (see [Module API routes (optional)](#12-module-api-routes-optional)).
+- [ ] If your module needs API endpoints: ensure the module folder has **\_\_init\_\_.py** (the template includes it), then add **api_routes.py** with **`register_routes(app)`** and keep backend logic in the module folder (see [Module API routes (optional)](#12-module-api-routes-optional)). For external APIs or heavy work, use the [universal cache](#126-using-the-universal-cache) so multiple requests share the same result.
 - [ ] If your module uses GPIO: add **`gpio`** with **`inputs`** and/or **`outputs`** to **MODULE**; define **`GPIO_INPUT_HANDLERS`** in **module.py** for inputs; use **`set_output(module_id, function_id, value)`** from **glancerf.gpio_manager** for outputs (see [GPIO support (optional)](#13-gpio-support-optional)).
+- [ ] If your module fetches data that is cached and you want the cache to stay warm when the server runs headless: add **`"cache_warmer": True`** to **MODULE** and **warmer.py** with **`async def warm(settings, config)`** that fills the same cache your API uses (see [Cache warmer (optional, headless)](#15-cache-warmer-optional-headless)).
 
-For a minimal, commented reference, see the **`example`** module in `glancerf/modules/_custom/example/`. For a module with API routes and cached data, see **`satellite_pass`** in `glancerf/modules/satellite_pass/`.
+For a minimal, commented reference, see the **`_example`** template in `glancerf/modules/_custom/_example/` (includes `__init__.py`). For a module with API routes and cached data, see **`satellite_pass`** in `glancerf/modules/satellite_pass/`.
+
+---
+
+## 15. Cache warmer (optional, headless)
+
+When the server runs **headless** (e.g. as a Windows service or with no browser/desktop connected), the core runs a **cache warmer** in the background. It periodically calls each **active** module’s warmer (if the module has one) so that when a client later connects, the cache is already filled. This avoids cold caches and slow first loads.
+
+**You do not need to change any core code to add a new cache-warmed module.** The core discovers warmers by convention.
+
+### 15.1. Opting in
+
+1. In **module.py**, add **`"cache_warmer": True`** to the **MODULE** dict.
+2. In the same folder, add **warmer.py** with a single async function:
+
+   **`async def warm(settings: dict, config: Any) -> None`**
+
+   - **`settings`** – The **cell** settings for one grid cell that uses this module (same keys as in your module’s `settings` schema, e.g. `rss_url`, `enabled_sources`). The core calls `warm` once per cell that uses your module; you may be called multiple times for different cells or the same logical config.
+   - **`config`** – The global config object (e.g. from `get_config()`). Use it for global values like `setup_location` or `setup_callsign` if your cell settings are empty.
+
+Your **`warm`** function should:
+
+- **Return early** if the cell is not configured (e.g. empty URL, missing location). No need to raise; just `return`.
+- **Do the same work the API would do**: call your service layer (or fetch), then write the result into the shared cache with the **same cache key and TTL** your API route uses. That way, when a browser later hits your API, the response is served from cache.
+- **Catch exceptions** if you prefer (e.g. log and return); the core catches and logs any exception from `warm` so one failing module does not stop others.
+
+### 15.2. When the warmer runs
+
+- The warmer runs only when **no browser and no desktop** is connected. If someone has the dashboard open, their requests fill the cache as usual and the background warmer does not run.
+- It runs on an interval (e.g. every 5 minutes) after a short startup delay. Only modules that are **active** (appear in the current layout) and have **`cache_warmer: True`** and a **warmer.py** are invoked.
+
+### 15.3. Example
+
+Your module has an API that fetches by URL and caches by `"rss:" + hash(url)`. In **warmer.py**:
+
+```python
+# warmer.py
+import hashlib
+from typing import Any
+
+from glancerf.utils.cache import get_cache
+
+
+async def warm(settings: dict, config: Any) -> None:
+    url = (settings.get("rss_url") or "").strip()
+    if not url:
+        return
+    try:
+        from .api_routes import fetch_rss_feed, _RSS_CACHE_TTL
+        out = await fetch_rss_feed(url)
+        if out is not None:
+            cache_key = "rss:" + hashlib.sha256(url.encode()).hexdigest()
+            get_cache().set(cache_key, out, _RSS_CACHE_TTL)
+    except Exception:
+        pass
+```
+
+In **module.py**, add **`"cache_warmer": True`** to **MODULE**. The core will discover **warmer.py** and call **`warm`** for each cell that uses this module when the server is headless.
+
+### 15.4. Built-in modules with warmers
+
+The **contests**, **dxpeditions**, **rss**, **sun_times**, **map**, **satellite_pass**, and **live_spots** modules each define **`cache_warmer: True`** and a **warmer.py**. You can copy their pattern (e.g. `glancerf/modules/rss/warmer.py`, `glancerf/modules/contests/warmer.py`). For location parsing (grid square or `lat,lng`), use **`glancerf.utils.location.parse_location(s)`** which returns `(lat, lng)` or `None`.

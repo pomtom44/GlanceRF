@@ -22,6 +22,7 @@ LOG_LEVEL_MAP = {
     "default": logging.INFO,      # startup [INFO], errors [ERROR] only
     "detailed": DETAILED_LEVEL,    # default + [DETAILED] web requests, API calls out
     "verbose": logging.DEBUG,     # detailed + [DEBUG] all extra logging
+    "debug": logging.DEBUG,       # alias for verbose (same as verbose)
 }
 
 
@@ -47,7 +48,7 @@ def setup_logging(config: Any) -> None:
     Configure logging for GlanceRF from config.
     - Always adds a console handler.
     - Adds a file handler only if config has a non-empty "log_path".
-    - Level comes from config "log_level": "default" | "detailed" | "verbose".
+    - Level comes from config "log_level": "default" | "detailed" | "verbose" | "debug" (debug = verbose).
     """
     level = _level_from_config(config)
     log_path = _log_path_from_config(config)

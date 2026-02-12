@@ -4,7 +4,8 @@ Grid building and span logic for main and readonly pages.
 Cell appearance (color, inner HTML) comes from the module dict; no special handling per type.
 """
 
-from typing import Dict, Set, Tuple, Any
+import html as html_module
+from typing import Any, Dict, Optional, Set, Tuple
 
 from glancerf.modules import get_module_by_id
 
@@ -40,8 +41,12 @@ def build_grid_html(
     merged_cells: Set[Tuple[int, int]],
     grid_columns: int,
     grid_rows: int,
+    module_settings: Optional[Dict[str, Any]] = None,
 ) -> str:
-    """Generate grid cells HTML from layout and cell_spans. Each cell uses its module (color, inner_html)."""
+    """Generate grid cells HTML from layout and cell_spans. Each cell uses its module (color, inner_html).
+    If module_settings[cell_key].show_title is True (default), a module title is rendered; if False,
+    the title is omitted so the content scales to fill the cell."""
+    settings = module_settings or {}
     grid_html = ""
     for row in range(grid_rows):
         for col in range(grid_columns):
@@ -55,6 +60,28 @@ def build_grid_html(
             module = get_module_by_id(cell_value)
             cell_color = (module or {}).get("color", "#111")
             inner = (module or {}).get("inner_html", "")
+            cell_key = f"{row}_{col}"
+            cell_settings = settings.get(cell_key) or {}
+            show_title = cell_settings.get("show_title", True)
+            if show_title in (False, "false", "0", 0):
+                show_title = False
+            else:
+                show_title = True
+            module_name = (module or {}).get("name", "") if (show_title and cell_value) else ""
+            if show_title and module_name:
+                title_escaped = html_module.escape(module_name, quote=True)
+                inner = (
+                    f'<div class="glancerf-cell-inner">'
+                    f'<div class="glancerf-module-title">{title_escaped}</div>'
+                    f'<div class="glancerf-module-content">{inner}</div>'
+                    f"</div>"
+                )
+            else:
+                inner = (
+                    f'<div class="glancerf-cell-inner">'
+                    f'<div class="glancerf-module-content">{inner}</div>'
+                    f"</div>"
+                )
             span_key = f"{row}_{col}"
             span_info = (cell_spans or {}).get(span_key, {})
             colspan = span_info.get("colspan", 1)

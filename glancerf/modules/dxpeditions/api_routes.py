@@ -8,11 +8,13 @@ from fastapi import FastAPI
 from fastapi.responses import JSONResponse
 
 from glancerf.config import get_logger
+from glancerf.utils.cache import get_cache
 from .dxpedition_service import get_dxpeditions_cached
 
 _log = get_logger("dxpeditions.api_routes")
 
 _DEFAULT_CREDITS = "NG3K ADXO; NG3K RSS; DXCAL (danplanet.com)"
+_CACHE_TTL_SEC = 900
 
 
 def register_routes(app: FastAPI) -> None:
@@ -27,6 +29,11 @@ def register_routes(app: FastAPI) -> None:
         else:
             enabled = [s.strip() for s in sources.split(",") if s.strip()]
         credits = "; ".join(enabled) if enabled else _DEFAULT_CREDITS
+        cache_key = "dxpeditions:list:" + (",".join(sorted(enabled or [])) or "all")
+        cache = get_cache()
+        cached = cache.get(cache_key)
+        if cached is not None:
+            return cached
         try:
             result = await asyncio.to_thread(get_dxpeditions_cached, enabled_sources=enabled)
             from datetime import datetime, timezone
@@ -40,10 +47,9 @@ def register_routes(app: FastAPI) -> None:
                 set_output("dxpeditions", "alert", bool(active))
             except Exception:
                 pass
-            return {
-                "dxpeditions": result,
-                "credits": credits,
-            }
+            out = {"dxpeditions": result, "credits": credits}
+            cache.set(cache_key, out, _CACHE_TTL_SEC)
+            return out
         except Exception as e:
             _log.debug("DXpeditions list failed: %s", e)
             return JSONResponse(

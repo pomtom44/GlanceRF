@@ -3,6 +3,7 @@
 Main entry point for GlanceRF
 """
 
+import os
 import sys
 import signal
 import threading
@@ -60,6 +61,15 @@ def main():
     port = config.get("port")
     readonly_port = config.get("readonly_port")
     use_desktop = config.get("use_desktop")
+
+    # Env overrides for ports (e.g. Docker)
+    if os.environ.get("GLANCERF_PORT"):
+        port = int(os.environ["GLANCERF_PORT"])
+    if os.environ.get("GLANCERF_READONLY_PORT"):
+        readonly_port = int(os.environ["GLANCERF_READONLY_PORT"])
+    # In Docker always run server-only; ignore use_desktop from config.
+    if os.environ.get("GLANCERF_DOCKER"):
+        use_desktop = False
 
     if port is None or readonly_port is None or use_desktop is None:
         log.error("Missing required configuration values: port, readonly_port, or use_desktop")

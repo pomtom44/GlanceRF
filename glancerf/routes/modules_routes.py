@@ -1,11 +1,12 @@
 """
 Modules management page routes for GlanceRF
-Shows installed modules and whether each is active (used in the current layout).
+Shows installed modules.
 """
 
 import html as html_module
 import importlib.util
 import sys
+import time
 from pathlib import Path
 
 from fastapi import FastAPI
@@ -57,7 +58,7 @@ def register_modules_routes(app: FastAPI, connection_manager=None):
 
     @app.get("/modules")
     async def modules_page():
-        """Modules page - lists installed modules and whether each is active in the layout."""
+        """Modules page - lists installed modules."""
         _log.debug("GET /modules")
         clear_module_cache()
         try:
@@ -66,14 +67,8 @@ def register_modules_routes(app: FastAPI, connection_manager=None):
             _log.debug("modules: config not found, redirect to setup")
             return RedirectResponse(url="/setup")
 
-        layout = current_config.get("layout") or []
-        enabled_module_ids = set()
-        for row in layout:
-            for cell_value in row:
-                if cell_value:
-                    enabled_module_ids.add(cell_value)
-
         all_modules = get_modules()
+        cache_bust = str(int(time.time() * 1000))
         modules_html = ""
         for module in all_modules:
             module_id = module.get("id", "")
@@ -81,9 +76,6 @@ def register_modules_routes(app: FastAPI, connection_manager=None):
                 continue
             module_name = module.get("name", "Unknown")
             module_color = module.get("color", "#111")
-            is_enabled = module_id in enabled_module_ids
-            status = "Enabled" if is_enabled else "Disabled"
-            status_class = "status-enabled" if is_enabled else "status-disabled"
             description = _get_module_description(module_id)
             modules_html += f"""
             <div class="module-item">
@@ -93,7 +85,6 @@ def register_modules_routes(app: FastAPI, connection_manager=None):
                         <h3>{html_module.escape(module_name)}</h3>
                         <span class="module-id">ID: {html_module.escape(module_id)}</span>
                     </div>
-                    <div class="module-status {status_class}">{status}</div>
                 </div>
                 <div class="module-description">{html_module.escape(description)}</div>
             </div>
@@ -101,8 +92,8 @@ def register_modules_routes(app: FastAPI, connection_manager=None):
 
         menu_list_no_config = """
                 <li><a href="/setup">Setup</a></li>
-                <li><a href="/layout">Layout editor</a></li>
-                <li><a href="/modules">Modules</a></li>
+                <li><a href="/layout">Layout & Config editor</a></li>
+                <li><a href="/modules">Modules list</a></li>
                 <li><a href="/updates">Updates</a></li>
                 <li><button type="button" class="menu-link" id="menu-restart-services">Restart services</button></li>
             """ + get_gpio_menu_html()
@@ -113,9 +104,9 @@ def register_modules_routes(app: FastAPI, connection_manager=None):
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>GlanceRF - Modules</title>
+    <title>GlanceRF - Modules list</title>
     <link rel="icon" href="/logo.png" type="image/png">
-    <link rel="stylesheet" href="/static/css/menu.css">
+    <link rel="stylesheet" href="/static/css/menu.css?v={cache_bust}">
     <style>
         * {{ margin: 0; padding: 0; box-sizing: border-box; }}
         body {{ font-family: 'Courier New', monospace; background-color: #000; color: #fff; padding: 20px; min-height: 100vh; }}
@@ -130,9 +121,6 @@ def register_modules_routes(app: FastAPI, connection_manager=None):
         .module-info {{ flex: 1; }}
         .module-info h3 {{ margin: 0 0 5px 0; color: #fff; font-size: 18px; }}
         .module-id {{ color: #888; font-size: 12px; }}
-        .module-status {{ padding: 8px 16px; border-radius: 5px; font-size: 14px; font-weight: bold; flex-shrink: 0; }}
-        .status-enabled {{ background-color: #0f0; color: #000; }}
-        .status-disabled {{ background-color: #333; color: #aaa; }}
         .module-description {{ color: #aaa; font-size: 14px; line-height: 1.6; padding: 0 20px 15px 20px; }}
     </style>
 </head>
@@ -148,12 +136,12 @@ def register_modules_routes(app: FastAPI, connection_manager=None):
     </div>
     <div class="container">
         <a href="/" class="back-link">← Back to Main</a>
-        <h1>Modules</h1>
+        <h1>Modules list</h1>
         <div class="modules-list">
             {modules_html}
         </div>
     </div>
-    <script src="/static/js/menu.js"></script>
+    <script src="/static/js/menu.js?v={cache_bust}"></script>
     <script>
         document.addEventListener('keydown', function(event) {{
             var isInputFocused = document.activeElement && (document.activeElement.tagName === 'INPUT' || document.activeElement.tagName === 'TEXTAREA' || document.activeElement.tagName === 'SELECT' || document.activeElement.isContentEditable);

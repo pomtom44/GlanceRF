@@ -59,6 +59,7 @@
 
     function renderList(cell, contests, credits, maxEntries, emptyEl, listEl, creditsEl) {
         if (creditsEl) creditsEl.textContent = credits || '';
+        cell.classList.remove('contests_show_empty');
         if (!contests || contests.length === 0) {
             if (emptyEl) emptyEl.textContent = 'No contests listed.';
             setState(cell, 'empty');
@@ -118,12 +119,12 @@
         }
         var query = params.length ? '?' + params.join('&') : '';
 
-        var isBackgroundRefresh = cell.getAttribute('data-contests-loaded') === '1';
+        var hasContent = listEl && listEl.children.length > 0;
+        var isBackgroundRefresh = cell.getAttribute('data-contests-loaded') === '1' || hasContent;
 
         if (!isBackgroundRefresh) {
-            setState(cell, 'loading');
-            if (emptyEl) emptyEl.textContent = 'Loading contests';
-            listEl.innerHTML = '';
+            if (emptyEl) emptyEl.textContent = 'Loading contests...';
+            cell.classList.add('contests_show_empty');
         }
 
         fetch('/api/contests/list' + query)
@@ -131,6 +132,7 @@
             .then(function(data) {
                 if (errorEl) errorEl.textContent = '';
                 if (data.error) {
+                    cell.classList.remove('contests_show_empty');
                     if (errorEl) errorEl.textContent = data.error;
                     setState(cell, 'error');
                     if (isBackgroundRefresh) return;
@@ -139,12 +141,14 @@
                 }
                 var contests = (data.contests && Array.isArray(data.contests)) ? data.contests : [];
                 var credits = data.credits || '';
+                cell.classList.remove('contests_show_empty');
                 renderList(cell, contests, credits, maxEntries, emptyEl, listEl, creditsEl);
                 cell.setAttribute('data-contests-loaded', '1');
                 cell.setAttribute('data-contests-last-ts', String(Date.now()));
                 setLastRefresh(cell, new Date());
             })
             .catch(function() {
+                cell.classList.remove('contests_show_empty');
                 if (!isBackgroundRefresh) {
                     setState(cell, 'error');
                     if (errorEl) errorEl.textContent = 'Failed to load contests.';
@@ -175,5 +179,5 @@
     }
 
     run();
-    setInterval(run, 60 * 1000);
+    setInterval(run, 25 * 1000);
 })();

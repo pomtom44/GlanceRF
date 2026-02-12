@@ -3,6 +3,7 @@ Root (main clock) page route for GlanceRF
 """
 
 import json
+import time
 
 from fastapi import Request
 from fastapi.responses import HTMLResponse, RedirectResponse
@@ -54,17 +55,23 @@ def register_root(app):
 
         cell_spans = current_config.get("cell_spans") or {}
         merged_cells, _ = build_merged_cells_from_spans(cell_spans)
+        module_settings = current_config.get("module_settings") or {}
         grid_html = build_grid_html(
-            layout, cell_spans, merged_cells, grid_columns, grid_rows
+            layout,
+            cell_spans,
+            merged_cells,
+            grid_columns,
+            grid_rows,
+            module_settings=module_settings,
         )
         grid_css = f"grid-template-columns: repeat({grid_columns}, minmax(0, 1fr)); grid-template-rows: repeat({grid_rows}, minmax(0, 1fr));"
         module_css, module_js = get_module_assets(layout)
-        module_settings = current_config.get("module_settings") or {}
         module_settings_json = json.dumps(module_settings)
         setup_callsign_json = json.dumps(current_config.get("setup_callsign") or "")
         setup_location_json = json.dumps(current_config.get("setup_location") or "")
 
         _log.debug("root: rendering main page grid=%sx%s", grid_columns, grid_rows)
+        cache_bust = str(int(time.time() * 1000))
         html_content = render_main_page(
             aspect_ratio_css=aspect_ratio_css,
             grid_css=grid_css,
@@ -75,6 +82,7 @@ def register_root(app):
             module_settings_json=module_settings_json,
             setup_callsign_json=setup_callsign_json,
             setup_location_json=setup_location_json,
+            cache_bust=cache_bust,
         )
         html_content = html_content.replace("__GLANCERF_GPIO_MENU__", get_gpio_menu_html())
         return HTMLResponse(content=html_content)

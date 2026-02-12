@@ -3,6 +3,7 @@ Read-only root page for the secondary server (no WebSocket, no interactions)
 """
 
 import json
+import time
 from pathlib import Path
 
 from fastapi import FastAPI
@@ -52,12 +53,17 @@ def register_readonly_routes(readonly_app: FastAPI):
         layout = current_config.get("layout")
         if layout is None:
             layout = [[""] * grid_columns for _ in range(grid_rows)]
+        module_settings = current_config.get("module_settings") or {}
         grid_html = build_grid_html(
-            layout, cell_spans, merged_cells, grid_columns, grid_rows
+            layout,
+            cell_spans,
+            merged_cells,
+            grid_columns,
+            grid_rows,
+            module_settings=module_settings,
         )
         grid_css = f"grid-template-columns: repeat({grid_columns}, minmax(0, 1fr)); grid-template-rows: repeat({grid_rows}, minmax(0, 1fr));"
         module_css, module_js = get_module_assets(layout)
-        module_settings = current_config.get("module_settings") or {}
         module_settings_json = json.dumps(module_settings)
         setup_callsign_json = json.dumps(current_config.get("setup_callsign") or "")
         setup_location_json = json.dumps(current_config.get("setup_location") or "")
@@ -66,6 +72,7 @@ def register_readonly_routes(readonly_app: FastAPI):
         if main_port is None or not isinstance(main_port, int):
             main_port = 8080
         _log.debug("readonly: grid=%sx%s main_port=%s", grid_columns, grid_rows, main_port)
+        cache_bust = str(int(time.time() * 1000))
         html_content = render_readonly_page(
             aspect_ratio_css=aspect_ratio_css,
             grid_css=grid_css,
@@ -77,6 +84,7 @@ def register_readonly_routes(readonly_app: FastAPI):
             setup_callsign_json=setup_callsign_json,
             setup_location_json=setup_location_json,
             main_port=main_port,
+            cache_bust=cache_bust,
         )
         html_content = html_content.replace("__GLANCERF_GPIO_MENU__", get_gpio_menu_html())
         return HTMLResponse(content=html_content)

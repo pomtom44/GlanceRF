@@ -58,19 +58,19 @@ def _strip_frame_blocking(html: str) -> str:
 
 
 def _inject_base_tag(html: bytes, base_url: str, encoding: str = "utf-8") -> bytes:
-    """Inject <base href="base_url"> and strip frame-blocking so page can be embedded in iframe."""
+    """Inject <base href="..."> and strip frame-blocking so the page can be embedded in an iframe. Content layout is left as the remote site intended."""
     try:
         text = html.decode(encoding, errors="replace")
     except Exception:
         return html
     text = _strip_frame_blocking(text)
-    base_tag = f'<base href="{base_url}" target="_blank">'
+    inject = f'<base href="{base_url}" target="_blank">'
     if "<head>" in text:
-        text = text.replace("<head>", "<head>" + base_tag, 1)
+        text = text.replace("<head>", "<head>" + inject, 1)
     elif "<head " in text:
-        text = re.sub(r"(<head\s[^>]*>)", r"\1" + base_tag, text, count=1)
+        text = re.sub(r"(<head\s[^>]*>)", r"\1" + inject, text, count=1)
     else:
-        text = base_tag + text
+        text = inject + text
     return text.encode(encoding, errors="replace")
 
 

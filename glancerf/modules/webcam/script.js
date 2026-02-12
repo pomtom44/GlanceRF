@@ -79,14 +79,17 @@
             var devIndex = parseNum(settings.device_index, 0, 0, 4);
             var streamUrl = '/api/webcam/stream?device=' + devIndex;
             if (img) {
+                placeholder.textContent = 'Loading stream...';
+                placeholder.style.display = '';
+                img.style.display = 'none';
                 img.src = streamUrl;
-                img.style.display = '';
                 img.onerror = function() {
                     wrap.classList.remove('has-feed');
                     placeholder.style.display = '';
                     placeholder.textContent = 'ffmpeg needs to be installed on the server';
                 };
                 img.onload = function() {
+                    img.style.display = '';
                     wrap.classList.add('has-feed');
                     placeholder.style.display = 'none';
                 };
@@ -101,20 +104,25 @@
             }
             var remoteType = (settings.remote_type || 'mjpeg').toLowerCase();
             if (remoteType === 'mjpeg') {
+                placeholder.textContent = 'Loading stream...';
+                placeholder.style.display = '';
+                img.style.display = 'none';
                 img.src = url;
-                img.style.display = '';
                 img.onerror = function() {
                     wrap.classList.remove('has-feed');
                     placeholder.style.display = '';
                     placeholder.textContent = 'Failed to load stream';
                 };
                 img.onload = function() {
+                    img.style.display = '';
                     wrap.classList.add('has-feed');
                     placeholder.style.display = 'none';
                 };
             } else {
-                video.src = url;
+                placeholder.textContent = 'Loading video...';
+                placeholder.style.display = '';
                 video.style.display = '';
+                video.src = url;
                 video.onerror = function() {
                     wrap.classList.remove('has-feed');
                     placeholder.style.display = '';
