@@ -1,0 +1,57 @@
+<div class="satellite_pass_wrap">
+  <div class="sat_pass_view_pass" style="display:none;">
+    <div class="sat_pass_compass_wrap" aria-label="Next pass compass">
+      <div class="sat_pass_compass_loading">Loading...</div>
+      <div class="sat_pass_compass_error" style="display:none;"></div>
+      <div class="sat_pass_compass_inner" style="display:none;">
+        <div class="sat_pass_compass_canvas">
+          <svg class="sat_pass_compass" viewBox="0 0 200 200" preserveAspectRatio="xMidYMid meet" aria-hidden="true">
+            <circle class="sat_pass_compass_horizon" cx="100" cy="100" r="88" fill="none" stroke="currentColor" stroke-width="1"/>
+            <g class="sat_pass_compass_radials">
+              <line x1="100" y1="100" x2="100" y2="12" stroke="currentColor" stroke-width="0.5"/>
+              <line x1="100" y1="100" x2="134" y2="19" stroke="currentColor" stroke-width="0.5"/>
+              <line x1="100" y1="100" x2="162" y2="38" stroke="currentColor" stroke-width="0.5"/>
+              <line x1="100" y1="100" x2="181" y2="66" stroke="currentColor" stroke-width="0.5"/>
+              <line x1="100" y1="100" x2="188" y2="100" stroke="currentColor" stroke-width="0.5"/>
+              <line x1="100" y1="100" x2="181" y2="134" stroke="currentColor" stroke-width="0.5"/>
+              <line x1="100" y1="100" x2="162" y2="162" stroke="currentColor" stroke-width="0.5"/>
+              <line x1="100" y1="100" x2="134" y2="181" stroke="currentColor" stroke-width="0.5"/>
+              <line x1="100" y1="100" x2="100" y2="188" stroke="currentColor" stroke-width="0.5"/>
+              <line x1="100" y1="100" x2="66" y2="181" stroke="currentColor" stroke-width="0.5"/>
+              <line x1="100" y1="100" x2="38" y2="162" stroke="currentColor" stroke-width="0.5"/>
+              <line x1="100" y1="100" x2="19" y2="134" stroke="currentColor" stroke-width="0.5"/>
+              <line x1="100" y1="100" x2="12" y2="100" stroke="currentColor" stroke-width="0.5"/>
+              <line x1="100" y1="100" x2="19" y2="66" stroke="currentColor" stroke-width="0.5"/>
+              <line x1="100" y1="100" x2="38" y2="38" stroke="currentColor" stroke-width="0.5"/>
+              <line x1="100" y1="100" x2="66" y2="19" stroke="currentColor" stroke-width="0.5"/>
+            </g>
+            <circle class="sat_pass_compass_el30" cx="100" cy="100" r="59" fill="none" stroke="currentColor" stroke-width="0.5"/>
+            <circle class="sat_pass_compass_el60" cx="100" cy="100" r="29" fill="none" stroke="currentColor" stroke-width="0.5"/>
+            <text x="100" y="6" text-anchor="middle" dominant-baseline="middle" class="sat_pass_compass_label">N</text>
+            <text x="194" y="100" text-anchor="middle" dominant-baseline="middle" class="sat_pass_compass_label">E</text>
+            <text x="100" y="194" text-anchor="middle" dominant-baseline="middle" class="sat_pass_compass_label">S</text>
+            <text x="6" y="100" text-anchor="middle" dominant-baseline="middle" class="sat_pass_compass_label">W</text>
+          </svg>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="sat_pass_view_list" style="display:none;">
+    <div class="sat_pass_panel" aria-label="Pass list">
+      <div class="sat_pass_panel_title">Pass list</div>
+      <div class="sat_pass_panel_loading">Loading...</div>
+      <div class="sat_pass_panel_body" style="display:none;">
+        <div class="sat_pass_primary"></div>
+        <div class="sat_pass_countdown"></div>
+        <div class="sat_pass_secondary"></div>
+        <div class="sat_pass_upcoming_wrap">
+          <table class="sat_pass_upcoming">
+            <thead><tr><th>Time (UTC)</th><th>Satellite</th><th>Km</th></tr></thead>
+            <tbody class="sat_pass_upcoming_body"></tbody>
+          </table>
+        </div>
+      </div>
+      <div class="sat_pass_panel_error" style="display:none;"></div>
+    </div>
+  </div>
+</div>

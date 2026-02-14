@@ -43,16 +43,25 @@ async def _request_logging(request: Request, call_next):
         return response
     return await call_next(request)
 
-# Project folder (parent of glancerf package); logos/logo.png may live here
+# Project folder (parent of glancerf package); logo for favicon and web
 _project_dir = Path(__file__).resolve().parent.parent
-_logo_path = _project_dir / "logos" / "logo.png"
+
+
+def _get_logo_path():
+    """Return path to logo.png: Project/logos/logo.png or workspace root logo.png."""
+    p = _project_dir / "logos" / "logo.png"
+    if p.is_file():
+        return p
+    p = _project_dir.parent / "logo.png"
+    return p if p.is_file() else None
 
 
 @app.get("/logo.png", include_in_schema=False)
 def _serve_logo():
-    """Serve logo.png from Project folder for favicon and web use."""
-    if _logo_path.is_file():
-        return FileResponse(str(_logo_path), media_type="image/png")
+    """Serve logo.png for favicon and web (taskbar/tab icon)."""
+    path = _get_logo_path()
+    if path is not None:
+        return FileResponse(str(path), media_type="image/png")
     return Response(status_code=404)
 
 
@@ -233,6 +242,23 @@ async def _start_background_tasks():
     import asyncio
     set_broadcast(connection_manager, asyncio.get_running_loop())
     start_gpio_manager()
+    # Run satellite list cache check once at startup so logs show cache status / update
+    try:
+        from glancerf.modules.satellite_pass.satellite_service import get_satellite_list_cached
+        await asyncio.to_thread(get_satellite_list_cached)
+    except Exception:
+        pass
+    # Background loop: fetch satellite locations (SatChecker, 1 req/s), log only
+    try:
+        from glancerf.modules.satellite_pass.satellite_service import start_satellite_locations_fetch_loop
+        start_satellite_locations_fetch_loop()
+    except Exception:
+        pass
+    try:
+        from glancerf.modules.satellite_pass.satellite_service import start_satellite_tracks_fetch_loop
+        start_satellite_tracks_fetch_loop()
+    except Exception:
+        pass
 
 
 @app.on_event("shutdown")
@@ -241,6 +267,16 @@ async def _stop_background_tasks():
     update_checker.stop()
     telemetry_sender.stop()
     stop_cache_warmer()
+    try:
+        from glancerf.modules.satellite_pass.satellite_service import stop_satellite_locations_fetch_loop
+        stop_satellite_locations_fetch_loop()
+    except Exception:
+        pass
+    try:
+        from glancerf.modules.satellite_pass.satellite_service import stop_satellite_tracks_fetch_loop
+        stop_satellite_tracks_fetch_loop()
+    except Exception:
+        pass
     from glancerf.gpio import stop_gpio_manager
     stop_gpio_manager()
 

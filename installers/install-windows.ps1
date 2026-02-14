@@ -123,7 +123,7 @@ if (-not $PythonCmd) {
 
 # --- 2. Desktop or headless? ---
 $WantHeadless = $false
-$modeResp = Read-Host "Run in desktop (window) or headless (browser only)? (desktop/headless)"
+$modeResp = Read-Host "Run in desktop (terminal + browser) or headless (server only)? (desktop/headless)"
 if ($modeResp -match "headless") { $WantHeadless = $true }
 
 # --- 3. Check / install requirements ---
@@ -302,7 +302,7 @@ if ($WantHeadless) {
         Write-Host "To install manually: Run PowerShell as Administrator, cd to Project folder, then: python glancerf\glancerf_service.py install"
     }
 } else {
-    # Desktop: create startup task (use pythonw.exe so no console window)
+    # Desktop: create startup task (use python.exe so a console window shows logs)
     $startupTaskCreated = $false
     if ($WantStartup) {
         $TaskName = "GlanceRF"
@@ -312,16 +312,14 @@ if ($WantHeadless) {
             } else {
                 (& $PythonCmd -c "import sys; print(sys.executable)").Trim()
             }
-            $pythonwPath = $pyExePath -replace "python\.exe$", "pythonw.exe"
-            if (-not (Test-Path $pythonwPath)) { $pythonwPath = $pyExePath }
-            $Action = New-ScheduledTaskAction -Execute $pythonwPath -Argument "run.py" -WorkingDirectory $ProjectPath
+            $Action = New-ScheduledTaskAction -Execute $pyExePath -Argument "run.py" -WorkingDirectory $ProjectPath
             $Trigger = New-ScheduledTaskTrigger -AtLogOn -User $env:USERNAME
             $Settings = New-ScheduledTaskSettingsSet -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries -StartWhenAvailable
             $Principal = New-ScheduledTaskPrincipal -UserId $env:USERNAME -LogonType Interactive
             Unregister-ScheduledTask -TaskName $TaskName -ErrorAction SilentlyContinue
             Register-ScheduledTask -TaskName $TaskName -Action $Action -Trigger $Trigger -Settings $Settings -Principal $Principal | Out-Null
             $startupTaskCreated = $true
-            Write-Host "Startup task created. GlanceRF will run at logon (window only; no terminal)."
+            Write-Host "Startup task created. GlanceRF will run at logon (terminal window and browser)."
         } catch {
             Write-Host "Could not create startup task (access denied or not allowed in this environment)."
             Write-Host "To add it later: Run this installer as Administrator, or create a shortcut and place it in your Startup folder."

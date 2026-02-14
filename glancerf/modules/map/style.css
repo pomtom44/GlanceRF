@@ -1,6 +1,10 @@
 .grid-cell-map {
             min-height: 0;
             overflow: hidden;
+            --sat-pass-dot-radius: 5;
+            --sat-pass-label-line-length: 24;
+            --sat-pass-label-line-drop: 8;
+            --sat-pass-label-line-thickness: 2;
         }
         .grid-cell-map .map_container {
             height: 100%;
@@ -40,4 +44,140 @@
             background-repeat: no-repeat;
             image-rendering: -webkit-optimize-contrast;
             image-rendering: crisp-edges;
+        }
+        /* Comic-style speech bubble: rounded frame, offset from dot, tail points at dot. */
+        .grid-cell-map .leaflet-tooltip.satellite-pass-label {
+            margin: 0;
+            padding: 6px 12px;
+            background: #fff;
+            border: 1.5px solid #333;
+            border-radius: 14px;
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+            font-size: 12px;
+            font-weight: 600;
+            color: #1a1a1a;
+            white-space: nowrap;
+            position: relative;
+        }
+        /* Tail: small comic pointer from bubble edge toward the dot. */
+        .grid-cell-map .leaflet-tooltip.satellite-pass-label::before {
+            content: '';
+            position: absolute;
+            width: 0;
+            height: 0;
+            border: 7px solid transparent;
+        }
+        .grid-cell-map .leaflet-tooltip.satellite-pass-label.leaflet-tooltip-top::before {
+            bottom: -14px;
+            left: 50%;
+            margin-left: -7px;
+            border-top-color: #333;
+        }
+        .grid-cell-map .leaflet-tooltip.satellite-pass-label.leaflet-tooltip-top::after {
+            content: '';
+            position: absolute;
+            bottom: -11px;
+            left: 50%;
+            margin-left: -6px;
+            border: 6px solid transparent;
+            border-top-color: #fff;
+        }
+        .grid-cell-map .leaflet-tooltip.satellite-pass-label.leaflet-tooltip-bottom::before {
+            top: -14px;
+            left: 50%;
+            margin-left: -7px;
+            border-bottom-color: #333;
+        }
+        .grid-cell-map .leaflet-tooltip.satellite-pass-label.leaflet-tooltip-bottom::after {
+            content: '';
+            position: absolute;
+            top: -11px;
+            left: 50%;
+            margin-left: -6px;
+            border: 6px solid transparent;
+            border-bottom-color: #fff;
+        }
+        .grid-cell-map .leaflet-tooltip.satellite-pass-label.leaflet-tooltip-left::before {
+            right: -14px;
+            top: 50%;
+            margin-top: -7px;
+            border-left-color: #333;
+        }
+        .grid-cell-map .leaflet-tooltip.satellite-pass-label.leaflet-tooltip-left::after {
+            content: '';
+            position: absolute;
+            right: -11px;
+            top: 50%;
+            margin-top: -6px;
+            border: 6px solid transparent;
+            border-left-color: #fff;
+        }
+        .grid-cell-map .leaflet-tooltip.satellite-pass-label.leaflet-tooltip-right::before {
+            left: -14px;
+            top: 50%;
+            margin-top: -7px;
+            border-right-color: #333;
+        }
+        .grid-cell-map .leaflet-tooltip.satellite-pass-label.leaflet-tooltip-right::after {
+            content: '';
+            position: absolute;
+            left: -11px;
+            top: 50%;
+            margin-top: -6px;
+            border: 6px solid transparent;
+            border-right-color: #fff;
+        }
+        /* Satellite pass labels: angled line from dot center to center of bubble left edge. Tweak via CSS variables. */
+        .grid-cell-map .sat-pass-label-icon {
+            background: transparent;
+            border: none;
+            white-space: nowrap;
+        }
+        .grid-cell-map .sat-pass-label-wrap {
+            display: flex;
+            align-items: flex-start;
+            pointer-events: none;
+        }
+        .grid-cell-map .sat-pass-label-line {
+            display: block;
+            width: calc(var(--sat-pass-label-line-length) * 1px);
+            height: calc(var(--sat-pass-label-line-drop) * 1px);
+            flex-shrink: 0;
+        }
+        .grid-cell-map .sat-pass-label-line line {
+            stroke: #333;
+            stroke-width: 2;
+            fill: none;
+        }
+        .grid-cell-map .sat-pass-label-bubble-wrap {
+            height: calc(var(--sat-pass-label-line-drop) * 1px);
+            display: flex;
+            align-items: center;
+            margin-top: calc(var(--sat-pass-label-line-drop) * 0.5 * 1px);
+            flex-shrink: 0;
+            overflow: visible;
+        }
+        .grid-cell-map .sat-pass-label {
+            display: inline-block;
+            padding: 2px 6px;
+            background: rgba(255, 255, 255, 0.92);
+            border: 1px solid #333;
+            border-radius: 4px;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+            font-size: 11px;
+            line-height: 1.25;
+            color: #1a1a1a;
+            flex-shrink: 0;
+        }
+        .grid-cell-map .sat-pass-label-name {
+            display: block;
+            font-weight: 600;
+            max-width: 140px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .grid-cell-map .sat-pass-label-norad {
+            display: block;
+            font-size: 10px;
+            color: #555;
         }

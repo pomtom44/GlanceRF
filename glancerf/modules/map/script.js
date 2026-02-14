@@ -874,6 +874,448 @@
                     layerGroup.bringToFront();
                 }).catch(function() {});
             }
+            /* Satellite-pass position logic (confirm):
+             * 1. Get "current" position, velocity (deg/s), and per-NORAD position_updated_utc from cache via /api/satellite/locations. Backend only returns positions with per-satellite timestamp < 5 min.
+             * 2. Anchor time: for new markers we use position_updated_utc (when that position was computed) so cache age is real; else "when we received the data". For track lead we use fetchedAt.
+             * 3. Estimated position every 100 ms (satPassInterpolateTick): track lead line at elapsed time, or anchor + velocity * (now - anchorTime).
+             * 4. Dot and label at estimated position. New markers are placed at estimated position (cached + velocity * age) from first paint. On locations fetch we re-anchor at current estimated position and refresh velocity.
+             */
+            var satPassDefaultColorPalette = [
+                '#e6194b', '#3cb44b', '#4363d8', '#f58231', '#911eb4', '#46f0f0',
+                '#f032e6', '#bcf60c', '#fabebe', '#008080', '#e6beff', '#9a6324',
+                '#fffac8', '#800000', '#aaffc3', '#808000', '#ffd8b1', '#000075'
+            ];
+            function satPassColorForNorad(noradId) {
+                var idx = Math.abs(parseInt(noradId, 10) || 0) % satPassDefaultColorPalette.length;
+                return satPassDefaultColorPalette[idx];
+            }
+            function satPassColorFromSettings(satEntry, noradId) {
+                var hex = (satEntry && satEntry.color && typeof satEntry.color === 'string') ? String(satEntry.color).trim() : '';
+                if (hex && /^#[0-9A-Fa-f]{3}([0-9A-Fa-f]{3}([0-9A-Fa-f]{2})?)?$/.test(hex)) return hex;
+                return satPassColorForNorad(noradId);
+            }
+            function getSatellitePassSettings() {
+                var cell = document.querySelector('.grid-cell-satellite_pass');
+                if (!cell) return {};
+                var r = cell.getAttribute('data-row');
+                var c = cell.getAttribute('data-col');
+                var key = (r != null && c != null) ? r + '_' + c : '';
+                if (!key) return {};
+                var all = window.GLANCERF_MODULE_SETTINGS || {};
+                var cellSettings = all[key];
+                if (!cellSettings || !cellSettings.sat_satellites) return {};
+                try {
+                    var data = JSON.parse(cellSettings.sat_satellites);
+                    return (data && typeof data === 'object') ? data : {};
+                } catch (e) {
+                    return {};
+                }
+            }
+            var TRACKS_STEP_SEC = 120;
+            function satPassInterpolateTick() {
+                var now = Date.now();
+                document.querySelectorAll('.grid-cell-map .map_container').forEach(function(el) {
+                    var map = el._map;
+                    if (!map || !map._satellitePassMarkers) return;
+                    var markers = map._satellitePassMarkers;
+                    var labelMarkers = map._satellitePassLabelMarkers || {};
+                    var trackLead = map._satellitePassTrackLead || {};
+                    Object.keys(markers).forEach(function(noradStr) {
+                        var m = markers[noradStr];
+                        var norad = parseInt(noradStr, 10);
+                        var leadData = trackLead[noradStr];
+                        var lat, lon;
+                        if (leadData && leadData.lead && leadData.lead.length > 0 && leadData.fetchedAt != null) {
+                            var elapsedSec = (now - leadData.fetchedAt) / 1000;
+                            var idx = Math.floor(elapsedSec / TRACKS_STEP_SEC);
+                            var lead = leadData.lead;
+                            if (idx >= lead.length - 1) {
+                                var last = lead[lead.length - 1];
+                                lat = last[0];
+                                lon = last[1];
+                            } else if (idx < 0) {
+                                lat = lead[0][0];
+                                lon = lead[0][1];
+                            } else {
+                                var frac = (elapsedSec / TRACKS_STEP_SEC) - idx;
+                                var a = lead[idx];
+                                var b = lead[idx + 1];
+                                lat = a[0] + frac * (b[0] - a[0]);
+                                lon = a[1] + frac * (b[1] - a[1]);
+                                while (lon > 180) lon -= 360;
+                                while (lon < -180) lon += 360;
+                            }
+                            m.setLatLng([lat, lon]);
+                            if (labelMarkers[noradStr]) labelMarkers[noradStr].setLatLng([lat, lon]);
+                            return;
+                        }
+                        if (m._anchorTime == null) return;
+                        var dtSec = (now - m._anchorTime) / 1000;
+                        lat = m._anchorLat + (m._vlat || 0) * dtSec;
+                        lon = m._anchorLon + (m._vlon || 0) * dtSec;
+                        while (lon > 180) lon -= 360;
+                        while (lon < -180) lon += 360;
+                        if (lat > 90) lat = 90;
+                        if (lat < -90) lat = -90;
+                        m.setLatLng([lat, lon]);
+                        if (labelMarkers[noradStr]) labelMarkers[noradStr].setLatLng([lat, lon]);
+                    });
+                });
+            }
+            function addSatellitePassLocationsOverlay(map) {
+                if (typeof L === 'undefined') return;
+                if (document.querySelectorAll('.grid-cell-satellite_pass').length === 0) {
+                    /* Hide overlay only; keep layer and markers so we do not recreate all dots at cached position when panel reappears. */
+                    if (map._satellitePassLocationsLayerGroup && map.hasLayer(map._satellitePassLocationsLayerGroup)) {
+                        map.removeLayer(map._satellitePassLocationsLayerGroup);
+                    }
+                    return;
+                }
+                var layerGroup = map._satellitePassLocationsLayerGroup;
+                if (!layerGroup) {
+                    layerGroup = L.layerGroup();
+                    map._satellitePassLocationsLayerGroup = layerGroup;
+                    map._satellitePassMarkers = {};
+                    map._satellitePassLabelMarkers = {};
+                    layerGroup.addTo(map);
+                } else if (!map.hasLayer(layerGroup)) {
+                    layerGroup.addTo(map);
+                }
+                var base = getMapApiBase();
+                var locationsUrl = base + '/api/satellite/locations';
+                var listUrl = base + '/api/satellite/list';
+                Promise.all([
+                    fetch(locationsUrl).then(function(r) { return r.ok ? r.json() : { positions: {}, velocities: {}, position_updated_utc: {} }; }),
+                    fetch(listUrl).then(function(r) { return r.ok ? r.json() : { satellites: [] }; })
+                ]).then(function(results) {
+                    var data = results[0];
+                    var listData = results[1];
+                    var positions = (data && data.positions) ? data.positions : {};
+                    var velocities = (data && data.velocities) ? data.velocities : {};
+                    var positionUpdatedUtc = (data && data.position_updated_utc) ? data.position_updated_utc : {};
+                    var satellites = (listData && listData.satellites) ? listData.satellites : [];
+                    var namesByNorad = {};
+                    satellites.forEach(function(s) {
+                        var n = s.norad_id != null ? parseInt(s.norad_id, 10) : NaN;
+                        if (!isNaN(n) && s.name) namesByNorad[String(n)] = String(s.name).trim();
+                    });
+                    var noradIds = Object.keys(positions).map(function(k) { return parseInt(k, 10); }).filter(function(n) { return !isNaN(n); });
+                    if (noradIds.length === 0) return;
+                    var satSettings = getSatellitePassSettings();
+                    noradIds = noradIds.filter(function(norad) {
+                        var e = satSettings[String(norad)];
+                        return (e && e.show_on_map === false) ? false : true;
+                    });
+                    var markers = map._satellitePassMarkers || {};
+                    var labelMarkers = map._satellitePassLabelMarkers || {};
+                    map._satellitePassLabelMarkers = labelMarkers;
+                    var now = Date.now();
+                    function positionTimeMs(noradKey) {
+                        var s = positionUpdatedUtc[noradKey];
+                        if (typeof s !== 'string' || !s) return null;
+                        var ms = Date.parse(s);
+                        return isNaN(ms) ? null : ms;
+                    }
+                    noradIds.forEach(function(norad) {
+                        var noradKey = String(norad);
+                        var ll = positions[noradKey];
+                        if (!Array.isArray(ll) || ll.length < 2) return;
+                        var lat = Number(ll[0]);
+                        var lon = Number(ll[1]);
+                        if (isNaN(lat) || isNaN(lon)) return;
+                        var vel = velocities[noradKey];
+                        var vlat = 0, vlon = 0;
+                        if (Array.isArray(vel) && vel.length >= 2) {
+                            vlat = Number(vel[0]) || 0;
+                            vlon = Number(vel[1]) || 0;
+                        }
+                        var m = markers[norad];
+                        if (m) {
+                            /* Advance anchor to current estimated position (interpolation owns position). Update velocity from API so future interpolation stays accurate; never set position to cached lat/lon. */
+                            var current = m.getLatLng();
+                            if (current) {
+                                m._anchorLat = current.lat;
+                                m._anchorLon = current.lng;
+                                m._anchorTime = now;
+                                m._vlat = vlat;
+                                m._vlon = vlon;
+                            }
+                            var satEntry = satSettings[noradKey];
+                            var color = satPassColorFromSettings(satEntry, norad);
+                            m.setStyle({ fillColor: color });
+                        } else {
+                            var anchorTimeMs = positionTimeMs(noradKey) || now;
+                            var dtSec = (now - anchorTimeMs) / 1000;
+                            var estLat = lat + (vlat * dtSec);
+                            var estLon = lon + (vlon * dtSec);
+                            while (estLon > 180) estLon -= 360;
+                            while (estLon < -180) estLon += 360;
+                            if (estLat > 90) estLat = 90;
+                            if (estLat < -90) estLat = -90;
+                            var satEntry = satSettings[noradKey];
+                            var color = satPassColorFromSettings(satEntry, norad);
+                            m = L.circleMarker([estLat, estLon], {
+                                radius: 5, /* match .grid-cell-map --sat-pass-dot-radius if changed */
+                                fillColor: color,
+                                color: '#fff',
+                                weight: 1,
+                                fillOpacity: 0.9
+                            });
+                            m._anchorLat = lat;
+                            m._anchorLon = lon;
+                            m._anchorTime = anchorTimeMs;
+                            m._vlat = vlat;
+                            m._vlon = vlon;
+                            m.addTo(layerGroup);
+                            markers[norad] = m;
+                            if (satEntry.show_label !== false) {
+                                var name = (namesByNorad[noradKey] || 'NORAD ' + norad).substring(0, 24);
+                                var labelHtml = '<div class="sat-pass-label-wrap"><svg class="sat-pass-label-line" viewBox="0 0 24 8" preserveAspectRatio="none"><line x1="0" y1="0" x2="24" y2="8" stroke="#333" vector-effect="non-scaling-stroke"/></svg><div class="sat-pass-label-bubble-wrap"><div class="sat-pass-label"><span class="sat-pass-label-name">' + escapeHtml(name) + '</span><span class="sat-pass-label-norad">' + norad + '</span></div></div></div>';
+                                var labelIcon = L.divIcon({
+                                    html: labelHtml,
+                                    className: 'sat-pass-label-icon',
+                                    iconSize: null,
+                                    iconAnchor: [0, 0]
+                                });
+                                var labelM = L.marker([estLat, estLon], { icon: labelIcon });
+                                labelM._norad = norad;
+                                labelM.addTo(layerGroup);
+                                labelMarkers[norad] = labelM;
+                            }
+                            scheduleTraceRetryForNorad(map, norad);
+                        }
+                    });
+                    Object.keys(markers).forEach(function(noradStr) {
+                        var norad = parseInt(noradStr, 10);
+                        var remove = positions[String(norad)] == null;
+                        if (!remove) {
+                            var e = satSettings[noradStr];
+                            if (e && e.show_on_map === false) remove = true;
+                        }
+                        if (remove) {
+                            layerGroup.removeLayer(markers[norad]);
+                            delete markers[norad];
+                            if (labelMarkers[norad]) {
+                                layerGroup.removeLayer(labelMarkers[norad]);
+                                delete labelMarkers[norad];
+                            }
+                            if (map._satellitePassTracePendingNorads) delete map._satellitePassTracePendingNorads[norad];
+                        } else {
+                            var e = satSettings[noradStr];
+                            if (e && e.show_label === false && labelMarkers[norad]) {
+                                layerGroup.removeLayer(labelMarkers[norad]);
+                                delete labelMarkers[norad];
+                            } else if ((!e || e.show_label !== false) && markers[norad] && !labelMarkers[norad]) {
+                                var pos = markers[norad].getLatLng();
+                                var name = (namesByNorad[noradStr] || 'NORAD ' + norad).substring(0, 24);
+                                var labelHtml = '<div class="sat-pass-label-wrap"><svg class="sat-pass-label-line" viewBox="0 0 24 8" preserveAspectRatio="none"><line x1="0" y1="0" x2="24" y2="8" stroke="#333" vector-effect="non-scaling-stroke"/></svg><div class="sat-pass-label-bubble-wrap"><div class="sat-pass-label"><span class="sat-pass-label-name">' + escapeHtml(name) + '</span><span class="sat-pass-label-norad">' + norad + '</span></div></div></div>';
+                                var labelIcon = L.divIcon({
+                                    html: labelHtml,
+                                    className: 'sat-pass-label-icon',
+                                    iconSize: null,
+                                    iconAnchor: [0, 0]
+                                });
+                                var labelM = L.marker([pos.lat, pos.lng], { icon: labelIcon });
+                                labelM._norad = norad;
+                                labelM.addTo(layerGroup);
+                                labelMarkers[norad] = labelM;
+                            }
+                        }
+                    });
+                    if (!map.hasLayer(layerGroup)) layerGroup.addTo(map);
+                    layerGroup.bringToFront();
+                    redrawSatellitePassTracksFromCache(map);
+                }).catch(function() {});
+            }
+            function escapeHtml(s) {
+                if (!s) return '';
+                var div = document.createElement('div');
+                div.textContent = s;
+                return div.innerHTML;
+            }
+            function splitPathAtWrapBoundaries(path) {
+                if (!path || path.length < 2) return path.length >= 2 ? [path] : [];
+                var segments = [];
+                var seg = [path[0]];
+                for (var i = 1; i < path.length; i++) {
+                    var a = path[i - 1];
+                    var b = path[i];
+                    var lat1 = a[0], lon1 = a[1], lat2 = b[0], lon2 = b[1];
+                    var dlon = Math.abs(lon2 - lon1);
+                    var crossesAntimeridian = dlon > 180;
+                    var nearPole = Math.min(Math.abs(lat1), Math.abs(lat2)) > 80;
+                    var largeLonJumpNearPole = nearPole && dlon > 90;
+                    var crossesPole = Math.abs(lat2 - lat1) > 90;
+                    if (crossesAntimeridian || largeLonJumpNearPole || crossesPole) {
+                        if (seg.length >= 2) segments.push(seg);
+                        seg = [b];
+                    } else {
+                        seg.push(b);
+                    }
+                }
+                if (seg.length >= 2) segments.push(seg);
+                return segments;
+            }
+            var SAT_TRACE_RETRY_INTERVAL_MS = 15000;
+            var SAT_TRACE_RETRY_MAX = 8;
+            function scheduleTraceRetryForNorad(map, norad) {
+                if (!map || norad == null) return;
+                if (document.querySelectorAll('.grid-cell-satellite_pass').length === 0) {
+                    if (map._satellitePassTracePendingNorads) delete map._satellitePassTracePendingNorads[norad];
+                    return;
+                }
+                var pending = map._satellitePassTracePendingNorads;
+                if (!pending) {
+                    pending = {};
+                    map._satellitePassTracePendingNorads = pending;
+                }
+                if (pending[norad] == null) pending[norad] = 0;
+                var base = getMapApiBase();
+                var tracksUrl = base + '/api/satellite/tracks';
+                fetch(tracksUrl).then(function(r) {
+                    if (!r.ok) return { tracks: {} };
+                    return r.json();
+                }).then(function(data) {
+                    if (document.querySelectorAll('.grid-cell-satellite_pass').length === 0) return;
+                    var tracks = (data && data.tracks) ? data.tracks : {};
+                    if (tracks[String(norad)]) {
+                        delete pending[norad];
+                        addSatellitePassTracksOverlay(map);
+                    } else {
+                        pending[norad] = (pending[norad] || 0) + 1;
+                        if (pending[norad] < SAT_TRACE_RETRY_MAX) {
+                            setTimeout(function() { scheduleTraceRetryForNorad(map, norad); }, SAT_TRACE_RETRY_INTERVAL_MS);
+                        } else {
+                            delete pending[norad];
+                        }
+                    }
+                }).catch(function() {
+                    pending[norad] = (pending[norad] || 0) + 1;
+                    if (pending[norad] < SAT_TRACE_RETRY_MAX) {
+                        setTimeout(function() { scheduleTraceRetryForNorad(map, norad); }, SAT_TRACE_RETRY_INTERVAL_MS);
+                    } else {
+                        delete pending[norad];
+                    }
+                });
+            }
+            function drawSatellitePassTracksFromData(map, tracks, fetchedAt) {
+                var layerGroup = map._satellitePassTracksLayerGroup;
+                if (!layerGroup) return;
+                if (!map._satellitePassTrackLead) map._satellitePassTrackLead = {};
+                var satSettings = getSatellitePassSettings();
+                var markers = map._satellitePassMarkers || {};
+                layerGroup.clearLayers();
+                Object.keys(tracks).forEach(function(noradStr) {
+                    var norad = parseInt(noradStr, 10);
+                    if (isNaN(norad)) return;
+                    if (satSettings[noradStr] && satSettings[noradStr].show_traces === false) return;
+                    var satEntry = satSettings[noradStr];
+                    var showOnMap = !(satEntry && satEntry.show_on_map === false);
+                    if (showOnMap && !markers[noradStr]) return;
+                    var t = tracks[noradStr];
+                    var tail = (t && t.tail) ? t.tail : [];
+                    var lead = (t && t.lead) ? t.lead : [];
+                    var path = [];
+                    tail.forEach(function(p) {
+                        if (Array.isArray(p) && p.length >= 2) path.push([Number(p[0]), Number(p[1])]);
+                    });
+                    var leadPoints = [];
+                    lead.forEach(function(p) {
+                        if (Array.isArray(p) && p.length >= 2) {
+                            path.push([Number(p[0]), Number(p[1])]);
+                            leadPoints.push([Number(p[0]), Number(p[1])]);
+                        }
+                    });
+                    if (leadPoints.length > 0) {
+                        var useFetchedAt = fetchedAt;
+                        var existing = map._satellitePassTrackLead && map._satellitePassTrackLead[noradStr];
+                        if (existing && existing.fetchedAt != null) {
+                            useFetchedAt = existing.fetchedAt;
+                        } else {
+                            var m = markers[noradStr];
+                            if (m) {
+                                var current = m.getLatLng();
+                                if (current && leadPoints.length > 0) {
+                                    var bestIdx = 0;
+                                    var bestDist = 1e9;
+                                    for (var i = 0; i < leadPoints.length; i++) {
+                                        var d = (leadPoints[i][0] - current.lat) * (leadPoints[i][0] - current.lat) + (leadPoints[i][1] - current.lng) * (leadPoints[i][1] - current.lng);
+                                        if (d < bestDist) { bestDist = d; bestIdx = i; }
+                                    }
+                                    useFetchedAt = fetchedAt - bestIdx * TRACKS_STEP_SEC * 1000;
+                                }
+                            }
+                        }
+                        map._satellitePassTrackLead[noradStr] = { lead: leadPoints, fetchedAt: useFetchedAt };
+                    }
+                    var segments = splitPathAtWrapBoundaries(path);
+                    var color = satPassColorFromSettings(satEntry, norad);
+                    segments.forEach(function(seg) {
+                        L.polyline(seg, {
+                            color: color,
+                            weight: 2,
+                            opacity: 0.65,
+                            smoothFactor: 1
+                        }).addTo(layerGroup);
+                    });
+                });
+                Object.keys(map._satellitePassTrackLead || {}).forEach(function(noradStr) {
+                    if (satSettings[noradStr] && satSettings[noradStr].show_traces === false) {
+                        delete map._satellitePassTrackLead[noradStr];
+                    }
+                });
+                if (!map.hasLayer(layerGroup)) layerGroup.addTo(map);
+                layerGroup.bringToBack();
+                if (map._satellitePassLocationsLayerGroup && map.hasLayer(map._satellitePassLocationsLayerGroup)) {
+                    map._satellitePassLocationsLayerGroup.bringToFront();
+                }
+            }
+            function addSatellitePassTracksOverlay(map) {
+                if (typeof L === 'undefined') return;
+                if (document.querySelectorAll('.grid-cell-satellite_pass').length === 0) {
+                    if (map._satellitePassTracksLayerGroup) {
+                        map.removeLayer(map._satellitePassTracksLayerGroup);
+                        map._satellitePassTracksLayerGroup = null;
+                    }
+                    map._satellitePassTrackLead = {};
+                    map._satellitePassTracksCache = null;
+                    return;
+                }
+                var layerGroup = map._satellitePassTracksLayerGroup;
+                if (!layerGroup) {
+                    layerGroup = L.layerGroup();
+                    map._satellitePassTracksLayerGroup = layerGroup;
+                    map._satellitePassTrackLead = {};
+                    layerGroup.addTo(map);
+                }
+                var base = getMapApiBase();
+                var tracksUrl = base + '/api/satellite/tracks';
+                fetch(tracksUrl).then(function(r) {
+                    if (!r.ok) return { tracks: {} };
+                    return r.json();
+                }).then(function(data) {
+                    var tracks = (data && data.tracks) ? data.tracks : {};
+                    var fetchedAt = Date.now();
+                    map._satellitePassTracksCache = { tracks: tracks, fetchedAt: fetchedAt };
+                    if (!map._satellitePassTrackLead) map._satellitePassTrackLead = {};
+                    var trackCount = Object.keys(tracks).length;
+                    if (trackCount === 0) {
+                        var retries = (map._satellitePassTracksRetryCount != null) ? map._satellitePassTracksRetryCount : 0;
+                        map._satellitePassTracksRetryCount = retries + 1;
+                        if (retries < 3 && document.querySelectorAll('.grid-cell-satellite_pass').length > 0) {
+                            setTimeout(function() { addSatellitePassTracksOverlay(map); }, 20000);
+                        }
+                    } else {
+                        map._satellitePassTracksRetryCount = 0;
+                    }
+                    drawSatellitePassTracksFromData(map, tracks, fetchedAt);
+                }).catch(function() {});
+            }
+            function redrawSatellitePassTracksFromCache(map) {
+                var cache = map._satellitePassTracksCache;
+                if (!cache || !cache.tracks) return;
+                drawSatellitePassTracksFromData(map, cache.tracks, cache.fetchedAt);
+            }
             function applyOverlays(map, cfg) {
                 if (cfg.grid_style && cfg.grid_style !== 'none') addGridOverlay(map, cfg.grid_style);
                 if (cfg.show_terminator) addTerminatorOverlay(map);
@@ -883,6 +1325,8 @@
                 if (cfg.show_aprs_locations) addAprsLocationsOverlay(map, cfg);
                 addQthMarkerOverlay(map);
                 addSatNewLocationsOverlay(map);
+                addSatellitePassLocationsOverlay(map);
+                addSatellitePassTracksOverlay(map);
             }
             function syncMapSize(el) {
                 if (!el._map) return;
@@ -941,8 +1385,36 @@
                             if (cfg.propagation_source && cfg.propagation_source !== 'none') addPropagationOverlay(el._map, cfg);
                             if (cfg.show_aprs_locations) addAprsLocationsOverlay(el._map, cfg);
                             addSatNewLocationsOverlay(el._map);
+                            addSatellitePassLocationsOverlay(el._map);
                         });
                     }, PROPAGATION_REFRESH_MS);
+                }
+                /* Satellite positions: refresh from cache every 5 s so new dots appear as soon as each position is written. */
+                if (!window._glancerfSatelliteLocationsRefreshStarted) {
+                    window._glancerfSatelliteLocationsRefreshStarted = true;
+                    setInterval(function() {
+                        if (document.querySelectorAll('.grid-cell-satellite_pass').length === 0) return;
+                        document.querySelectorAll('.grid-cell-map .map_container').forEach(function(el) {
+                            if (!el._map) return;
+                            addSatellitePassLocationsOverlay(el._map);
+                        });
+                    }, 5000);
+                }
+                /* Interpolate satellite dot positions between API pings using velocity (deg/s). */
+                if (!window._glancerfSatelliteInterpolationStarted) {
+                    window._glancerfSatelliteInterpolationStarted = true;
+                    setInterval(satPassInterpolateTick, 100);
+                }
+                /* Satellite tracks (tail + lead): refresh from cache every 5 min. */
+                if (!window._glancerfSatelliteTracksRefreshStarted) {
+                    window._glancerfSatelliteTracksRefreshStarted = true;
+                    setInterval(function() {
+                        if (document.querySelectorAll('.grid-cell-satellite_pass').length === 0) return;
+                        document.querySelectorAll('.grid-cell-map .map_container').forEach(function(el) {
+                            if (!el._map) return;
+                            addSatellitePassTracksOverlay(el._map);
+                        });
+                    }, 5 * 60 * 1000);
                 }
             }
 

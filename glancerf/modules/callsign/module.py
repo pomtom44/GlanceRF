@@ -24,6 +24,8 @@ MODULE = {
         {"id": "grid", "label": "Grid square / QTH", "type": "text", "default": ""},
         {"id": "comment", "label": "Comment (optional)", "type": "text", "default": ""},
         {"type": "separator"},
+        {"id": "on_the_air_shortcut", "label": "On The Air shortcut (optional)", "type": "text", "default": "", "placeholder": "e.g. F12"},
+        {"type": "separator"},
         {
             "id": "show_qth_on_map",
             "label": "Show QTH on map",
@@ -42,4 +44,15 @@ MODULE = {
             "default": "/-",
         },
     ],
+    "gpio": {
+        "inputs": [{"id": "on_the_air", "name": "On The Air"}],
+    },
 }
+
+
+def _on_gpio_on_the_air(value: bool) -> None:
+    """GPIO input: On The Air toggle. UI receives gpio_input WebSocket and shows/hides On The Air indicator."""
+    pass
+
+
+GPIO_INPUT_HANDLERS = {"on_the_air": _on_gpio_on_the_air}

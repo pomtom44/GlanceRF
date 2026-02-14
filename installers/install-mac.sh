@@ -99,8 +99,9 @@ case "$startup_resp" in
 esac
 
 # --- 4. Desktop or headless? ---
+# Desktop = run in terminal (logs visible) and auto-open browser; headless = server only, no browser
 WANT_HEADLESS=false
-read -r -p "Run in desktop (window) or headless (browser only)? (desktop/headless) " mode_resp
+read -r -p "Run in desktop (terminal + browser) or headless (server only)? (desktop/headless) " mode_resp
 case "$mode_resp" in
     headless|Headless|HEADLESS) WANT_HEADLESS=true ;;
 esac
@@ -140,7 +141,7 @@ cd "$PROJECT_DIR"
 exec "$PYTHON_EXE" run.py
 EOF
     chmod +x "$SHORTCUT_FILE"
-    echo "Shortcut created: $SHORTCUT_FILE (double-click to run GlanceRF)"
+    echo "Shortcut created: $SHORTCUT_FILE (double-click runs GlanceRF in Terminal and opens browser)"
     echo ""
 fi
 

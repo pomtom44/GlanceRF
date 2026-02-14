@@ -33,3 +33,10 @@
     color: #888;
     font-style: italic;
 }
+.grid-cell-callsign .callsign_on_the_air {
+    margin-top: 0.4em;
+    text-align: center;
+    font-size: 0.9em;
+    color: #f44;
+    font-weight: bold;
+}

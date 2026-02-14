@@ -277,7 +277,7 @@ def validate_module_dependencies() -> List[Tuple[str, str]]:
     """
     Try to import each module that provides api_routes.py. Returns a list of
     (module_name, error_message) for any that fail. Used at startup to fail fast
-    if a module's dependencies (e.g. skyfield for satellite_pass) are missing.
+    if a module's dependencies (e.g. skyfield for sun_times) are missing.
     """
     from glancerf.utils.numpy_fallback import try_numpy_baseline_fallback
 

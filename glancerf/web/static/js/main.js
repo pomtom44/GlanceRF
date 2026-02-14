@@ -327,6 +327,14 @@
             );
             if (isInputFocused) return;
 
+            var otaShortcut = (typeof window.GLANCERF_ON_THE_AIR_SHORTCUT === 'string' ? window.GLANCERF_ON_THE_AIR_SHORTCUT : '').trim();
+            if (otaShortcut && event.key === otaShortcut) {
+                event.preventDefault();
+                window.GLANCERF_ON_THE_AIR = !window.GLANCERF_ON_THE_AIR;
+                window.dispatchEvent(new CustomEvent('glancerf_on_the_air', { detail: { value: window.GLANCERF_ON_THE_AIR } }));
+                return;
+            }
+
             if (event.key === 'm' || event.key === 'M') {
                 event.preventDefault();
                 event.stopPropagation();

@@ -67,6 +67,7 @@ def register_readonly_routes(readonly_app: FastAPI):
         module_settings_json = json.dumps(module_settings)
         setup_callsign_json = json.dumps(current_config.get("setup_callsign") or "")
         setup_location_json = json.dumps(current_config.get("setup_location") or "")
+        on_the_air_shortcut_json = json.dumps(current_config.get("on_the_air_shortcut") or "")
 
         main_port = current_config.get("port")
         if main_port is None or not isinstance(main_port, int):
@@ -83,6 +84,7 @@ def register_readonly_routes(readonly_app: FastAPI):
             module_settings_json=module_settings_json,
             setup_callsign_json=setup_callsign_json,
             setup_location_json=setup_location_json,
+            on_the_air_shortcut_json=on_the_air_shortcut_json,
             main_port=main_port,
             cache_bust=cache_bust,
         )

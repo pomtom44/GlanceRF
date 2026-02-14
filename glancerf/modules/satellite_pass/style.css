@@ -1,0 +1,292 @@
+.grid-cell-satellite_pass {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    justify-content: flex-start;
+    overflow: hidden;
+}
+
+.grid-cell-satellite_pass .satellite_pass_wrap {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    justify-content: flex-start;
+    height: 100%;
+    padding: 6px 8px;
+    box-sizing: border-box;
+    overflow: hidden;
+}
+
+.grid-cell-satellite_pass .satellite_pass_info {
+    font-size: 13px;
+    color: #888;
+    text-align: center;
+    line-height: 1.4;
+    margin: 0;
+    flex-shrink: 0;
+}
+
+.grid-cell-satellite_pass .sat_pass_view_pass,
+.grid-cell-satellite_pass .sat_pass_view_list {
+    flex: 1;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+/* HamClock-style compass (Next pass view) */
+.grid-cell-satellite_pass .sat_pass_compass_wrap {
+    flex: 1;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    overflow: hidden;
+}
+
+.grid-cell-satellite_pass .sat_pass_compass_loading,
+.grid-cell-satellite_pass .sat_pass_compass_error {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+    color: #888;
+    text-align: center;
+    padding: 12px;
+}
+
+.grid-cell-satellite_pass .sat_pass_compass_error {
+    color: #c66;
+}
+
+.grid-cell-satellite_pass .sat_pass_compass_inner {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 0;
+}
+
+/* 1:1 canvas so overlay aligns with compass circle; theme color for strokes */
+.grid-cell-satellite_pass .sat_pass_compass_canvas {
+    position: relative;
+    aspect-ratio: 1;
+    width: 100%;
+    height: 100%;
+    max-width: min(100%, 100vh);
+    max-height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #333;
+}
+
+.grid-cell-satellite_pass .sat_pass_compass {
+    width: 100%;
+    height: 100%;
+    display: block;
+}
+
+.grid-cell-satellite_pass .sat_pass_compass_horizon {
+    stroke: #333;
+}
+
+.grid-cell-satellite_pass .sat_pass_compass_radials line,
+.grid-cell-satellite_pass .sat_pass_compass_el30,
+.grid-cell-satellite_pass .sat_pass_compass_el60 {
+    stroke: #333;
+}
+
+.grid-cell-satellite_pass .sat_pass_compass_label {
+    fill: #555;
+    font-size: 10px;
+    font-family: inherit;
+}
+
+/* Pass list panel - match grid cell colors (#111, #333, #0f0) */
+.grid-cell-satellite_pass .sat_pass_panel {
+    flex: 1;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    background: #111;
+    border: 1px solid #333;
+    border-radius: 6px;
+    padding: 8px 10px;
+    box-sizing: border-box;
+}
+
+.grid-cell-satellite_pass .sat_pass_panel_title {
+    font-size: 12px;
+    font-weight: 600;
+    color: #0f0;
+    text-align: center;
+    flex-shrink: 0;
+    margin-bottom: 6px;
+    padding-bottom: 4px;
+    border-bottom: 1px solid #333;
+}
+
+.grid-cell-satellite_pass .sat_pass_panel_loading,
+.grid-cell-satellite_pass .sat_pass_panel_error {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+    color: #888;
+    text-align: center;
+    padding: 8px;
+}
+
+.grid-cell-satellite_pass .sat_pass_panel_error {
+    color: #c66;
+}
+
+.grid-cell-satellite_pass .sat_pass_panel_body {
+    flex: 1;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+.grid-cell-satellite_pass .sat_pass_primary {
+    font-size: 14px;
+    font-variant-numeric: tabular-nums;
+    color: #0f0;
+    text-align: center;
+    flex-shrink: 0;
+    margin-bottom: 2px;
+}
+
+.grid-cell-satellite_pass .sat_pass_countdown {
+    font-size: 11px;
+    color: #888;
+    text-align: center;
+    flex-shrink: 0;
+    margin-bottom: 4px;
+}
+
+.grid-cell-satellite_pass .sat_pass_secondary {
+    font-size: 11px;
+    color: #ccc;
+    text-align: center;
+    flex-shrink: 0;
+    margin-bottom: 6px;
+}
+
+.grid-cell-satellite_pass .sat_pass_secondary .sat_pass_name {
+    color: #0f0;
+    font-weight: 600;
+}
+
+.grid-cell-satellite_pass .sat_pass_upcoming_wrap {
+    flex: 1;
+    min-height: 0;
+    overflow: auto;
+}
+
+.grid-cell-satellite_pass .sat_pass_upcoming {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 10px;
+    color: #aaa;
+}
+
+.grid-cell-satellite_pass .sat_pass_upcoming th {
+    text-align: left;
+    padding: 2px 4px;
+    border-bottom: 1px solid #333;
+    font-weight: 600;
+    color: #888;
+    background: #1a1a1a;
+}
+
+.grid-cell-satellite_pass .sat_pass_upcoming td {
+    padding: 2px 4px;
+    border-bottom: 1px solid #222;
+}
+
+.grid-cell-satellite_pass .sat_pass_upcoming .sat_pass_upcoming_name {
+    color: #0f0;
+}
+
+.grid-cell-satellite_pass .sat_pass_list_empty {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex: 1;
+    font-size: 13px;
+    color: #888;
+    text-align: center;
+    padding: 10px 8px;
+}
+
+.grid-cell-satellite_pass .sat_pass_view_list.sat_pass_list_has_items .sat_pass_list_empty {
+    display: none;
+}
+
+.grid-cell-satellite_pass .sat_pass_list_scroll {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+    overflow-x: hidden;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+}
+
+.grid-cell-satellite_pass .sat_pass_list_scroll::-webkit-scrollbar {
+    display: none;
+}
+
+.grid-cell-satellite_pass .sat_pass_list_content {
+    position: relative;
+    width: 100%;
+}
+
+.grid-cell-satellite_pass .sat_pass_list_item {
+    position: absolute;
+    left: 0;
+    right: 0;
+    font-size: 12px;
+    line-height: 1.3;
+    color: #ccc;
+    padding: 4px 6px;
+    background: #1a1a1a;
+    border: 1px solid #333;
+    border-radius: 4px;
+    box-sizing: border-box;
+}
+
+.grid-cell-satellite_pass .sat_pass_list_item .sat_pass_list_name {
+    color: #0f0;
+    font-weight: 600;
+}
+
+.grid-cell-satellite_pass .sat_pass_list_item .sat_pass_list_utc {
+    color: #888;
+    font-size: 11px;
+    font-variant-numeric: tabular-nums;
+}
+
+.grid-cell-satellite_pass .sat_pass_list_item .sat_pass_list_km {
+    color: #79c0ff;
+    font-size: 11px;
+    margin-left: 6px;
+}
+
+.grid-cell-satellite_pass .sat_pass_list_last_refresh {
+    font-size: 10px;
+    color: #888;
+    text-align: center;
+    flex-shrink: 0;
+    margin-top: 4px;
+}

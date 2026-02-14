@@ -28,6 +28,7 @@ def render_main_page(
     module_settings_json: str = "{}",
     setup_callsign_json: str = '""',
     setup_location_json: str = '""',
+    on_the_air_shortcut_json: str = '""',
     cache_bust: str = "",
 ) -> str:
     """Render the main clock page HTML with WebSocket and aspect-ratio support."""
@@ -42,6 +43,7 @@ def render_main_page(
         module_settings_json=module_settings_json,
         setup_callsign_json=setup_callsign_json,
         setup_location_json=setup_location_json,
+        on_the_air_shortcut_json=on_the_air_shortcut_json,
     )
     if cache_bust:
         html = html.replace("__CACHE_BUST__", cache_bust)

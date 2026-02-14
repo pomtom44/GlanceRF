@@ -162,6 +162,9 @@ def _validate_config(config: Dict[str, Any]) -> None:
     if "setup_ssid" in config and config["setup_ssid"] is not None:
         _check_type("setup_ssid", config["setup_ssid"], str)
 
+    if "on_the_air_shortcut" in config and config["on_the_air_shortcut"] is not None:
+        _check_type("on_the_air_shortcut", config["on_the_air_shortcut"], str)
+
     if "aprs_propagation_hours" in config and config["aprs_propagation_hours"] is not None:
         _check_type("aprs_propagation_hours", config["aprs_propagation_hours"], (int, float))
 

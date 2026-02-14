@@ -69,6 +69,7 @@ def register_root(app):
         module_settings_json = json.dumps(module_settings)
         setup_callsign_json = json.dumps(current_config.get("setup_callsign") or "")
         setup_location_json = json.dumps(current_config.get("setup_location") or "")
+        on_the_air_shortcut_json = json.dumps(current_config.get("on_the_air_shortcut") or "")
 
         _log.debug("root: rendering main page grid=%sx%s", grid_columns, grid_rows)
         cache_bust = str(int(time.time() * 1000))
@@ -82,6 +83,7 @@ def register_root(app):
             module_settings_json=module_settings_json,
             setup_callsign_json=setup_callsign_json,
             setup_location_json=setup_location_json,
+            on_the_air_shortcut_json=on_the_air_shortcut_json,
             cache_bust=cache_bust,
         )
         html_content = html_content.replace("__GLANCERF_GPIO_MENU__", get_gpio_menu_html())

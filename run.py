@@ -84,57 +84,44 @@ def main():
         daemon=True
     )
     readonly_thread.start()
-    
-    if use_desktop:
-        # GUI libraries (PyQt5, PyQtWebEngine) are only imported here if desktop mode is enabled
-        # This allows headless operation without GUI dependencies installed
-        # Import desktop module (only if needed)
-        try:
-            from glancerf.desktop import run_desktop
-            import time
-            import urllib.request
-            import urllib.error
-            
-            # Start server in a separate thread
-            local_ip = get_local_ip()
-            log.info("Starting main server on http://%s:%s", local_ip, port)
-            server_thread = threading.Thread(
-                target=run_server,
-                args=("0.0.0.0", port, True),  # host, port, quiet - bind all interfaces so IP access works
-                daemon=True
-            )
-            server_thread.start()
-            
-            # Wait for server to be ready (check if it responds)
-            max_wait = 10  # seconds
-            waited = 0
-            server_ready = False
-            while waited < max_wait:
-                try:
-                    urllib.request.urlopen(f"http://localhost:{port}/api/time", timeout=1)
-                    server_ready = True
-                    break
-                except (urllib.error.URLError, OSError):
-                    time.sleep(0.5)
-                    waited += 0.5
-            
-            if not server_ready:
-                log.error("Server did not start within %s seconds - desktop window may not load correctly", max_wait)
 
-            # Run desktop application
-            log.info("Starting desktop app")
-            run_desktop(port, server_thread)
-            
-        except ImportError as e:
-            log.error("Could not import desktop module: %s", e)
-            log.error("Falling back to server-only mode")
-            log.error("Make sure PyQt5 and PyQtWebEngine are installed: pip install PyQt5 PyQtWebEngine")
-            run_server(port=port)
-    else:
-        # Server-only mode
-        local_ip = get_local_ip()
+    if use_desktop:
+        # Desktop mode: run main server in a thread (logs in this terminal), wait for ready, open browser, then block
+        import time
+        import urllib.request
+        import urllib.error
+        import webbrowser
+
         log.info("Starting main server on http://%s:%s", local_ip, port)
-        run_server(port=port, quiet=False)
+        server_thread = threading.Thread(
+            target=run_server,
+            args=("0.0.0.0", port, False),  # host, port, quiet=False so logs show in terminal
+            daemon=False
+        )
+        server_thread.start()
+
+        max_wait = 10
+        waited = 0
+        server_ready = False
+        while waited < max_wait:
+            try:
+                urllib.request.urlopen(f"http://127.0.0.1:{port}/api/time", timeout=1)
+                server_ready = True
+                break
+            except (urllib.error.URLError, OSError):
+                time.sleep(0.5)
+                waited += 0.5
+
+        if server_ready:
+            webbrowser.open(f"http://127.0.0.1:{port}")
+        else:
+            log.warning("Server did not respond within %s seconds; open http://127.0.0.1:%s in your browser", max_wait, port)
+
+        server_thread.join()
+    else:
+        # Server (headless) mode: no browser launch
+        log.info("Starting main server on http://%s:%s", local_ip, port)
+        run_server(host="0.0.0.0", port=port, quiet=False)
 
 
 if __name__ == "__main__":

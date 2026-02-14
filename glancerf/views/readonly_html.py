@@ -28,6 +28,7 @@ def render_readonly_page(
     module_settings_json: str = "{}",
     setup_callsign_json: str = '""',
     setup_location_json: str = '""',
+    on_the_air_shortcut_json: str = '""',
     main_port: int = 8080,
     cache_bust: str = "",
 ) -> str:
@@ -43,6 +44,7 @@ def render_readonly_page(
         module_settings_json=module_settings_json,
         setup_callsign_json=setup_callsign_json,
         setup_location_json=setup_location_json,
+        on_the_air_shortcut_json=on_the_air_shortcut_json,
         main_port=main_port,
     )
     if cache_bust:

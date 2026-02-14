@@ -40,13 +40,36 @@ from glancerf.utils import calculate_dimensions, get_closest_aspect_ratio
 
 # Project folder (parent of glancerf package)
 _PROJECT_DIR = Path(__file__).resolve().parent.parent.parent
-_LOGO_PATH = _PROJECT_DIR / "logos" / "logo.png"
+
+
+def _get_logo_path():
+    """Return absolute path to logo: prefer .ico on Windows for taskbar, else .png."""
+    project_logos = _PROJECT_DIR / "logos"
+    workspace_root = _PROJECT_DIR.parent
+    if sys.platform == "win32":
+        for name in ("logo.ico", "logo.png"):
+            p = (project_logos / name).resolve()
+            if p.is_file():
+                return p
+        p = (workspace_root / "logo.ico").resolve()
+        if p.is_file():
+            return p
+        p = (workspace_root / "logo.png").resolve()
+        if p.is_file():
+            return p
+        return None
+    for p in (project_logos / "logo.png", workspace_root / "logo.png"):
+        p = p.resolve()
+        if p.is_file():
+            return p
+    return None
 
 
 def _app_icon():
-    """Return QIcon for logo.png if present, else None."""
-    if _LOGO_PATH.is_file():
-        return QIcon(str(_LOGO_PATH))
+    """Return QIcon for logo if present, else None (taskbar/window icon)."""
+    path = _get_logo_path()
+    if path is not None:
+        return QIcon(str(path))
     return None
 
 
@@ -330,8 +353,17 @@ def _create_tray_icon(app, window, port):
 
 def run_desktop(port: int = 8080, server_thread=None):
     """Run GlanceRF in desktop mode."""
+    if sys.platform == "win32":
+        try:
+            import ctypes
+            ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID("GlanceRF.Desktop.1")
+        except (AttributeError, OSError):
+            pass
     app = QApplication(sys.argv)
     app.setApplicationName("GlanceRF")
+    icon = _app_icon()
+    if icon is not None:
+        app.setWindowIcon(icon)
 
     window = GlanceRFWindow(port)
     tray = _create_tray_icon(app, window, port)

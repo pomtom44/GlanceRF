@@ -35,7 +35,10 @@ _TRAY_ICON_SIZE = (128, 128)
 
 
 def _load_icon_image():
-    logo_path = Path(__file__).resolve().parent.parent.parent / "logos" / "logo.png"
+    project_dir = Path(__file__).resolve().parent.parent.parent
+    logo_path = project_dir / "logos" / "logo.png"
+    if not logo_path.is_file():
+        logo_path = project_dir.parent / "logo.png"
     if logo_path.is_file():
         try:
             img = Image.open(logo_path).convert("RGBA")

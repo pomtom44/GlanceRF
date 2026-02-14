@@ -176,6 +176,21 @@ def register_layout_routes(app: FastAPI, connection_manager: ConnectionManager):
                         if cell_value and raw_module_settings.get(cell_value):
                             key = f"{r}_{c}"
                             module_settings_by_cell[key] = raw_module_settings[cell_value]
+        # Sync shared On The Air shortcut from config into cells that have callsign or on_the_air (so layout editor shows current value)
+        shared_ota_shortcut = (current_config.get("on_the_air_shortcut") or "").strip()
+        for r in range(grid_rows):
+            for c in range(grid_columns):
+                if r >= len(layout) or c >= len(layout[r]):
+                    continue
+                mid = layout[r][c] or ""
+                if mid not in ("callsign", "on_the_air"):
+                    continue
+                key = f"{r}_{c}"
+                cell_settings = module_settings_by_cell.get(key) or {}
+                if "on_the_air_shortcut" not in cell_settings and shared_ota_shortcut:
+                    cell_settings = dict(cell_settings)
+                    cell_settings["on_the_air_shortcut"] = shared_ota_shortcut
+                    module_settings_by_cell[key] = cell_settings
         # Schema: module_id -> list of setting dicts (for JS to build in-cell UI).
         # Prepend show_title for every non-empty module so users can show/hide the module title per cell.
         modules_settings_schema = {}
@@ -366,6 +381,25 @@ def register_layout_routes(app: FastAPI, connection_manager: ConnectionManager):
                 for cell_key, settings in module_settings.items():
                     if isinstance(settings, dict):
                         current[cell_key] = {**(current.get(cell_key) or {}), **settings}
+            # Sync shared On The Air shortcut: when either callsign or on_the_air cell is saved, update global config (last in form order wins)
+            on_the_air_shortcut_val = None
+            for cell_key, settings in (module_settings or {}).items():
+                if not isinstance(settings, dict):
+                    continue
+                try:
+                    parts = cell_key.split("_")
+                    if len(parts) != 2:
+                        continue
+                    r, c = int(parts[0]), int(parts[1])
+                    if r < 0 or r >= grid_rows or c < 0 or c >= grid_columns or r >= len(layout) or c >= len(layout[r]):
+                        continue
+                    mid = layout[r][c] or ""
+                    if mid in ("callsign", "on_the_air"):
+                        on_the_air_shortcut_val = (settings.get("on_the_air_shortcut") or "").strip()
+                except (ValueError, TypeError):
+                    continue
+            if on_the_air_shortcut_val is not None:
+                current_config.set("on_the_air_shortcut", on_the_air_shortcut_val)
             # Remove settings for cell keys that are outside the current grid (e.g. after resize)
             for cell_key in list(current):
                 try:

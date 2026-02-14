@@ -12,6 +12,16 @@
         return (p.length > 1 && p.charAt(p.length - 1) === '/') ? p.slice(0, -1) : p;
     }
 
+    function layoutHasBothCallsignAndOnTheAir() {
+        var selects = document.querySelectorAll('.grid-layout .cell-widget-select');
+        var hasCallsign = false, hasOnTheAir = false;
+        selects.forEach(function(sel) {
+            if (sel.value === 'callsign') hasCallsign = true;
+            if (sel.value === 'on_the_air') hasOnTheAir = true;
+        });
+        return hasCallsign && hasOnTheAir;
+    }
+
 var currentDesktopWidth = 0;
             var currentDesktopHeight = 0;
 
@@ -40,6 +50,20 @@ var currentDesktopWidth = 0;
                         line.className = 'cell-setting-separator-line';
                         sep.appendChild(line);
                         inner.appendChild(sep);
+                        return;
+                    }
+                    if (moduleId === 'callsign' && s.id === 'on_the_air_shortcut' && layoutHasBothCallsignAndOnTheAir()) {
+                        var otaLabel = document.createElement('label');
+                        otaLabel.className = 'cell-setting-label';
+                        otaLabel.textContent = s.label;
+                        inner.appendChild(otaLabel);
+                        var otaInp = document.createElement('input');
+                        otaInp.type = 'text';
+                        otaInp.className = 'cell-setting-select';
+                        otaInp.disabled = true;
+                        otaInp.placeholder = 'Uses the On The Air shortcut';
+                        otaInp.value = '';
+                        inner.appendChild(otaInp);
                         return;
                     }
                     var cur = vals[s.id] !== undefined ? vals[s.id] : (s.default !== undefined ? s.default : '');
