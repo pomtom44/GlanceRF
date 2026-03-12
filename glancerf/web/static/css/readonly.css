@@ -1,5 +1,4 @@
-/* Read-only overlay: same grid as main (main.css), but disable all interaction and hide menu/updates. */
-/* Sizing is viewport-only; no sync with main or desktop. */
+/* Read-only overlay: same grid as main (main.css), but disable all interaction and hide menu. */
 
 body.glancerf-readonly {
     pointer-events: none;
@@ -11,7 +10,6 @@ body.glancerf-readonly * {
     user-select: none !important;
 }
 
-body.glancerf-readonly #glancerf-menu,
-body.glancerf-readonly #update-notification {
+body.glancerf-readonly #glancerf-menu {
     display: none !important;
 }

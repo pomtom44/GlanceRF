@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>GlanceRF - Layout Configurator</title>
     <link rel="icon" href="/logo.png" type="image/png">
+    <link rel="stylesheet" href="/static/css/pages.css?v=__CACHE_BUST__">
     <link rel="stylesheet" href="/static/css/layout.css?v=__CACHE_BUST__">
     <link rel="stylesheet" href="/static/css/menu.css?v=__CACHE_BUST__">
     <style>
@@ -12,6 +13,7 @@
     </style>
 </head>
 <body>
+    <div id="conflict-resolution-container"></div>
     <div id="aspect-container">
         <div class="grid-layout">
             __GRID_HTML__
@@ -23,15 +25,7 @@
     <div id="glancerf-menu" role="dialog" aria-modal="true" aria-label="Menu">
         <div class="glancerf-menu-overlay" id="glancerf-menu-overlay"></div>
         <div class="glancerf-menu-panel">
-            <h2>Menu</h2>
-            <ul class="glancerf-menu-list">
-                <li><a href="/setup">Setup</a></li>
-                <li><a href="/layout">Layout & Config editor</a></li>
-                <li><a href="/modules">Modules list</a></li>
-                <li><a href="/updates">Updates</a></li>
-                <li><button type="button" class="menu-link" id="menu-restart-services">Restart services</button></li>
-                __GLANCERF_GPIO_MENU__
-            </ul>
+__GLANCERF_MENU_PANEL__
         </div>
     </div>
 
@@ -48,10 +42,12 @@
             "module_settings_by_cell": __MODULE_SETTINGS_BY_CELL_JSON__,
             "modules_settings_schema": __MODULES_SETTINGS_SCHEMA_JSON__,
             "setup_callsign": __SETUP_CALLSIGN_JSON__,
-            "setup_location": __SETUP_LOCATION_JSON__
+            "setup_location": __SETUP_LOCATION_JSON__,
+            "conflicts": __CONFLICT_DATA_JSON__
         };
     </script>
     <script src="/static/js/menu.js?v=__CACHE_BUST__"></script>
+    <script src="/static/js/conflict-resolution.js?v=__CACHE_BUST__"></script>
     <script src="/static/js/layout.js?v=__CACHE_BUST__"></script>
     __MODULE_SETTINGS_SCRIPTS__
 </body>

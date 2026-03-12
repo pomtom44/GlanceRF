@@ -1,5 +1,5 @@
 """
-WebSocket connection manager for real-time mirroring
+WebSocket connection manager for real-time desktop/browser mirroring.
 """
 
 from typing import List
@@ -12,12 +12,35 @@ _log = get_logger("websocket_manager")
 
 
 class ConnectionManager:
-    """Manages WebSocket connections for desktop mirroring"""
+    """Manages WebSocket connections for desktop mirroring."""
+
     def __init__(self):
         self.desktop_connection: WebSocket = None
         self.browser_connections: List[WebSocket] = []
         self.readonly_connections: List[WebSocket] = []
         self.desktop_state = {}
+
+    async def _send_to_connections(self, connections: list, message: dict) -> None:
+        """Send message to connections, removing any that fail."""
+        disconnected = []
+        for conn in list(connections):
+            try:
+                await conn.send_json(message)
+            except Exception:
+                disconnected.append(conn)
+        for conn in disconnected:
+            if conn in connections:
+                connections.remove(conn)
+
+    async def _broadcast_to_all(self, message: dict) -> None:
+        """Send message to desktop, browsers, and readonly."""
+        if self.desktop_connection:
+            try:
+                await self.desktop_connection.send_json(message)
+            except Exception:
+                self.desktop_connection = None
+        await self._send_to_connections(self.browser_connections, message)
+        await self._send_to_connections(self.readonly_connections, message)
 
     async def connect_readonly(self, websocket: WebSocket):
         await websocket.accept()
@@ -58,15 +81,7 @@ class ConnectionManager:
     async def broadcast_from_desktop(self, message: dict):
         self.desktop_state = message.get("data", {})
         _log.debug("broadcast_from_desktop to %s browsers", len(self.browser_connections))
-        disconnected = []
-        for connection in self.browser_connections:
-            try:
-                await connection.send_json(message)
-            except Exception:
-                disconnected.append(connection)
-        for conn in disconnected:
-            if conn in self.browser_connections:
-                self.browser_connections.remove(conn)
+        await self._send_to_connections(self.browser_connections, message)
 
     async def broadcast_from_browser(self, message: dict, sender_websocket: WebSocket):
         self.desktop_state = message.get("data", {})
@@ -87,34 +102,25 @@ class ConnectionManager:
             if conn in self.browser_connections:
                 self.browser_connections.remove(conn)
 
+    async def broadcast_config_update(self, data: dict = None):
+        """Broadcast config_update to desktop, browsers, and readonly so they reload."""
+        msg = {"type": "config_update", "data": data or {"reload": True}}
+        _log.debug("broadcast_config_update")
+        await self._broadcast_to_all(msg)
+
     async def broadcast_update_notification(self, message: dict):
+        """Broadcast update_available to desktop, browsers, and readonly."""
         _log.debug("broadcast_update_notification")
-        if self.desktop_connection:
-            try:
-                await self.desktop_connection.send_json(message)
-            except Exception:
-                self.desktop_connection = None
-        disconnected = []
-        for connection in self.browser_connections:
-            try:
-                await connection.send_json(message)
-            except Exception:
-                disconnected.append(connection)
-        for conn in disconnected:
-            if conn in self.browser_connections:
-                self.browser_connections.remove(conn)
+        await self._broadcast_to_all(message)
 
     async def broadcast_gpio_input(self, module_id: str, function_id: str, value: bool):
+        """Broadcast GPIO input event to browsers (and desktop if connected)."""
         msg = {
             "type": "gpio_input",
             "data": {"module_id": module_id, "function_id": function_id, "value": value},
         }
-        disconnected = []
-        for connection in self.browser_connections:
-            try:
-                await connection.send_json(msg)
-            except Exception:
-                disconnected.append(connection)
-        for conn in disconnected:
-            if conn in self.browser_connections:
-                self.browser_connections.remove(conn)
+        await self._broadcast_to_all(msg)
+
+    async def broadcast_aprs_update(self):
+        """Broadcast aprs_update so clients refetch APRS data (real-time trigger)."""
+        await self._broadcast_to_all({"type": "aprs_update"})

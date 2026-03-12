@@ -21,17 +21,16 @@ _gpio_available_cached: Optional[bool] = None
 
 
 def _detect_gpio_available() -> bool:
-    """Check if RPi.GPIO can be imported (Raspberry Pi). Optionally check device tree."""
+    """Check if RPi.GPIO can be imported (Raspberry Pi)."""
     try:
         import RPi.GPIO as _  # noqa: F401
         return True
     except ImportError:
         pass
-    # Optional: on Linux check for Pi device tree
     try:
         model = Path("/proc/device-tree/model").read_text().strip()
         if "Raspberry Pi" in model:
-            return False  # Pi but no RPi.GPIO; still not "available" for our purposes
+            return False
     except Exception:
         pass
     return False
@@ -52,7 +51,7 @@ def clear_gpio_availability_cache() -> None:
 
 
 def get_available_pins() -> List[Tuple[int, str]]:
-    """Return list of (BCM number, label) for pins that can be assigned. Only when GPIO is available."""
+    """Return list of (BCM number, label) for pins that can be assigned."""
     if not is_gpio_available():
         return []
     return list(_DEFAULT_BCM_PINS)

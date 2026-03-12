@@ -1,10 +1,5 @@
-/*
-  Module JS. Loaded once per page; runs in the main document.
-  Fetches spots from /api/live_spots/spots and displays as list (latest first) or table (bands + count).
-*/
 (function() {
     var REFRESH_MS = 5 * 60 * 1000;
-
     var BANDS = [
         { id: '160', name: '160', minKHz: 1800, maxKHz: 2000 },
         { id: '80', name: '80', minKHz: 3500, maxKHz: 4000 },
@@ -19,13 +14,11 @@
         { id: '6', name: '6', minKHz: 50000, maxKHz: 54000 },
         { id: '2', name: '2', minKHz: 144000, maxKHz: 148000 }
     ];
-
     var DEFAULT_BAND_COLORS = {
         '160': '#8b4513', '80': '#4682b4', '60': '#20b2aa', '40': '#00ff00',
         '30': '#9acd32', '20': '#ffd700', '17': '#ff8c00', '15': '#f08080',
         '12': '#da70d6', '10': '#9370db', '6': '#00ced1', '2': '#e0e0e0'
     };
-
     function getBandColor(settings, bandId) {
         if (!bandId) return null;
         var key = 'band_' + bandId + '_color';
@@ -33,7 +26,6 @@
         if (c && /^#[0-9A-Fa-f]{3,8}$/.test(c)) return c;
         return DEFAULT_BAND_COLORS[bandId] || '#ccc';
     }
-
     function freqToBand(khz) {
         if (khz == null || isNaN(khz)) return null;
         var k = parseInt(khz, 10);
@@ -42,7 +34,6 @@
         }
         return null;
     }
-
     function isBandEnabled(settings, bandId) {
         if (!settings) return true;
         var key = 'band_' + bandId;
@@ -50,7 +41,6 @@
         if (v === false || v === 'false' || v === '0' || v === 0) return false;
         return true;
     }
-
     function getCellSettings(cell) {
         var allSettings = window.GLANCERF_MODULE_SETTINGS || {};
         var r = cell.getAttribute('data-row');
@@ -58,12 +48,10 @@
         var key = (r != null && c != null) ? r + '_' + c : '';
         return (key && allSettings[key]) ? allSettings[key] : {};
     }
-
     function setState(cell, state) {
         cell.classList.remove('live_spots_state_loading', 'live_spots_state_error', 'live_spots_state_empty');
         if (state) cell.classList.add('live_spots_state_' + state);
     }
-
     function showLoading(cell, on) {
         var wrap = cell.querySelector('.live_spots_wrap');
         var loadEl = cell.querySelector('.live_spots_loading');
@@ -80,7 +68,6 @@
             if (loadEl) loadEl.style.display = '';
         } else if (loadEl) loadEl.style.display = 'none';
     }
-
     function setFilterNote(cell, filterMode, callsignOrGrid, displayMode, ageMins) {
         var el = cell.querySelector('.live_spots_filter_note');
         if (!el) return;
@@ -97,7 +84,6 @@
         el.textContent = text;
         el.style.display = '';
     }
-
     function setLastRefresh(cell, show) {
         var el = cell.querySelector('.live_spots_last_refresh');
         if (!el) return;
@@ -113,7 +99,6 @@
         el.textContent = 'Last refreshed: ' + day + ' ' + ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][m - 1] + ' ' + t;
         el.style.display = '';
     }
-
     function showError(cell, msg) {
         var errEl = cell.querySelector('.live_spots_error');
         var loadEl = cell.querySelector('.live_spots_loading');
@@ -128,7 +113,6 @@
         setFilterNote(cell, null, null, null, null);
         setLastRefresh(cell, false);
     }
-
     function showEmpty(cell, msg) {
         var loadEl = cell.querySelector('.live_spots_loading');
         var emptyEl = cell.querySelector('.live_spots_empty');
@@ -144,7 +128,6 @@
         setLastRefresh(cell, false);
         setState(cell, 'empty');
     }
-
     function formatFreqHz(hz) {
         if (hz === undefined || hz === null || hz === '') return '—';
         var n = parseInt(String(hz).trim(), 10);
@@ -153,13 +136,11 @@
         if (n >= 1000) return (n / 1000).toFixed(1) + ' kHz';
         return n + ' Hz';
     }
-
     function freqToKHz(hz) {
         var n = parseInt(String(hz).trim(), 10);
         if (isNaN(n)) return null;
         return Math.round(n / 1000);
     }
-
     function formatTime(secStr) {
         if (!secStr) return '—';
         var s = parseInt(String(secStr), 10);
@@ -169,7 +150,6 @@
         var m = d.getUTCMinutes();
         return (h < 10 ? '0' : '') + h + ':' + (m < 10 ? '0' : '') + m + 'Z';
     }
-
     function escapeHtml(s) {
         if (s == null) return '';
         var t = document.createTextNode(String(s));
@@ -177,7 +157,6 @@
         div.appendChild(t);
         return div.innerHTML;
     }
-
     function renderList(cell, spots, filterMode, settings) {
         var listWrap = cell.querySelector('.live_spots_list_wrap');
         var listEl = cell.querySelector('.live_spots_list');
@@ -228,7 +207,6 @@
             listEl.appendChild(li);
         });
     }
-
     function renderTable(cell, spots, settings) {
         var tableWrap = cell.querySelector('.live_spots_table_wrap');
         var gridEl = cell.querySelector('.live_spots_bands_grid');
@@ -284,7 +262,6 @@
             gridEl.appendChild(card);
         });
     }
-
     function updateCell(cell) {
         var settings = getCellSettings(cell);
         var callsignOrGrid = (settings.callsign_or_grid || '').toString().trim();
@@ -326,13 +303,11 @@
                 setState(cell, 'error');
             });
     }
-
     function runAll() {
         document.querySelectorAll('.grid-cell-live_spots').forEach(function(cell) {
             updateCell(cell);
         });
     }
-
     runAll();
     setInterval(runAll, REFRESH_MS);
 })();

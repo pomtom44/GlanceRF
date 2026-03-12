@@ -198,7 +198,8 @@
 
     function run() {
         document.querySelectorAll('.cell-module-settings').forEach(function(container) {
-            var select = container.closest('.grid-cell') && container.closest('.grid-cell').querySelector('.cell-widget-select');
+            var parent = container.closest('.grid-cell') || container.closest('.map-module-cell');
+            var select = parent && parent.querySelector('.cell-widget-select, .map-module-select');
             if (select && select.value === 'satellite_pass') {
                 fillSatelliteTable(container);
             }

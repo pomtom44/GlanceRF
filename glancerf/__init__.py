@@ -1,5 +1,2 @@
-"""
-GlanceRF - Modern Python implementation
-"""
-
-__version__ = "1.0.0"
+# glancerf package
+__version__ = "2.0.0"

@@ -1,4 +1,6 @@
 (function() {
+    var liveStopwatchState = {};
+
     function parseDateOnly(s) {
         var m = (s || '').trim().match(/^(\d{4})-(\d{2})-(\d{2})$/);
         if (!m) return null;
@@ -35,6 +37,33 @@
         parts.push(String(sec).padStart(2, '0') + 's');
         return parts.join(' ');
     }
+
+    function getLiveElapsed(cellKey) {
+        var s = liveStopwatchState[cellKey];
+        if (!s) return 0;
+        if (s.running && s.startTime != null) {
+            return (s.pausedElapsed || 0) + (Date.now() - s.startTime);
+        }
+        return s.pausedElapsed || 0;
+    }
+
+    function doStartStop(cellKey) {
+        var s = liveStopwatchState[cellKey] || { running: false, pausedElapsed: 0 };
+        if (s.running) {
+            s.pausedElapsed = (s.pausedElapsed || 0) + (Date.now() - (s.startTime || Date.now()));
+            s.running = false;
+            s.startTime = null;
+        } else {
+            s.startTime = Date.now();
+            s.running = true;
+        }
+        liveStopwatchState[cellKey] = s;
+    }
+
+    function doReset(cellKey) {
+        liveStopwatchState[cellKey] = { running: false, pausedElapsed: 0, startTime: null };
+    }
+
     function updateCountdowns() {
         var now = Date.now();
         var allSettings = window.GLANCERF_MODULE_SETTINGS || {};
@@ -55,6 +84,15 @@
                 labelEl.style.display = label ? '' : 'none';
             }
             if (!valueEl) return;
+
+            if (mode === 'live_stopwatch') {
+                var elapsed = getLiveElapsed(cellKey);
+                valueEl.textContent = formatDuration(elapsed);
+                valueEl.style.display = '';
+                if (msgEl) msgEl.style.display = 'none';
+                return;
+            }
+
             var ts = parseDateTime(dateStr, timeStr);
             if (!ts) {
                 valueEl.textContent = mode === 'countdown' ? 'Set target date' : 'Set start date';
@@ -83,6 +121,52 @@
             }
         });
     }
+
+    window.addEventListener('glancerf_gpio_input', function(e) {
+        var d = e.detail || {};
+        if (d.module_id !== 'countdown') return;
+        var allSettings = window.GLANCERF_MODULE_SETTINGS || {};
+        document.querySelectorAll('.grid-cell-countdown').forEach(function(cell) {
+            var r = cell.getAttribute('data-row');
+            var c = cell.getAttribute('data-col');
+            var cellKey = (r != null && c != null) ? r + '_' + c : '';
+            var ms = (cellKey && allSettings[cellKey]) ? allSettings[cellKey] : {};
+            if ((ms.mode || '').toLowerCase() !== 'live_stopwatch') return;
+            if (d.function_id === 'start_stop') {
+                doStartStop(cellKey);
+            } else if (d.function_id === 'reset') {
+                doReset(cellKey);
+            }
+        });
+    });
+
+    document.addEventListener('keydown', function(e) {
+        var active = document.activeElement;
+        var isInput = active && (active.tagName === 'INPUT' || active.tagName === 'TEXTAREA' || active.tagName === 'SELECT' || active.isContentEditable);
+        if (isInput) return;
+        var key = e.key;
+        var keyNorm = (key === ' ') ? ' ' : (key || '').toLowerCase();
+        var allSettings = window.GLANCERF_MODULE_SETTINGS || {};
+        document.querySelectorAll('.grid-cell-countdown').forEach(function(cell) {
+            var r = cell.getAttribute('data-row');
+            var c = cell.getAttribute('data-col');
+            var cellKey = (r != null && c != null) ? r + '_' + c : '';
+            var ms = (cellKey && allSettings[cellKey]) ? allSettings[cellKey] : {};
+            if ((ms.mode || '').toLowerCase() !== 'live_stopwatch') return;
+            var startStop = (ms.start_stop_shortcut || '').toString().trim();
+            var reset = (ms.reset_shortcut || '').toString().trim();
+            var startStopNorm = (startStop === ' ' || startStop.toLowerCase() === 'space') ? ' ' : startStop.toLowerCase();
+            var resetNorm = (reset === ' ' || reset.toLowerCase() === 'space') ? ' ' : reset.toLowerCase();
+            if (startStopNorm && keyNorm === startStopNorm) {
+                e.preventDefault();
+                doStartStop(cellKey);
+            } else if (resetNorm && keyNorm === resetNorm) {
+                e.preventDefault();
+                doReset(cellKey);
+            }
+        });
+    });
+
     updateCountdowns();
     setInterval(updateCountdowns, 1000);
 })();

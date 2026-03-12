@@ -8,7 +8,6 @@
     gap: 0.15em;
     text-align: center;
 }
-/* Fallback for desktop (Qt WebEngine) and older browsers that don't support container queries */
 .grid-cell-weather .weather_place {
     font-size: 2vmin;
     color: #888;
@@ -34,7 +33,6 @@
     font-size: 2vmin;
     color: #888;
 }
-/* When container queries are supported (modern browsers), scale by cell size */
 @supports (container-type: size) {
     .grid-cell-weather .weather_place {
         font-size: 6cqmin;

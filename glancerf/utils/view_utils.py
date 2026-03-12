@@ -1,20 +1,14 @@
 """
-Shared view utilities for GlanceRF
+View utilities for GlanceRF.
 Grid building and span logic for main and readonly pages.
-Cell appearance (color, inner HTML) comes from the module dict; no special handling per type.
 """
 
 import html as html_module
 from typing import Any, Dict, Optional, Set, Tuple
 
-from glancerf.modules import get_module_by_id
-
 
 def build_merged_cells_from_spans(cell_spans: Dict[str, Any]) -> Tuple[Set[Tuple[int, int]], Dict]:
-    """
-    From cell_spans config, compute merged_cells set and primary_cells dict.
-    Used when generating grid HTML so merged cells are skipped and primary cells get span styles.
-    """
+    """From cell_spans config, compute merged_cells set and primary_cells dict."""
     merged_cells: Set[Tuple[int, int]] = set()
     primary_cells: Dict = {}
     for key, span_info in (cell_spans or {}).items():
@@ -42,11 +36,12 @@ def build_grid_html(
     grid_columns: int,
     grid_rows: int,
     module_settings: Optional[Dict[str, Any]] = None,
+    get_module_by_id=None,
 ) -> str:
-    """Generate grid cells HTML from layout and cell_spans. Each cell uses its module (color, inner_html).
-    If module_settings[cell_key].show_title is True (default), a module title is rendered; if False,
-    the title is omitted so the content scales to fill the cell."""
+    """Generate grid cells HTML. get_module_by_id: callable(id) -> dict or None."""
+    from glancerf.modules import get_module_by_id as _get_module
     settings = module_settings or {}
+    get_module = get_module_by_id or (lambda id: _get_module(id) or {"color": "#111", "inner_html": "", "name": ""})
     grid_html = ""
     for row in range(grid_rows):
         for col in range(grid_columns):
@@ -57,9 +52,9 @@ def build_grid_html(
                 if row < len(layout) and col < len(layout[row])
                 else ""
             )
-            module = get_module_by_id(cell_value)
-            cell_color = (module or {}).get("color", "#111")
-            inner = (module or {}).get("inner_html", "")
+            module = get_module(cell_value) or {}
+            cell_color = module.get("color", "#111")
+            inner = module.get("inner_html", "")
             cell_key = f"{row}_{col}"
             cell_settings = settings.get(cell_key) or {}
             show_title = cell_settings.get("show_title", True)
@@ -67,7 +62,7 @@ def build_grid_html(
                 show_title = False
             else:
                 show_title = True
-            module_name = (module or {}).get("name", "") if (show_title and cell_value) else ""
+            module_name = module.get("name", "") if (show_title and cell_value) else ""
             if show_title and module_name:
                 title_escaped = html_module.escape(module_name, quote=True)
                 inner = (
@@ -82,8 +77,7 @@ def build_grid_html(
                     f'<div class="glancerf-module-content">{inner}</div>'
                     f"</div>"
                 )
-            span_key = f"{row}_{col}"
-            span_info = (cell_spans or {}).get(span_key, {})
+            span_info = (cell_spans or {}).get(cell_key, {})
             colspan = span_info.get("colspan", 1)
             rowspan = span_info.get("rowspan", 1)
             style = (

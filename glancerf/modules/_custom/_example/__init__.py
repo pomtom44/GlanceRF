@@ -1,5 +1,2 @@
-# ---------------------------------------------------------------------------
-# This file makes the folder a Python package. It is required if you add
-# api_routes.py to your module, so the core can import your API routes.
-# Keep this file when you copy the template to create a new module.
-# ---------------------------------------------------------------------------
+# Example module package. Required if you add api_routes.py.
+# Folder prefixed with _ so it is NOT loaded - copy to a new folder to use.

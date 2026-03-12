@@ -1,156 +1,180 @@
+/* GlanceRF main display - grid fills aspect container; cells constrain content */
+
 * {
-    margin: 0;
-    padding: 0;
-    box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
 }
 
 body {
-    font-family: 'Courier New', monospace;
-    background-color: #000;
-    color: #fff;
-    margin: 0;
-    min-height: 100vh;
-    overflow: hidden;
-    position: relative;
+  margin: 0;
+  padding: 0;
+  min-height: 100vh;
+  overflow: hidden;
+  background: #0d1117;
+  color: #c9d1d9;
+  font-family: system-ui, sans-serif;
 }
 
 #aspect-container {
-    position: absolute;
-    inset: 0;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    width: 100%;
-    height: 100%;
-    box-sizing: border-box;
+  position: absolute;
+  inset: 0;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  width: 100%;
+  height: 100%;
+  box-sizing: border-box;
+  overflow: hidden;
 }
 
-/* Grid fills container; equal rows/cols via minmax(0,1fr); content cannot push size */
+/* Grid fills container; minmax(0,1fr) prevents overflow; content cannot push size */
 .grid-layout {
-    display: grid;
-    gap: 2px;
-    padding: 2px;
-    flex: 1 1 0;
-    align-self: stretch;
-    justify-self: stretch;
-    min-width: 0;
-    min-height: 0;
-    overflow: hidden;
-    box-sizing: border-box;
+  display: grid;
+  gap: 2px;
+  padding: 2px;
+  flex: 1 1 0;
+  align-self: stretch;
+  justify-self: stretch;
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+  box-sizing: border-box;
 }
 
 .grid-cell {
-    background-color: #111;
-    border: none;
-    position: relative;
-    display: flex;
-    align-items: stretch;
-    justify-content: center;
-    min-width: 0;
-    min-height: 0;
-    overflow: hidden;
-    container-type: size;
-    container-name: cell;
+  background-color: #111;
+  position: relative;
+  display: flex;
+  align-items: stretch;
+  justify-content: center;
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+  container-type: size;
+  container-name: cell;
 }
+
 .grid-cell > * {
-    flex: 1 1 0;
-    align-self: stretch;
-    min-width: 0;
-    min-height: 0;
-    width: 100%;
-    height: 100%;
-    box-sizing: border-box;
+  flex: 1 1 0;
+  align-self: stretch;
+  min-width: 0;
+  min-height: 0;
+  width: 100%;
+  height: 100%;
+  box-sizing: border-box;
 }
 
-/* Module title and content layout: same theme for all modules. Title is only present when show_title is on. */
 .glancerf-cell-inner {
-    display: flex;
-    flex-direction: column;
-    min-width: 0;
-    min-height: 0;
-    width: 100%;
-    height: 100%;
-    box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+  width: 100%;
+  height: 100%;
+  box-sizing: border-box;
 }
-/* Global module title: green, centered (same for all modules). Higher specificity so module CSS does not override. */
+
 .grid-layout .grid-cell .glancerf-module-title {
-    display: block;
-    flex: 0 0 auto;
-    font-family: 'Courier New', monospace;
-    font-size: 16px;
-    font-weight: 600;
-    color: #0f0 !important;
-    text-align: center !important;
-    padding: 4px 8px;
-    line-height: 1.2;
-    margin-bottom: 2px;
+  display: block;
+  flex: 0 0 auto;
+  font-size: 0.75em;
+  opacity: 0.8;
+  padding: 4px 8px;
+  line-height: 1.2;
+  margin-bottom: 2px;
 }
+
 .glancerf-module-content {
-    flex: 1 1 0;
-    min-height: 0;
-    overflow: auto;
-    width: 100%;
-    box-sizing: border-box;
+  flex: 1 1 0;
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+  width: 100%;
+  box-sizing: border-box;
 }
+
 .glancerf-module-content > * {
-    min-height: 100%;
-    box-sizing: border-box;
+  min-width: 0;
+  min-height: 0;
+  width: 100%;
+  height: 100%;
+  box-sizing: border-box;
 }
 
-#update-notification {
-    position: fixed;
-    top: 10px;
-    right: 10px;
-    background-color: #0f0;
-    color: #000;
-    padding: 12px 20px;
-    border-radius: 5px;
-    font-size: 14px;
-    font-weight: bold;
-    z-index: 10000;
-    display: none;
-    max-width: 400px;
-    box-shadow: 0 4px 12px rgba(0, 255, 0, 0.3);
+.empty-state-message {
+  color: #8b949e;
+  font-size: 18px;
+  text-align: center;
+  padding: 24px;
 }
 
-#update-notification.show {
-    display: block;
-}
-
-#update-notification .update-close {
-    float: right;
-    margin-left: 15px;
-    cursor: pointer;
-    font-size: 18px;
-    line-height: 1;
-}
-
-#update-notification .update-close:hover {
-    opacity: 0.7;
+.empty-state-message kbd {
+  display: inline-block;
+  padding: 4px 10px;
+  font-family: inherit;
+  font-size: 16px;
+  background: #21262d;
+  border: 1px solid #30363d;
+  border-radius: 6px;
+  color: #c9d1d9;
 }
 
 #ws-lost-warning {
-    position: fixed;
-    top: 10px;
-    left: 10px;
-    background-color: rgba(180, 60, 60, 0.95);
-    color: #fff;
-    padding: 8px 12px;
-    border-radius: 4px;
-    font-size: 12px;
-    font-weight: bold;
-    z-index: 9999;
-    display: none;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+  position: fixed;
+  top: 10px;
+  left: 10px;
+  background-color: #333;
+  color: #fff;
+  padding: 8px 12px;
+  border-radius: 5px;
+  font-size: 12px;
+  z-index: 10000;
+  display: none;
 }
+
 #ws-lost-warning.show {
-    display: block;
+  display: block;
 }
+
 #ws-lost-warning .ws-lost-label {
-    display: block;
-    margin-bottom: 2px;
+  font-weight: bold;
+  margin-right: 8px;
+  color: #ff4444;
 }
+
 #ws-lost-warning #ws-lost-timer {
-    font-size: 11px;
-    opacity: 0.95;
+  color: #aaa;
+}
+
+#update-notification {
+  position: fixed;
+  top: 10px;
+  right: 10px;
+  background-color: #238636;
+  color: #fff;
+  padding: 12px 20px;
+  border-radius: 5px;
+  font-size: 14px;
+  font-weight: bold;
+  z-index: 10000;
+  display: none;
+  max-width: 400px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+#update-notification.show {
+  display: block;
+}
+
+#update-notification .update-close {
+  float: right;
+  margin-left: 12px;
+  cursor: pointer;
+  font-size: 18px;
+  opacity: 0.8;
+}
+
+#update-notification .update-close:hover {
+  opacity: 1;
 }

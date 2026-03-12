@@ -1,5 +1,7 @@
 """Current weather from Open-Meteo (no API key): conditions, temperature, feels like, humidity, wind, pressure. Set location by grid square or lat,lng."""
 
+from glancerf.modules.loader import load_assets
+
 ON_OFF_OPTIONS = [
     {"value": "1", "label": "On"},
     {"value": "0", "label": "Off"},
@@ -10,10 +12,15 @@ UNITS_OPTIONS = [
     {"value": "imperial", "label": "Imperial (F, mph, inHg)"},
 ]
 
+inner_html, css, js = load_assets(__file__)
+
 MODULE = {
     "id": "weather",
     "name": "Weather",
     "color": "#0d1117",
+    "inner_html": inner_html,
+    "css": css,
+    "js": js,
     "settings": [
         {"id": "location", "label": "Grid square or lat,lng", "type": "text", "default": ""},
         {"id": "units", "label": "Units", "type": "select", "options": UNITS_OPTIONS, "default": "metric"},

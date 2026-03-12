@@ -85,6 +85,7 @@
                 (info ? '<br><span class="contests_info">' + info.substring(0, 80) + (info.length > 80 ? '...' : '') + '</span>' : '');
             listEl.appendChild(item);
         });
+        listEl.scrollTop = 0;
     }
 
     function updateCell(cell) {
@@ -178,6 +179,81 @@
         });
     }
 
+    var SCROLL_SPEED_PX_PER_SEC = 18;
+    var SCROLL_WAIT_BOTTOM_MS = 4000;
+    var SCROLL_WAIT_TOP_MS = 4000;
+
+    function startAutoScroll(cell, listEl) {
+        if (!listEl || !cell) return;
+        var rafId = null;
+
+        function smoothScrollTo(target, duration, done) {
+            var start = listEl.scrollTop;
+            var dist = target - start;
+            var startTime = performance.now();
+            function step(now) {
+                var elapsed = now - startTime;
+                var progress = Math.min(elapsed / duration, 1);
+                var eased = progress < 0.5 ? 2 * progress * progress : 1 - Math.pow(-2 * progress + 2, 2) / 2;
+                listEl.scrollTop = start + dist * eased;
+                if (progress < 1) {
+                    rafId = requestAnimationFrame(step);
+                } else if (done) {
+                    done();
+                }
+            }
+            rafId = requestAnimationFrame(step);
+        }
+
+        function cycle() {
+            if (cell.getAttribute('data-contests-scroll-off') === '1') return;
+            var maxScroll = listEl.scrollHeight - listEl.clientHeight;
+            if (maxScroll <= 0) {
+                setTimeout(cycle, 2000);
+                return;
+            }
+            var durationMs = (maxScroll / SCROLL_SPEED_PX_PER_SEC) * 1000;
+            smoothScrollTo(maxScroll, durationMs, function() {
+                if (cell.getAttribute('data-contests-scroll-off') === '1') return;
+                setTimeout(function() {
+                    if (cell.getAttribute('data-contests-scroll-off') === '1') return;
+                    listEl.scrollTop = 0;
+                    setTimeout(function() {
+                        if (cell.getAttribute('data-contests-scroll-off') === '1') return;
+                        cycle();
+                    }, SCROLL_WAIT_TOP_MS);
+                }, SCROLL_WAIT_BOTTOM_MS);
+            });
+        }
+        cell.setAttribute('data-contests-scroll-off', '0');
+        setTimeout(cycle, Math.random() * 6000);
+    }
+
+    function stopAutoScroll(cell) {
+        if (cell) cell.setAttribute('data-contests-scroll-off', '1');
+    }
+
+    function runScrollToggles() {
+        document.querySelectorAll('.grid-cell-contests').forEach(function(cell) {
+            var listEl = cell.querySelector('.contests_list');
+            var settings = getCellSettings(cell);
+            var enabled = !!(settings.scroll_toggle === true || settings.scroll_toggle === 'true' || settings.scroll_toggle === '1' || settings.scroll_toggle === 1);
+            if (enabled) {
+                cell.classList.add('contests_scroll_toggle');
+                if (cell.getAttribute('data-contests-scroll-started') !== '1') {
+                    cell.setAttribute('data-contests-scroll-started', '1');
+                    startAutoScroll(cell, listEl);
+                }
+            } else {
+                cell.classList.remove('contests_scroll_toggle');
+                cell.setAttribute('data-contests-scroll-started', '0');
+                stopAutoScroll(cell);
+            }
+        });
+    }
+
     run();
+    runScrollToggles();
     setInterval(run, 25 * 1000);
+    setInterval(runScrollToggles, 5000);
 })();

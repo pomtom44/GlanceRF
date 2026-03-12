@@ -1,7 +1,3 @@
-/*
-  Module CSS. Loaded once per page; only for cells that use this module.
-  Scoped under .grid-cell-live_spots. Use live_spots_ prefix for classes.
-*/
 .grid-cell-live_spots {
     display: flex;
     flex-direction: column;
@@ -50,15 +46,10 @@
     padding: 0;
     flex: 1;
     min-height: 0;
-    overflow-y: auto;
+    overflow: hidden;
     display: flex;
     flex-direction: column;
     gap: 4px;
-    scrollbar-width: none;
-    -ms-overflow-style: none;
-}
-.grid-cell-live_spots .live_spots_list::-webkit-scrollbar {
-    display: none;
 }
 .grid-cell-live_spots .live_spots_list_item {
     font-size: 12px;
@@ -69,7 +60,10 @@
     border: 1px solid #333;
     border-left: 3px solid transparent;
     border-radius: 4px;
-    flex-shrink: 0;
+    flex-shrink: 1;
+    min-height: 0;
+    min-width: 0;
+    overflow: hidden;
 }
 .grid-cell-live_spots .live_spots_list_item .live_spots_list_call {
     color: #0f0;
@@ -92,17 +86,12 @@
 .grid-cell-live_spots .live_spots_table_wrap {
     flex: 1;
     min-height: 0;
-    overflow: auto;
-    scrollbar-width: none;
-    -ms-overflow-style: none;
-}
-.grid-cell-live_spots .live_spots_table_wrap::-webkit-scrollbar {
-    display: none;
+    overflow: hidden;
 }
 .grid-cell-live_spots .live_spots_bands_grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(72px, 1fr));
-    grid-auto-rows: 1fr;
+    grid-template-columns: repeat(auto-fill, minmax(0, 1fr));
+    grid-auto-rows: minmax(0, 1fr);
     gap: 6px;
     align-content: stretch;
     padding: 0;

@@ -1,8 +1,8 @@
 """
 APRS cache reader for VHF propagation overlay (144 MHz), similar to vhf.dxview.org.
 Reads from the local cache DB (config_dir/cache/aprs.db) only; no live APRS-IS connection.
-Data volume depends on what is fed into the cache (e.g. an APRS-IS ingest); DXView shows
-more because they query APRS-IS directly.
+Uses aprslib when available for full format support (compressed, @, Mic-E, etc.); falls back
+to built-in parser for ! and = uncompressed only.
 """
 
 import math
@@ -13,6 +13,13 @@ from typing import Any
 from glancerf.config import get_logger
 
 _log = get_logger("map.aprs_client")
+
+_APRSLIB_AVAILABLE = False
+try:
+    import aprslib
+    _APRSLIB_AVAILABLE = True
+except ImportError:
+    pass
 
 _DEFAULT_PROPAGATION_HOURS = 6
 _MIN_PATH_KM = 20
@@ -45,6 +52,54 @@ def _parse_aprs_symbol_from_body(body: str) -> tuple[str, str]:
     table_char = rest[sep] if rest[sep] in ("/", "\\") else "/"
     symbol_char = rest[sep + 10]
     return (table_char, symbol_char)
+
+
+def _parse_aprs_line_to_position(
+    line: str,
+) -> tuple[str, float, float, str, str, float | None] | None:
+    """
+    Parse full TNC2 line to (callsign, lat, lon, symbol_table, symbol, packet_timestamp).
+    packet_timestamp: Unix timestamp from packet if present, else None (caller uses received_at).
+    Uses aprslib when available (handles compressed, @, Mic-E, etc.); else fallback to built-in.
+    Returns None if no position found.
+    """
+    if _APRSLIB_AVAILABLE:
+        try:
+            packet = aprslib.parse(line)
+            # Skip object/item: position is the reported entity's, not the sender's.
+            # Including them causes stations to jump hundreds of km between object positions.
+            fmt = packet.get("format") or ""
+            if fmt in ("object", "item"):
+                return None
+            if packet.get("latitude") is not None and packet.get("longitude") is not None:
+                lat = float(packet["latitude"])
+                lon = float(packet["longitude"])
+                if -90 <= lat <= 90 and -180 <= lon <= 180 and (abs(lat) >= 0.02 or abs(lon) >= 0.02):
+                    call = (packet.get("from") or "").strip()
+                    if call:
+                        tbl = packet.get("symbol_table") or "/"
+                        sym = packet.get("symbol") or "?"
+                        pkt_ts = packet.get("timestamp")
+                        if pkt_ts is not None:
+                            try:
+                                pkt_ts = float(pkt_ts)
+                            except (TypeError, ValueError):
+                                pkt_ts = None
+                        return (call, lat, lon, tbl, sym, pkt_ts)
+        except (aprslib.ParseError, aprslib.UnknownFormat):
+            pass
+        except Exception:
+            pass
+    parsed = _parse_tnc2(line)
+    if not parsed:
+        return None
+    srccall, _, body = parsed
+    pos = _parse_nmea_lat_lon(body)
+    if pos is None:
+        return None
+    lat, lon = pos
+    table_char, symbol_char = _parse_aprs_symbol_from_body(body)
+    return (srccall, lat, lon, table_char, symbol_char, None)
 
 
 def _parse_nmea_lat_lon(body: str) -> tuple[float, float] | None:
@@ -240,7 +295,7 @@ def get_aprs_propagation_data_from_cache(hours: float | None = None) -> dict[str
     segments: list[tuple[float, float, float, float, float, float]] = []
     rows: list[tuple[str, float]] = []
     try:
-        conn = sqlite3.connect(str(db_path))
+        conn = sqlite3.connect(str(db_path), timeout=15.0)
         conn.row_factory = sqlite3.Row
         cur = conn.execute(
             "SELECT raw, received_at FROM packets WHERE received_at >= ? ORDER BY received_at",
@@ -249,15 +304,13 @@ def get_aprs_propagation_data_from_cache(hours: float | None = None) -> dict[str
         rows = [(row["raw"], row["received_at"]) for row in cur]
         conn.close()
         for line, received_at in rows:
-            parsed = _parse_tnc2(line)
-            if not parsed:
+            pos_result = _parse_aprs_line_to_position(line)
+            if pos_result is None:
                 continue
-            srccall, path_calls, body = parsed
-            pos = _parse_nmea_lat_lon(body)
-            if pos is None:
-                continue
-            lat, lon = pos
+            srccall, lat, lon, _, _, _ = pos_result
             positions[srccall] = (lat, lon, received_at)
+            parsed = _parse_tnc2(line)
+            path_calls = parsed[1] if parsed else []
             path_stations = [srccall] + [p for p in path_calls if not _is_skip_call(p)]
             for i in range(len(path_stations) - 1):
                 a, b = path_stations[i], path_stations[i + 1]
@@ -271,14 +324,12 @@ def get_aprs_propagation_data_from_cache(hours: float | None = None) -> dict[str
                 segments.append((lat1, lon1, lat2, lon2, dist, received_at))
         digi_points: dict[tuple[float, float], set[tuple[float, float]]] = {}
         for line, received_at in rows:
+            pos_result = _parse_aprs_line_to_position(line)
+            if pos_result is None:
+                continue
+            srccall, lat_s, lon_s, _, _, _ = pos_result
             parsed = _parse_tnc2(line)
-            if not parsed:
-                continue
-            srccall, path_calls, body = parsed
-            pos = _parse_nmea_lat_lon(body)
-            if pos is None:
-                continue
-            lat_s, lon_s = pos
+            path_calls = parsed[1] if parsed else []
             path_stations = [srccall] + [p for p in path_calls if not _is_skip_call(p)]
             for d in path_stations:
                 if d not in positions:
@@ -303,10 +354,41 @@ def get_aprs_propagation_data_from_cache(hours: float | None = None) -> dict[str
     return {"coordinates": coords, "segments": segment_list, "blobs": blobs, "valueLabel": "VHF path km"}
 
 
-def get_aprs_locations_from_cache(hours: float | None = None) -> dict[str, Any]:
+def _apply_aprs_filter(locations: list[dict[str, Any]], filter_str: str | None) -> list[dict[str, Any]]:
+    """Filter locations by APRS-IS filter (p/PREFIX, p/P1/P2, or b/PREFIX*). Returns locations where callsign starts with a prefix."""
+    if not filter_str or not locations:
+        return locations
+    prefixes: list[str] = []
+    for part in filter_str.split():
+        if part.startswith("p/"):
+            for p in part[2:].split("/"):
+                if p:
+                    prefixes.append(p.upper())
+        elif part.startswith("b/"):
+            for p in part[2:].split("/"):
+                p = (p or "").rstrip("*").strip()
+                if p:
+                    prefixes.append(p.upper())
+    if not prefixes:
+        return locations
+    result = []
+    for loc in locations:
+        call = (loc.get("callsign") or "").upper().split("-")[0]
+        for prefix in prefixes:
+            if call.startswith(prefix):
+                result.append(loc)
+                break
+    return result
+
+
+def get_aprs_locations_from_cache(
+    hours: float | None = None,
+    filter_str: str | None = None,
+) -> dict[str, Any]:
     """
     Return APRS station locations from the local cache only (no live APRS-IS).
     Reads from config_dir/cache/aprs.db. One entry per callsign with position; uses latest position in the time window.
+    filter_str: optional APRS-IS filter (e.g. p/W1 p/VE) to restrict by callsign prefix.
     """
     from glancerf.config import get_config
     config = get_config()
@@ -326,25 +408,24 @@ def get_aprs_locations_from_cache(hours: float | None = None) -> dict[str, Any]:
     cutoff = time.time() - (hours * 3600)
     positions: dict[str, tuple[float, float, float]] = {}
     try:
-        conn = sqlite3.connect(str(db_path))
+        conn = sqlite3.connect(str(db_path), timeout=15.0)
         conn.row_factory = sqlite3.Row
         cur = conn.execute(
-            "SELECT raw, received_at FROM packets WHERE received_at >= ? ORDER BY received_at",
+            "SELECT id, raw, received_at FROM packets WHERE received_at >= ? ORDER BY received_at, id",
             (cutoff,),
         )
         for row in cur:
             line = row["raw"]
             received_at = row["received_at"]
-            parsed = _parse_tnc2(line)
-            if not parsed:
+            parsed = _parse_aprs_line_to_position(line)
+            if parsed is None:
                 continue
-            srccall, _, body = parsed
-            pos = _parse_nmea_lat_lon(body)
-            if pos is None:
-                continue
-            lat, lon = pos
-            table_char, symbol_char = _parse_aprs_symbol_from_body(body)
-            positions[srccall] = (lat, lon, received_at, table_char, symbol_char)
+            srccall, lat, lon, table_char, symbol_char, packet_ts = parsed
+            # Use packet timestamp when available (station transmit time) for stable ordering;
+            # received_at can cause jumping when packets arrive out of order.
+            effective_ts = packet_ts if packet_ts is not None else received_at
+            if srccall not in positions or effective_ts > positions[srccall][2]:
+                positions[srccall] = (lat, lon, effective_ts, table_char, symbol_char)
         conn.close()
     except (sqlite3.Error, OSError) as e:
         _log.debug("APRS cache read failed: %s", e)
@@ -360,4 +441,5 @@ def get_aprs_locations_from_cache(hours: float | None = None) -> dict[str, Any]:
         }
         for call, (lat, lon, ts, table_char, symbol_char) in positions.items()
     ]
+    locations = _apply_aprs_filter(locations, filter_str)
     return {"locations": locations}

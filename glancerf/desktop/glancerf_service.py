@@ -1,10 +1,7 @@
 #!/usr/bin/env python3
 """
 Windows service wrapper for GlanceRF headless (server-only) mode.
-Install: python -m glancerf.desktop.glancerf_service install (requires Administrator)
-Start:   python -m glancerf.desktop.glancerf_service start
-Stop:    python -m glancerf.desktop.glancerf_service stop
-Remove:  python -m glancerf.desktop.glancerf_service remove
+Install: python glancerf/desktop/glancerf_service.py install (requires Administrator)
 """
 
 import os
@@ -12,7 +9,6 @@ import sys
 import subprocess
 import time
 
-# Project folder = glancerf/desktop/ -> go up twice to glancerf, once more to Project
 PROJECT_DIR = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 if PROJECT_DIR not in sys.path:

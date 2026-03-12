@@ -1,0 +1,14 @@
+# Exclude installers and build artifacts (not needed in container)
+installers/
+__pycache__/
+*.pyc
+*.pyo
+.pytest_cache/
+.venv/
+venv/
+*.log
+.update_staging/
+.update_backup/
+
+# Exclude local config (app creates default at runtime if missing)
+glancerf_config.json

@@ -5,7 +5,6 @@ Configuration and logging for GlanceRF.
 from glancerf.config.settings import (
     Config,
     ConfigValidationError,
-    DEFAULT_CONFIG,
     get_config,
     resize_layout_to_grid,
 )
@@ -19,7 +18,6 @@ from glancerf.config.logging_config import (
 __all__ = [
     "Config",
     "ConfigValidationError",
-    "DEFAULT_CONFIG",
     "get_config",
     "resize_layout_to_grid",
     "DETAILED_LEVEL",

@@ -26,16 +26,14 @@
 .grid-cell-dxpeditions .dxpeditions_list {
     flex: 1;
     min-height: 0;
-    overflow-y: auto;
+    overflow: hidden;
     display: flex;
     flex-direction: column;
     gap: 4px;
-    scrollbar-width: none;
-    -ms-overflow-style: none;
 }
 
-.grid-cell-dxpeditions .dxpeditions_list::-webkit-scrollbar {
-    display: none;
+.grid-cell-dxpeditions.dxpeditions_scroll_toggle .dxpeditions_list {
+    overflow: hidden;
 }
 
 .grid-cell-dxpeditions .dxpeditions_item {
@@ -46,7 +44,10 @@
     background: #1a1a1a;
     border: 1px solid #333;
     border-radius: 4px;
-    flex-shrink: 0;
+    flex-shrink: 1;
+    min-height: 0;
+    min-width: 0;
+    overflow: hidden;
 }
 
 .grid-cell-dxpeditions .dxpeditions_item .dxpeditions_call {
@@ -97,7 +98,7 @@
     flex: 1;
     font-size: 1.25rem;
     color: #aaa;
-    min-height: 3em;
+    min-height: 0;
 }
 
 .grid-cell-dxpeditions.dxpeditions_show_empty .dxpeditions_list,

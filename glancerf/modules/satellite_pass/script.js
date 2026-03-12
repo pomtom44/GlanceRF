@@ -55,7 +55,7 @@
             if (innerEl) innerEl.style.display = 'none';
             if (errorEl) {
                 errorEl.style.display = 'flex';
-                errorEl.textContent = data && data.text ? 'No future passes in cached window.' : 'No pass data.';
+                errorEl.textContent = (data && (data.text || data.error)) ? (data.text || data.error) : 'No pass data.';
             }
             return;
         }
@@ -65,7 +65,7 @@
             if (innerEl) innerEl.style.display = 'none';
             if (errorEl) {
                 errorEl.style.display = 'flex';
-                errorEl.textContent = 'No future passes in cached window.';
+                errorEl.textContent = (data && (data.text || data.error)) ? (data.text || data.error) : 'No future passes in cached window.';
             }
             return;
         }
@@ -86,7 +86,7 @@
             if (bodyEl) bodyEl.style.display = 'none';
             if (errorEl) {
                 errorEl.style.display = 'flex';
-                errorEl.textContent = data && data.text ? 'No future passes in cached window.' : 'No pass data.';
+                errorEl.textContent = (data && (data.text || data.error)) ? (data.text || data.error) : 'No pass data.';
             }
             return;
         }
@@ -96,7 +96,7 @@
             if (bodyEl) bodyEl.style.display = 'none';
             if (errorEl) {
                 errorEl.style.display = 'flex';
-                errorEl.textContent = 'No future passes in cached window.';
+                errorEl.textContent = (data && (data.text || data.error)) ? (data.text || data.error) : 'No future passes in cached window.';
             }
             return;
         }
@@ -168,7 +168,9 @@
             if (loadingEl) { loadingEl.style.display = 'flex'; loadingEl.textContent = 'Loading...'; }
             if (innerEl) innerEl.style.display = 'none';
             if (errorEl) errorEl.style.display = 'none';
-            fetch(getNextPassUrl(cell)).then(function(r) { return r.json(); }).then(function(data) {
+            fetch(getNextPassUrl(cell)).then(function(r) {
+                return r.ok ? r.json() : r.json().then(function(d) { return d || {}; });
+            }).then(function(data) {
                 updateCompassView(cell, data);
             }).catch(function() {
                 if (loadingEl) loadingEl.style.display = 'none';
@@ -184,7 +186,9 @@
         if (loadingEl) { loadingEl.style.display = 'flex'; loadingEl.textContent = 'Loading...'; }
         if (bodyEl) bodyEl.style.display = 'none';
         if (errorEl) errorEl.style.display = 'none';
-        fetch(getNextPassUrl(cell)).then(function(r) { return r.json(); }).then(function(data) {
+        fetch(getNextPassUrl(cell)).then(function(r) {
+            return r.ok ? r.json() : r.json().then(function(d) { return d || {}; });
+        }).then(function(data) {
             updatePassView(cell, data);
         }).catch(function() {
             if (loadingEl) loadingEl.style.display = 'none';

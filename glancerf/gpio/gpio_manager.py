@@ -13,8 +13,6 @@ from typing import Any, Callable, Dict, Optional
 
 from glancerf.config import get_config
 from glancerf.config import get_logger
-from glancerf.modules import get_gpio_features, get_module_dir
-
 from glancerf.gpio.gpio_support import get_available_pins, is_gpio_available
 
 _log = get_logger("gpio_manager")
@@ -48,12 +46,21 @@ def _direction_for_feature(module_id: str, function_id: str) -> Optional[str]:
     return _feature_by_key.get(_build_feature_key(module_id, function_id), {}).get("direction")
 
 
+def _get_module_dir(module_id: str) -> Optional[Path]:
+    """Return module folder path for module_id."""
+    try:
+        from glancerf.modules import get_module_dir
+        return get_module_dir(module_id)
+    except ImportError:
+        return None
+
+
 def _load_input_handlers(module_id: str) -> Dict[str, Callable[[bool], None]]:
-    """Load GPIO_INPUT_HANDLERS from the module's module.py. Returns dict function_id -> callable(value)."""
+    """Load GPIO_INPUT_HANDLERS from the module's module.py."""
     if module_id in _handlers_cache:
         return _handlers_cache[module_id]
     result: Dict[str, Callable[[bool], None]] = {}
-    folder = get_module_dir(module_id)
+    folder = _get_module_dir(module_id)
     if not folder:
         _handlers_cache[module_id] = result
         return result
@@ -99,10 +106,7 @@ def _on_pin_event(pin_bcm: int) -> None:
         return
     try:
         value = G.input(pin_bcm)
-        if hasattr(value, "__bool__"):
-            value = bool(value)
-        else:
-            value = bool(value)
+        value = bool(value)
     except Exception as e:
         _log.debug("gpio_manager: read pin %s failed: %s", pin_bcm, e)
         return
@@ -126,18 +130,14 @@ def _on_pin_event(pin_bcm: int) -> None:
 
 
 def set_broadcast(connection_manager: Any, loop: asyncio.AbstractEventLoop) -> None:
-    """Set the connection manager and event loop so GPIO input events are broadcast to browsers. Call from main at startup."""
+    """Set the connection manager and event loop for GPIO input broadcast. Call from main at startup."""
     global _broadcast_cm, _broadcast_loop
     _broadcast_cm = connection_manager
     _broadcast_loop = loop
 
 
 def set_output(module_id: str, function_id: str, value: bool) -> None:
-    """
-    Set a GPIO output pin. Call from modules that own an output function.
-    module_id and function_id must match an assignment in gpio_assignments;
-    the pin direction must be "out" for that function.
-    """
+    """Set a GPIO output pin. Call from modules that own an output function."""
     G = _get_gpio_module()
     if not G:
         _log.debug("gpio_manager: set_output ignored (GPIO not available)")
@@ -163,6 +163,11 @@ def start_gpio_manager() -> None:
     global _assignments, _feature_by_key, _pins_configured
     if not is_gpio_available():
         return
+    try:
+        from glancerf.modules import get_gpio_features
+        features = get_gpio_features()
+    except ImportError:
+        features = []
     G = _get_gpio_module()
     if not G:
         return
@@ -176,9 +181,9 @@ def start_gpio_manager() -> None:
     raw = config.get("gpio_assignments") or {}
     if not isinstance(raw, dict):
         raw = {}
-    features = {_build_feature_key(f["module_id"], f["function_id"]): f for f in get_gpio_features()}
+    features_dict = {_build_feature_key(f["module_id"], f["function_id"]): f for f in features}
     _feature_by_key.clear()
-    _feature_by_key.update(features)
+    _feature_by_key.update(features_dict)
     _assignments.clear()
     for pin_str, val in raw.items():
         if not isinstance(val, dict):
@@ -188,7 +193,7 @@ def start_gpio_manager() -> None:
         if not mid or not fid:
             continue
         key = _build_feature_key(mid, fid)
-        if key not in features:
+        if key not in features_dict:
             continue
         _assignments[pin_str] = {"module_id": mid, "function_id": fid}
     available_bcm = {bcm for bcm, _ in get_available_pins()}

@@ -28,8 +28,30 @@ except ImportError:
 _log = get_logger("satellite_pass.satellite_service")
 
 
+def _collect_active_norad_from_settings(settings: dict, active: set[int]) -> None:
+    """Helper: parse sat_satellites from settings and add active NORADs to set."""
+    raw = settings.get("sat_satellites")
+    if not raw or not isinstance(raw, str):
+        return
+    try:
+        data = json.loads(raw)
+    except (ValueError, TypeError):
+        return
+    if not isinstance(data, dict):
+        return
+    for norad_str, entry in data.items():
+        if not isinstance(entry, dict):
+            continue
+        try:
+            norad = int(norad_str)
+        except (ValueError, TypeError):
+            continue
+        if entry.get("show_passes") or entry.get("show_on_map") or entry.get("show_traces"):
+            active.add(norad)
+
+
 def get_active_norad_set() -> set[int]:
-    """Return NORAD ids that have at least one of show_passes, show_on_map, show_traces true in any satellite_pass cell. If none active, returns empty set (no locations/tracks fetched)."""
+    """Return NORAD ids that have at least one of show_passes, show_on_map, show_traces true in any satellite_pass cell (layout or map_overlay_layout). If none active, returns empty set (no locations/tracks fetched)."""
     config = get_config()
     layout = config.get("layout") or []
     if not isinstance(layout, list):
@@ -38,6 +60,13 @@ def get_active_norad_set() -> set[int]:
     if not isinstance(module_settings, dict):
         module_settings = {}
     active: set[int] = set()
+    ids_in_layout: set[str] = set()
+    for row in layout:
+        if not isinstance(row, list):
+            continue
+        for cell_value in row:
+            if isinstance(cell_value, str) and cell_value.strip():
+                ids_in_layout.add(cell_value.strip())
     for row_idx, row in enumerate(layout):
         if not isinstance(row, list):
             continue
@@ -46,26 +75,17 @@ def get_active_norad_set() -> set[int]:
                 continue
             cell_key = f"{row_idx}_{col_idx}"
             settings = module_settings.get(cell_key)
-            if not isinstance(settings, dict):
-                continue
-            raw = settings.get("sat_satellites")
-            if not raw or not isinstance(raw, str):
-                continue
-            try:
-                data = json.loads(raw)
-            except (ValueError, TypeError):
-                continue
-            if not isinstance(data, dict):
-                continue
-            for norad_str, entry in data.items():
-                if not isinstance(entry, dict):
-                    continue
-                try:
-                    norad = int(norad_str)
-                except (ValueError, TypeError):
-                    continue
-                if entry.get("show_passes") or entry.get("show_on_map") or entry.get("show_traces"):
-                    active.add(norad)
+            if isinstance(settings, dict):
+                _collect_active_norad_from_settings(settings, active)
+    if "map" in ids_in_layout:
+        map_overlay = config.get("map_overlay_layout") or []
+        if isinstance(map_overlay, list):
+            for i, mid in enumerate(map_overlay):
+                if mid and isinstance(mid, str) and mid.strip() == "satellite_pass":
+                    cell_key = f"map_overlay_{i}"
+                    settings = module_settings.get(cell_key)
+                    if isinstance(settings, dict):
+                        _collect_active_norad_from_settings(settings, active)
     return active
 
 _CELESTRAK_GP = "https://celestrak.org/NORAD/elements/gp.php"
@@ -223,8 +243,8 @@ _LOCATIONS_LOOP_PAUSE_SEC = 5  # short pause between passes so we keep looping a
 _SATELLITE_TRACKS_FILENAME = "satellite_tracks.json"
 TRACKS_CACHE_MAX_AGE_SECONDS = 30 * 60  # 30 min; data from cache is valid for up to 30 min when reading
 _TRACKS_LOOP_INTERVAL_SEC = 10 * 60  # overwrite cache every 10 min
-_TRACKS_TAIL_MINUTES = 30  # past 30 min
-_TRACKS_LEAD_MINUTES = 90  # future 90 min
+_TRACKS_TAIL_MINUTES = 60  # past 60 min
+_TRACKS_LEAD_MINUTES = 360  # future 6 hours (~4 orbits for LEO)
 _TRACKS_STEP_MINUTES = 2  # 2 min between points
 
 
@@ -880,6 +900,9 @@ def get_next_pass_from_cache(
         base_dt = datetime.fromisoformat(tracks_updated_utc.replace("Z", "+00:00"))
     except (ValueError, TypeError):
         base_dt = datetime.now(timezone.utc)
+    # Lead points start at jd_now + 2 min (first sample after fetch). Tracks are fetched 1/sec,
+    # so base_dt should reflect start of first fetch, not cache write time.
+    base_dt = base_dt - timedelta(seconds=len(tracks) * _SATCHECKER_RATE_LIMIT_SEC)
     names_by_norad = {s["norad_id"]: s["name"] for s in sat_list}
     now_utc = datetime.now(timezone.utc)
     results: list[tuple[datetime, int, str, float]] = []
@@ -893,7 +916,8 @@ def get_next_pass_from_cache(
             if km < best_km:
                 best_km = km
                 best_idx = i
-        pass_dt = base_dt + timedelta(minutes=best_idx * _NEXT_PASS_TRACKS_STEP_MINUTES)
+        # lead[0] is at base_dt + 2 min, lead[i] at base_dt + (i+1)*2 min
+        pass_dt = base_dt + timedelta(minutes=(best_idx + 1) * _NEXT_PASS_TRACKS_STEP_MINUTES)
         if pass_dt < now_utc:
             continue
         name = names_by_norad.get(norad) or ("NORAD %s" % norad)
@@ -905,7 +929,7 @@ def get_next_pass_from_cache(
         "-" * 60,
     ]
     if not results:
-        lines.append("No future passes in cached lead window (lead is ~90 min from cache time).")
+        lines.append("No future passes in cached lead window (lead is ~6 h from cache time).")
         out["text"] = "\n".join(lines)
         out["tracks_updated_utc"] = tracks_updated_utc
         return out

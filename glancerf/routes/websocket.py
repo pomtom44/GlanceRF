@@ -1,20 +1,21 @@
 """
-WebSocket routes for GlanceRF
+WebSocket routes for GlanceRF desktop/browser sync.
 """
 
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
-from glancerf.web import ConnectionManager
+
 from glancerf.config import DETAILED_LEVEL, get_logger
+from glancerf.web import ConnectionManager
 
 _log = get_logger("websocket")
 
 
 def register_websocket_routes(app: FastAPI, connection_manager: ConnectionManager):
-    """Register WebSocket routes"""
+    """Register WebSocket routes."""
 
     @app.websocket("/ws/desktop")
     async def websocket_desktop(websocket: WebSocket):
-        """WebSocket endpoint for desktop app (source of truth)"""
+        """WebSocket endpoint for desktop app (source of truth)."""
         _log.log(DETAILED_LEVEL, "WebSocket: desktop connected")
         await connection_manager.connect_desktop(websocket)
         try:
@@ -22,11 +23,10 @@ def register_websocket_routes(app: FastAPI, connection_manager: ConnectionManage
                 data = await websocket.receive_json()
                 msg_type = data.get("type")
                 _log.debug("WebSocket desktop received type=%s", msg_type)
-                if msg_type in ["state", "update"]:
+                if msg_type in ("state", "update", "dom"):
                     await connection_manager.broadcast_from_desktop(data)
-                    connection_manager.desktop_state = data.get("data", {})
-                elif msg_type == "dom":
-                    pass
+                    if msg_type in ("state", "update"):
+                        connection_manager.desktop_state = data.get("data", {})
         except WebSocketDisconnect:
             _log.log(DETAILED_LEVEL, "WebSocket: desktop disconnected")
             await connection_manager.disconnect(websocket)
@@ -36,7 +36,7 @@ def register_websocket_routes(app: FastAPI, connection_manager: ConnectionManage
 
     @app.websocket("/ws/browser")
     async def websocket_browser(websocket: WebSocket):
-        """WebSocket endpoint for web browsers (two-way mirroring)"""
+        """WebSocket endpoint for web browsers (two-way mirroring)."""
         _log.log(DETAILED_LEVEL, "WebSocket: browser connected")
         await connection_manager.connect_browser(websocket)
         try:
@@ -45,7 +45,7 @@ def register_websocket_routes(app: FastAPI, connection_manager: ConnectionManage
                     data = await websocket.receive_json()
                     msg_type = data.get("type")
                     _log.debug("WebSocket browser received type=%s", msg_type)
-                    if data.get("type") in ["state", "update"]:
+                    if msg_type in ("state", "update"):
                         await connection_manager.broadcast_from_browser(data, websocket)
                 except ValueError:
                     await websocket.receive_text()

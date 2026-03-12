@@ -32,6 +32,10 @@
     gap: 4px;
 }
 
+.grid-cell-contests.contests_scroll_toggle .contests_list {
+    overflow: hidden;
+}
+
 .grid-cell-contests .contests_item {
     font-size: 12px;
     line-height: 1.3;
@@ -40,7 +44,10 @@
     background: #1a1a1a;
     border: 1px solid #333;
     border-radius: 4px;
-    flex-shrink: 0;
+    flex-shrink: 1;
+    min-height: 0;
+    min-width: 0;
+    overflow: hidden;
 }
 
 .grid-cell-contests .contests_item .contests_name {
@@ -86,7 +93,7 @@
     flex: 1;
     font-size: 1.25rem;
     color: #aaa;
-    min-height: 3em;
+    min-height: 0;
 }
 
 .grid-cell-contests.contests_show_empty .contests_list,

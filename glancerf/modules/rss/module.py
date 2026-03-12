@@ -1,9 +1,16 @@
 """Shows recent items from an RSS or Atom feed. You set the feed URL, max items, and refresh interval; the backend fetches and caches."""
 
+from glancerf.modules.loader import load_assets
+
+inner_html, css, js = load_assets(__file__)
+
 MODULE = {
     "id": "rss",
     "name": "RSS Feed",
     "color": "#0d1117",
+    "inner_html": inner_html,
+    "css": css,
+    "js": js,
     "settings": [
         {"id": "rss_url", "label": "RSS feed URL", "type": "text", "default": ""},
         {"id": "max_items", "label": "Max items to show", "type": "number", "min": 1, "max": 50, "default": "10"},

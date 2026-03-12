@@ -1,12 +1,12 @@
 """
 Logging configuration for GlanceRF.
-Configures console (always) and optional log file from config.
+Industry-standard setup: structured format, logger hierarchy, configurable levels.
 
-Levels (each keeps its own tag in the log output):
+Levels:
 - default: Startup and error only. [INFO] for startup/shutdown, [ERROR] for errors.
-- detailed: Default plus system calls. One or two lines per action: web requests, API calls out
-  (e.g. GitHub, telemetry). Messages show [DETAILED].
-- verbose: Detailed plus everything else (step-by-step, internals). Extra messages show [DEBUG].
+- detailed: Default plus system calls (web requests, API calls). Messages show [DETAILED].
+- verbose: Detailed plus step-by-step internals. Extra messages show [DEBUG].
+- debug: Alias for verbose.
 """
 
 import logging
@@ -14,15 +14,15 @@ import sys
 from pathlib import Path
 from typing import Any, Optional
 
-# Between DEBUG (10) and INFO (20): system calls (requests, API out), one or two per action
+# Between DEBUG (10) and INFO (20): system calls, one or two per action
 DETAILED_LEVEL = 15
 logging.addLevelName(DETAILED_LEVEL, "DETAILED")
 
 LOG_LEVEL_MAP = {
-    "default": logging.INFO,      # startup [INFO], errors [ERROR] only
-    "detailed": DETAILED_LEVEL,    # default + [DETAILED] web requests, API calls out
-    "verbose": logging.DEBUG,     # detailed + [DEBUG] all extra logging
-    "debug": logging.DEBUG,       # alias for verbose (same as verbose)
+    "default": logging.INFO,
+    "detailed": DETAILED_LEVEL,
+    "verbose": logging.DEBUG,
+    "debug": logging.DEBUG,
 }
 
 
@@ -45,15 +45,17 @@ def _log_path_from_config(config: Any) -> Optional[str]:
 
 def setup_logging(config: Any) -> None:
     """
-    Configure logging for GlanceRF from config.
-    - Always adds a console handler.
-    - Adds a file handler only if config has a non-empty "log_path".
-    - Level comes from config "log_level": "default" | "detailed" | "verbose" | "debug" (debug = verbose).
+    Configure logging from config.
+    - Console handler (always)
+    - File handler (if config has non-empty log_path)
+    - Level: default | detailed | verbose | debug
+    - Format: timestamp | level | logger | message
     """
     level = _level_from_config(config)
     log_path = _log_path_from_config(config)
 
-    fmt = "%(asctime)s [%(levelname)s] %(message)s"
+    # Industry-standard format: timestamp, level, logger name, message
+    fmt = "%(asctime)s | %(levelname)-8s | %(name)s | %(message)s"
     date_fmt = "%Y-%m-%d %H:%M:%S"
     formatter = logging.Formatter(fmt, datefmt=date_fmt)
 
@@ -77,12 +79,11 @@ def setup_logging(config: Any) -> None:
         except OSError as e:
             root.warning("Could not open log file %s: %s", log_path, e)
 
-    # Ensure child loggers (glancerf.telemetry, etc.) use our level
     logging.getLogger("glancerf").setLevel(level)
 
 
 def get_logger(name: str) -> logging.Logger:
-    """Return a logger for the given name (e.g. glancerf.telemetry). Prefer glancerf.* namespace."""
+    """Return a logger. Names are under glancerf.* namespace."""
     if not name.startswith("glancerf."):
         name = "glancerf." + name
     return logging.getLogger(name)

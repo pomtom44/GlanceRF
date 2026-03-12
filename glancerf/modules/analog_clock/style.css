@@ -1,7 +1,6 @@
 .grid-cell-analog_clock {
     padding: 4px;
 }
-/* Wrap fills cell but allows SVG to shrink; clock fits to smaller dimension (meet) */
 .grid-cell-analog_clock .analog_clock_wrap {
     width: 100%;
     height: 100%;
@@ -21,4 +20,3 @@
     display: block;
     object-fit: contain;
 }
-/* SVG preserveAspectRatio="xMidYMid meet" fits to cell; rotation center (50,50) in script */

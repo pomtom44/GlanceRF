@@ -1,16 +1,12 @@
 #!/usr/bin/env python3
-"""
-Tray icon helper for GlanceRF when running as a Windows service (headless).
-"""
+"""Tray icon helper for GlanceRF when running as a Windows service (headless)."""
+import json
 import sys
+import webbrowser
 from pathlib import Path
 
 _project_dir = Path(__file__).resolve().parent.parent.parent
-try:
-    _in_path = any(Path(p).resolve() == _project_dir for p in sys.path if p)
-except (OSError, ValueError):
-    _in_path = False
-if not _in_path:
+if str(_project_dir) not in sys.path:
     sys.path.insert(0, str(_project_dir))
 
 try:
@@ -20,33 +16,29 @@ except ImportError:
     print("tray_helper requires: pip install pystray Pillow")
     sys.exit(1)
 
-import webbrowser
-
 
 def _get_port():
-    try:
-        from glancerf.config import get_config
-        return int(get_config().get("port") or 8080)
-    except Exception:
-        return 8080
-
-
-_TRAY_ICON_SIZE = (128, 128)
+    config_path = _project_dir / "glancerf_config.json"
+    if config_path.exists():
+        try:
+            with open(config_path, encoding="utf-8") as f:
+                return int(json.load(f).get("port", 8080))
+        except Exception:
+            pass
+    return 8080
 
 
 def _load_icon_image():
-    project_dir = Path(__file__).resolve().parent.parent.parent
-    logo_path = project_dir / "logos" / "logo.png"
+    logo_path = _project_dir / "logos" / "logo.png"
     if not logo_path.is_file():
-        logo_path = project_dir.parent / "logo.png"
+        logo_path = _project_dir.parent / "logo.png"
     if logo_path.is_file():
         try:
             img = Image.open(logo_path).convert("RGBA")
-            img = img.resize(_TRAY_ICON_SIZE, Image.LANCZOS)
-            return img
+            return img.resize((128, 128), Image.LANCZOS)
         except Exception:
             pass
-    return Image.new("RGBA", _TRAY_ICON_SIZE, (30, 60, 120, 255))
+    return Image.new("RGBA", (128, 128), (30, 60, 120, 255))
 
 
 def main():

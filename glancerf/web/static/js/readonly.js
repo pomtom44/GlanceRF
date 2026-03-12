@@ -1,8 +1,13 @@
 // Read-only view: no desktop/browser sync. Connects to main server WebSocket for config_update (layout/module changes) and reloads.
 (function() {
+    'use strict';
     var mainPort = typeof window.GLANCERF_MAIN_PORT !== 'undefined' ? window.GLANCERF_MAIN_PORT : 8080;
-    var wsUrl = 'ws://' + location.hostname + ':' + mainPort + '/ws/readonly';
+    var protocol = location.protocol === 'https:' ? 'wss:' : 'ws:';
+    var wsUrl = protocol + '//' + location.hostname + ':' + mainPort + '/ws/readonly';
     var ws;
+    var reconnectDelay = 3000;
+    var maxReconnectDelay = 60000;
+
     function connect() {
         try {
             ws = new WebSocket(wsUrl);
@@ -12,13 +17,31 @@
                     if (msg && msg.type === 'config_update') {
                         window.location.reload();
                     }
-                } catch (e) {}
+                    if (msg && msg.type === 'aprs_update') {
+                        window.dispatchEvent(new CustomEvent('glancerf_aprs_update'));
+                    }
+                } catch (e) {
+                    if (typeof console !== 'undefined' && console.debug) console.debug('readonly WebSocket parse error', e);
+                }
+            };
+            ws.onerror = function() {
+                if (typeof console !== 'undefined' && console.debug) console.debug('readonly WebSocket error');
             };
             ws.onclose = function() {
-                setTimeout(connect, 3000);
+                setTimeout(function() {
+                    connect();
+                    reconnectDelay = Math.min(reconnectDelay * 1.5, maxReconnectDelay);
+                }, reconnectDelay);
+            };
+            ws.onopen = function() {
+                reconnectDelay = 3000;
             };
         } catch (e) {
-            setTimeout(connect, 3000);
+            if (typeof console !== 'undefined' && console.error) console.error('readonly WebSocket connect failed', e);
+            setTimeout(function() {
+                connect();
+                reconnectDelay = Math.min(reconnectDelay * 1.5, maxReconnectDelay);
+            }, reconnectDelay);
         }
     }
     connect();

@@ -1,6 +1,5 @@
 """
-Time utilities for GlanceRF
-Handles UTC and local time formatting
+Time utilities for GlanceRF.
 """
 
 from datetime import datetime, timezone
@@ -8,16 +7,7 @@ from typing import Dict
 
 
 def get_current_time() -> Dict[str, str]:
-    """
-    Get current UTC and local time information
-
-    Returns:
-        Dictionary with time information:
-        - utc: UTC time string
-        - local: Local time string
-        - utc_timestamp: UTC timestamp
-        - local_timestamp: Local timestamp
-    """
+    """Get current UTC and local time information."""
     now_utc = datetime.now(timezone.utc)
     now_local = datetime.now()
 

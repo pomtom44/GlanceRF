@@ -8,10 +8,9 @@
         }
         .grid-cell-map .map_container {
             height: 100%;
-            min-height: 80px;
-            min-width: 100%;
-            width: auto;
-            aspect-ratio: 2 / 1;
+            min-height: 0;
+            min-width: 0;
+            width: 100%;
             position: absolute;
             top: 0;
             bottom: 0;

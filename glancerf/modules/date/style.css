@@ -1,4 +1,3 @@
-/* Absolutely fill the cell and center content; base font-size set by JS to scale with cell */
 .grid-cell-date {
     position: relative;
 }

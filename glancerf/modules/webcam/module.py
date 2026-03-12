@@ -1,9 +1,16 @@
 """Video feed from local webcam (this device or server) or a remote URL. Local (this device) is only visible on the browser where the camera is connected. Local (server) requires ffmpeg installed on the server."""
 
+from glancerf.modules.loader import load_assets
+
+inner_html, css, js = load_assets(__file__)
+
 MODULE = {
     "id": "webcam",
     "name": "Webcam",
     "color": "#0d1117",
+    "inner_html": inner_html,
+    "css": css,
+    "js": js,
     "settings": [
         {"id": "source_type", "label": "Source", "type": "select", "options": [
             {"value": "local_user", "label": "Local (this device)"},

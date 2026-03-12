@@ -31,14 +31,11 @@
     padding: 0;
     flex: 1;
     min-height: 0;
-    overflow-y: auto;
+    overflow: hidden;
     font-size: 12px;
     color: #ccc;
-    scrollbar-width: none;
-    -ms-overflow-style: none;
-}
-.grid-cell-rss .rss_list::-webkit-scrollbar {
-    display: none;
+    display: flex;
+    flex-direction: column;
 }
 .grid-cell-rss .rss_list li {
     margin-bottom: 4px;
@@ -46,7 +43,10 @@
     background: #1a1a1a;
     border: 1px solid #333;
     border-radius: 4px;
-    flex-shrink: 0;
+    flex-shrink: 1;
+    min-height: 0;
+    min-width: 0;
+    overflow: hidden;
 }
 .grid-cell-rss .rss_list li:last-child {
     margin-bottom: 0;

@@ -46,8 +46,5 @@ restart_after_update.*
 restart_services.bat
 restart_services.sh
 
-# APRS / local cache (not for version control)
-cache/
-
 # Local / debug (not for version control)
 debug.txt

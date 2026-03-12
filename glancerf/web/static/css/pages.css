@@ -1,0 +1,43 @@
+/* Shared layout for all GlanceRF menu pages (Setup, Updates, Modules, GPIO, Map-modules) */
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: 'Courier New', monospace;
+  background-color: #000;
+  color: #fff;
+  min-height: 100vh;
+  padding: 20px;
+}
+
+.glancerf-page-container {
+  max-width: 900px;
+  width: 100%;
+  margin: 0 auto;
+  background-color: #111;
+  border: 2px solid #333;
+  border-radius: 10px;
+  padding: 40px;
+}
+
+.glancerf-page-container h1 {
+  margin-bottom: 24px;
+  color: #fff;
+  font-size: 28px;
+}
+
+.glancerf-page-back-link {
+  display: inline-block;
+  margin-bottom: 20px;
+  color: #0f0;
+  text-decoration: none;
+  font-size: 14px;
+}
+
+.glancerf-page-back-link:hover {
+  text-decoration: underline;
+}

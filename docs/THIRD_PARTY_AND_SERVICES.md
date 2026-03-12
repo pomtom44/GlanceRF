@@ -12,10 +12,10 @@ These are loaded in the browser when you use certain modules or features.
 |------|--------|--------|-----------|
 | **SunCalc** (sun/moon calculations) | `cdnjs.cloudflare.com` (v1.9.0) | Sun times module, Moon module | Only if you use Sun times or Moon |
 | **Leaflet** (maps) | `unpkg.com` (v1.9.4) – CSS and JS | Map module | Only if you use the Map module |
-| **APRS symbol sprites** (icons for map/callsign) | `cdn.jsdelivr.net` (GitHub: hessu/aprs-symbols) | Map (QTH icon), Callsign | Only if you show QTH on map or use APRS icons |
+| **APRS symbol sprites** (icons for map/callsign) | `cdn.jsdelivr.net` (GitHub: hessu/aprs-symbols) | Map (QTH icon), APRS module, Callsign | Only if you show QTH on map, APRS icons, or use APRS module |
 | **Moon phase images** | `img.icons8.com` (Icons8) | Moon module | Only if you use Moon module (fallback: built-in SVG) |
 
-- **SunCalc** is used to compute sunrise, sunset, moonrise, and moonset from your location; no data is sent to a server for this.
+- **SunCalc** computes sunrise, sunset, moonrise, and moonset from your location; no data is sent to a server.
 - **Leaflet** is the mapping library; map tiles and overlays come from the services listed in section 3.
 - **APRS symbols** and **Icons8** moon images are read-only assets; no tracking is performed by GlanceRF (Icons8 may have its own policies; see icons8.com).
 
@@ -35,7 +35,7 @@ When you use the **Map** module, the following external services may be used dep
 | **KC2G** | `prop.kc2g.com` | HF propagation (MUF, foF2) SVG and stations JSON | Only if you turn on KC2G propagation overlay |
 | **Open-Meteo** | `api.open-meteo.com` | Weather for propagation (backend) | Only if you use KC2G propagation overlay |
 
-Map tiles are requested by the browser (or server, if proxied) based on the visible map area and zoom. Aurora and propagation overlays are fetched when those overlays are enabled.
+Map tiles are requested by the browser based on the visible map area and zoom. Aurora and propagation overlays are fetched when those overlays are enabled.
 
 ---
 
@@ -43,7 +43,7 @@ Map tiles are requested by the browser (or server, if proxied) based on the visi
 
 | Service | URL | Data | Used by | Required? |
 |---------|-----|------|--------|-----------|
-| **Open-Meteo** | `api.open-meteo.com` | Weather forecast, sunrise/sunset (optional) | Weather module, Sun times module (fallback) | Only if you use Weather or Sun times (and Sun times can use SunCalc only) |
+| **Open-Meteo** | `api.open-meteo.com` | Weather forecast, sunrise/sunset (optional) | Weather module, Sun times module (fallback) | Only if you use Weather or Sun times (Sun times can use SunCalc only) |
 | **SunCalc** (see section 1) | Loaded from CDN, runs in browser | Sunrise, sunset, moonrise, moonset computed locally | Sun times, Moon | Only if you use those modules |
 
 - **Sun times**: Can work entirely with SunCalc in the browser (no server request). If Open-Meteo is used, only latitude, longitude, and request for daily sunrise/sunset are sent.
@@ -75,11 +75,11 @@ The **Live spots** module (if enabled) can request data from:
 
 | Source | URL | Data | Required? |
 |--------|-----|------|------------|
-| **Reverse Beacon Network (RBN)** | `reversebeacon.net`, `beta.reversebeacon.net` (raw_data PHP) | RBN spot data | Only if you use Live spots with RBN. Note: these endpoints often return 404; RBN now provides historical data as zips at reversebeacon.net/raw_data/. |
+| **Reverse Beacon Network (RBN)** | `reversebeacon.net`, `beta.reversebeacon.net` (raw_data PHP) | RBN spot data | Only if you use Live spots with RBN. Note: these endpoints may return 404; RBN provides historical data as zips at reversebeacon.net/raw_data/. |
 | **PSK Reporter** | `retrieve.pskreporter.info` | PSK reception reports (XML) | Only if you use Live spots with PSK Reporter |
 | **DXWatch** | `dxwatch.com` | DX cluster spots (HTML) | Only if you use Live spots with DXWatch |
 
-Requests are made from the GlanceRF server (backend), not directly from the browser. No personal data is sent; only the query parameters required by each service. PSK Reporter and DXWatch typically respond 200; RBN may respond 404 if the legacy PHP URLs are no longer available.
+Requests are made from the GlanceRF server (backend), not directly from the browser. No personal data is sent; only the query parameters required by each service.
 
 ---
 
@@ -95,13 +95,13 @@ Used to compute pass times and (optionally) ground tracks. No personal data is s
 
 ## 7. APRS (optional)
 
-If you configure a **callsign** and **APRS passcode** and the APRS cache is enabled:
+If you configure a **callsign** in Setup and the APRS cache is enabled:
 
 | Service | Host / URL | Data | Required? |
 |---------|------------|------|------------|
-| **APRS-IS** | `rotate.aprs.net` (port 10152) | Full-feed APRS packets (receive only) | No; only if you want local APRS cache for map/propagation |
+| **APRS-IS** | `rotate.aprs.net` (port 10152) | Full-feed APRS packets (receive only) | No; only if you want local APRS cache for map/APRS module |
 
-The app connects as a client and stores packets in a local SQLite database. No data is sent to APRS-IS except login (callsign-SSID and passcode). See your APRS-IS provider for their terms.
+The app connects as a client and stores packets in a local SQLite database (`config_dir/cache/aprs.db`). No data is sent to APRS-IS except login (callsign-SSID and passcode; passcode is auto-computed from your callsign). See your APRS-IS provider for their terms.
 
 ---
 
@@ -110,7 +110,7 @@ The app connects as a client and stores packets in a local SQLite database. No d
 | Service | URL | Data | Required? |
 |---------|-----|------|------------|
 | **GitHub** | `api.github.com` (repos/pomtom44/GlanceRF/releases) | Release list / version check, update zip | Only if you enable update check or run an update |
-| **Telemetry** | `glancerf-telemetry.zl4st.com` | Anonymous usage (version, grid size, module IDs, etc.) | No; only if you opt in during Setup |
+| **Telemetry** | `glancerf-telemetry.zl4st.com` | Anonymous usage (version, grid size, module IDs, etc.) | No; enabled by default, opt-out in Setup |
 
 - **Updates**: When update check is enabled, the app requests the latest release metadata and, if you choose to update, the release zip from GitHub.
 - **Telemetry**: Described in [TELEMETRY.md](TELEMETRY.md). You can opt out; no callsign, location, or personal data is collected.
@@ -128,9 +128,10 @@ The server runs on Python and uses these main third-party packages (see `require
 | **httpx** | HTTP client for backend requests (contests, DXpeditions, spots, propagation, satellites, etc.) |
 | **feedparser** | RSS/Atom parsing (contests, DXpeditions, RSS module) |
 | **Skyfield** | Astronomy (sun position for GPIO, satellite passes, ground tracks) |
+| **aprslib** | APRS packet parsing (APRS module, map overlay) |
 | **PyQt5 / PyQtWebEngine** | Desktop window (optional) |
 
-These do not by themselves contact external services; they are used when the features above (e.g. contests, satellites, sun_times API) are used.
+These do not by themselves contact external services; they are used when the features above (e.g. contests, satellites, APRS) are used.
 
 ---
 
@@ -147,18 +148,18 @@ These do not by themselves contact external services; they are used when the fea
 Some features let you enter your own URLs:
 
 - **Contests**: Custom RSS or iCal feed URL.
-- **DXpeditions**: Choice of built-in sources (no custom URL in the list found).
+- **DXpeditions**: Choice of built-in sources.
 - **RSS module**: Your RSS feed URL.
 - **Webbrowser / Webcam**: Optional remote URL.
 
-When you provide a URL, GlanceRF will request that URL according to the feature (e.g. RSS fetch, proxy). Only the URL you supply is used; no other third parties are added by GlanceRF for that request.
+When you provide a URL, GlanceRF will request that URL according to the feature. Only the URL you supply is used; no other third parties are added by GlanceRF for that request.
 
 ---
 
 ## 12. Summary table (quick reference)
 
 | Category | Examples | Required? |
-|----------|----------|------------|
+|----------|----------|-----------|
 | Frontend libs (SunCalc, Leaflet, APRS sprites, Icons8) | cdnjs, unpkg, jsDelivr, Icons8 | Only when using the module that needs them |
 | Map tiles | Carto, OpenTopoMap, Esri, NASA GIBS | Only when using Map with that source |
 | Weather / sun | Open-Meteo, SunCalc (local) | Only when using Weather or Sun times |
@@ -166,7 +167,7 @@ When you provide a URL, GlanceRF will request that URL according to the feature 
 | Live spots | RBN, PSK Reporter, DXWatch | Only when using Live spots |
 | Satellites | CelesTrak | Only when using Satellite pass |
 | Propagation / aurora | KC2G, NOAA, Open-Meteo | Only when using Map overlays |
-| APRS-IS | rotate.aprs.net | Only if APRS cache enabled |
+| APRS-IS | rotate.aprs.net | Only if APRS cache enabled (callsign set) |
 | Updates / telemetry | GitHub, telemetry server | Only if you enable them |
 
-If you want to minimise external access: disable optional features (telemetry, update check, APRS cache), use only modules that do not need external APIs (e.g. Clock, Date, Callsign without map), and avoid Map overlays and Weather/Sun/Moon if you do not want any third-party requests.
+If you want to minimise external access: disable optional features (telemetry, update check), leave APRS callsign unset, and use only modules that do not need external APIs (e.g. Clock, Date, Callsign without map).

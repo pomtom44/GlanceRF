@@ -1,1 +1,1 @@
-# Web browser module (iframe, proxy, screenshot)
+# webbrowser module package

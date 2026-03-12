@@ -1,5 +1,9 @@
 """World map with multiple tile sources, optional grid (lat/long or Maidenhead), day/night terminator, sun and moon markers, aurora overlay, HF/VHF propagation overlays, and APRS station locations (icons or age-coloured dots) from local cache."""
 
+from glancerf.modules.loader import load_assets
+
+inner_html, css, js = load_assets(__file__)
+
 GRID_OPTIONS = [
     {"value": "none", "label": "None"},
     {"value": "tropics", "label": "Tropics"},
@@ -16,6 +20,9 @@ MODULE = {
     "id": "map",
     "name": "Map",
     "color": "#0d1117",
+    "inner_html": inner_html,
+    "css": css,
+    "js": js,
     "settings": [
         {
             "id": "map_style",
@@ -101,7 +108,7 @@ MODULE = {
             "id": "propagation_source",
             "label": "Propagation overlay",
             "type": "select",
-                "options": [
+            "options": [
                 {"value": "none", "label": "None"},
                 {"value": "kc2g_muf", "label": "HF: KC2G MUF (3000 km)"},
                 {"value": "kc2g_fof2", "label": "HF: KC2G foF2 (NVIS)"},
@@ -121,36 +128,10 @@ MODULE = {
         },
         {
             "id": "propagation_aprs_age",
-            "label": "APRS data age (H:MM)",
+            "label": "APRS data age (H:MM) for propagation overlay",
             "type": "text",
             "default": "6:00",
             "placeholder": "e.g. 0:30, 1:15, 6:00",
-        },
-        {"type": "separator"},
-        {
-            "id": "show_aprs_locations",
-            "label": "APRS station locations",
-            "type": "select",
-            "options": ON_OFF_OPTIONS,
-            "default": "0",
-        },
-        {
-            "id": "aprs_display_mode",
-            "label": "APRS display",
-            "type": "select",
-            "options": [
-                {"value": "dots", "label": "Dots (age: green to red)"},
-                {"value": "icons", "label": "Icons (APRS symbol)"},
-            ],
-            "default": "dots",
-        },
-        {
-            "id": "aprs_filter",
-            "label": "APRS filter (locations display only)",
-            "type": "text",
-            "default": "",
-            "hintUrl": "https://www.aprs-is.net/javAPRSFilter.aspx",
-            "hintText": "APRS-IS filter guide",
         },
     ],
     "cache_warmer": True,

@@ -21,22 +21,10 @@
     <style>{module_css}</style>
 </head>
 <body class="glancerf-readonly">
-    <div id="update-notification">
-        <span class="update-close" onclick="this.parentElement.classList.remove('show')">&times;</span>
-        <div id="update-notification-content"></div>
-    </div>
     <div id="glancerf-menu" role="dialog" aria-modal="true" aria-label="Menu">
         <div class="glancerf-menu-overlay" id="glancerf-menu-overlay"></div>
         <div class="glancerf-menu-panel">
-            <h2>Menu</h2>
-            <ul class="glancerf-menu-list">
-                <li><a href="/setup">Setup</a></li>
-                <li><a href="/layout">Layout & Config editor</a></li>
-                <li><a href="/modules">Modules list</a></li>
-                <li><a href="/updates">Updates</a></li>
-                <li><button type="button" class="menu-link" id="menu-restart-services">Restart services</button></li>
-                __GLANCERF_GPIO_MENU__
-            </ul>
+__GLANCERF_MENU_PANEL__
         </div>
     </div>
     <div id="aspect-container">
@@ -46,13 +34,13 @@
     </div>
     <script>
         window.GLANCERF_MODULE_SETTINGS = {module_settings_json};
+        window.GLANCERF_MODULES_SETTINGS_SCHEMA = {modules_settings_schema_json};
+        window.GLANCERF_MAP_OVERLAY_MODULES = {map_overlay_modules_json};
+        window.GLANCERF_MAP_OVERLAY_LAYOUT = {map_overlay_layout_json};
         window.GLANCERF_SETUP_CALLSIGN = {setup_callsign_json};
         window.GLANCERF_SETUP_LOCATION = {setup_location_json};
-        window.GLANCERF_ON_THE_AIR_SHORTCUT = {on_the_air_shortcut_json};
-        window.GLANCERF_ON_THE_AIR = false;
         window.GLANCERF_MAIN_PORT = {main_port};
     </script>
-    <script src="/static/js/menu.js?v=__CACHE_BUST__"></script>
     <script src="/static/js/readonly.js?v=__CACHE_BUST__"></script>
     <script>{module_js}</script>
 </body>

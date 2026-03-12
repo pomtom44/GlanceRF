@@ -1,6 +1,5 @@
 """
 Fetch live spot data from various sources (RBN, PSK Reporter, DX cluster).
-Results are logged at debug level for verification; no display logic yet.
 Probe functions return raw and parsed data to inspect what each service provides.
 """
 
@@ -16,22 +15,16 @@ _log = get_logger("live_spots.spots_service")
 _TIMEOUT = 15.0
 _RAW_PREVIEW_BYTES = 2048
 
-# RBN: legacy raw-data URLs (often 404; RBN now offers historical zips at reversebeacon.net/raw_data/)
 _RBN_URLS = [
     "https://www.reversebeacon.net/raw_data/rbn_raw_data.php",
     "https://beta.reversebeacon.net/raw_data/rbn_raw_data.php",
 ]
 
-# PSK Reporter: query API returns XML (reception reports)
-# flowStartSeconds: negative = last N seconds; max 24h. rronly=1 = reception reports only.
 _PSKREPORTER_BASE = "https://retrieve.pskreporter.info/query"
-
-# DX cluster style: DXWatch spot feed (often HTML/table)
 _DXWATCH_SPOTS = "https://dxwatch.com/dxsd1/dxsd1.php?f=0&t=dx"
 
 
 def _fetch_and_log(source_id: str, url: str, method: str = "GET") -> dict[str, Any]:
-    """Fetch URL and log status, content-type, length, and a short body preview. Returns summary dict."""
     out: dict[str, Any] = {"source": source_id, "url": url, "ok": False, "status": None, "content_type": "", "length": 0, "preview": ""}
     try:
         with httpx.Client(timeout=_TIMEOUT, follow_redirects=True) as client:
@@ -52,14 +45,7 @@ def _fetch_and_log(source_id: str, url: str, method: str = "GET") -> dict[str, A
             out["preview"] = preview
         except Exception:
             out["preview"] = "(binary)"
-        _log.debug(
-            "live_spots fetch %s: status=%s content_type=%s length=%s preview=%s",
-            source_id,
-            out["status"],
-            out["content_type"],
-            out["length"],
-            out["preview"][:200] if out["preview"] else "",
-        )
+        _log.debug("live_spots fetch %s: status=%s content_type=%s length=%s", source_id, out["status"], out["content_type"], out["length"])
         return out
     except Exception as e:
         _log.debug("live_spots fetch %s failed: %s", source_id, e)
@@ -68,7 +54,6 @@ def _fetch_and_log(source_id: str, url: str, method: str = "GET") -> dict[str, A
 
 
 def _parse_pskreporter_xml(body: bytes) -> dict[str, Any]:
-    """Parse PSK Reporter XML response. Returns dict with record_count, records, sample_records, fields_seen, parse_error."""
     result: dict[str, Any] = {"record_count": 0, "records": [], "sample_records": [], "fields_seen": set(), "parse_error": None}
     try:
         text = body.decode("utf-8", errors="replace")
@@ -80,8 +65,6 @@ def _parse_pskreporter_xml(body: bytes) -> dict[str, Any]:
         result["parse_error"] = str(e)
         return result
 
-    # PSK Reporter uses <receptionReport ... /> or <receptionReport>...</receptionReport> with attributes
-    # Namespace may be present: {http://...}receptionReport
     def iter_reports():
         for elem in root.iter():
             tag = elem.tag.split("}")[-1] if "}" in elem.tag else elem.tag
@@ -109,10 +92,6 @@ def probe_pskreporter(
     receiver_callsign: str | None = None,
     rronly: int = 1,
 ) -> dict[str, Any]:
-    """
-    Fetch PSK Reporter and return status, raw preview, and parsed record summary.
-    Query params: flowStartSeconds (negative = last N sec), rptlimit, senderCallsign, receiverCallsign, rronly.
-    """
     params: dict[str, str | int] = {
         "flowStartSeconds": flow_start_seconds,
         "rptlimit": rpt_limit,
@@ -160,24 +139,9 @@ def probe_pskreporter(
 
 
 def probe_rbn() -> dict[str, Any]:
-    """Try each RBN URL; return first successful or all attempts with status and raw preview."""
-    out: dict[str, Any] = {
-        "source": "RBN",
-        "urls_tried": _RBN_URLS,
-        "results": [],
-        "best": None,
-    }
+    out: dict[str, Any] = {"source": "RBN", "urls_tried": _RBN_URLS, "results": [], "best": None}
     for url in _RBN_URLS:
-        one: dict[str, Any] = {
-            "url": url,
-            "ok": False,
-            "status": None,
-            "content_type": "",
-            "length": 0,
-            "raw_preview": "",
-            "first_lines": [],
-            "error": None,
-        }
+        one: dict[str, Any] = {"url": url, "ok": False, "status": None, "content_type": "", "length": 0, "raw_preview": "", "first_lines": [], "error": None}
         try:
             with httpx.Client(timeout=_TIMEOUT, follow_redirects=True) as client:
                 r = client.get(url)
@@ -205,17 +169,7 @@ def probe_rbn() -> dict[str, Any]:
 
 
 def probe_dxwatch() -> dict[str, Any]:
-    """Fetch DXWatch spot page and return status, content-type, and raw preview."""
-    out: dict[str, Any] = {
-        "source": "DXWatch",
-        "url": _DXWATCH_SPOTS,
-        "ok": False,
-        "status": None,
-        "content_type": "",
-        "length": 0,
-        "raw_preview": "",
-        "error": None,
-    }
+    out: dict[str, Any] = {"source": "DXWatch", "url": _DXWATCH_SPOTS, "ok": False, "status": None, "content_type": "", "length": 0, "raw_preview": "", "error": None}
     try:
         with httpx.Client(timeout=_TIMEOUT, follow_redirects=True) as client:
             r = client.get(_DXWATCH_SPOTS)
@@ -227,7 +181,7 @@ def probe_dxwatch() -> dict[str, Any]:
         try:
             text = body.decode("utf-8", errors="replace")
             out["raw_preview"] = text[:_RAW_PREVIEW_BYTES]
-            if len(text) > _RAW_PREVIEW_BYTES:
+            if len(body) > _RAW_PREVIEW_BYTES:
                 out["raw_preview"] += "\n... (truncated)"
         except Exception:
             out["raw_preview"] = "(binary)"
@@ -244,8 +198,6 @@ def probe_all_sources(
     psk_sender: str | None = None,
     psk_receiver: str | None = None,
 ) -> dict[str, Any]:
-    """Probe RBN, PSK Reporter, and DXWatch; return combined result with raw and parsed data per source."""
-    _log.debug("live_spots: probe_all_sources")
     return {
         "pskreporter": probe_pskreporter(
             flow_start_seconds=psk_flow_seconds,
@@ -259,7 +211,6 @@ def probe_all_sources(
 
 
 def fetch_rbn() -> list[dict[str, Any]]:
-    """Try RBN raw data URLs; log and return one successful result or all attempts."""
     results = []
     for url in _RBN_URLS:
         r = _fetch_and_log("RBN", url)
@@ -270,25 +221,21 @@ def fetch_rbn() -> list[dict[str, Any]]:
 
 
 def fetch_pskreporter() -> dict[str, Any]:
-    """Fetch PSK Reporter query (reception reports, last 10 min); log and return summary."""
     url = f"{_PSKREPORTER_BASE}?flowStartSeconds=-600&rronly=1&rptlimit=20"
     return _fetch_and_log("PSK Reporter", url)
 
 
 def fetch_dxwatch() -> dict[str, Any]:
-    """Fetch DXWatch DX spot page; log and return summary."""
     return _fetch_and_log("DXWatch", _DXWATCH_SPOTS)
 
 
 def fetch_all_sources() -> dict[str, Any]:
-    """Fetch from all configured sources and log. Returns dict of source_id -> result(s)."""
     _log.debug("live_spots: fetching all sources")
     out: dict[str, Any] = {
         "rbn": fetch_rbn(),
         "pskreporter": fetch_pskreporter(),
         "dxwatch": fetch_dxwatch(),
     }
-    _log.debug("live_spots: fetch_all_sources done rbn=%s psk=%s dx=%s", len(out["rbn"]), out["pskreporter"].get("ok"), out["dxwatch"].get("ok"))
     return out
 
 
@@ -301,12 +248,6 @@ def fetch_pskreporter_for_config(
     flow_seconds: int = -3600,
     rpt_limit: int = 200,
 ) -> list[dict[str, Any]]:
-    """
-    Fetch PSK Reporter for one cell config.
-    filter_mode "received" = heard by (receiverCallsign), "sent" = heard from (senderCallsign).
-    callsign_or_grid: callsign or grid square; passed to PSK Reporter as-is.
-    Returns list of reception report dicts (attributes).
-    """
     value = (callsign_or_grid or "").strip()
     if not value:
         return []
@@ -332,7 +273,6 @@ def get_pskreporter_cached(
     flow_seconds: int = -3600,
     rpt_limit: int = 200,
 ) -> list[dict[str, Any]]:
-    """Return PSK Reporter spots for config; use cache when available. Populates cache on miss."""
     value = (callsign_or_grid or "").strip()
     if not value:
         return []

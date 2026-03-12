@@ -21,6 +21,7 @@ _store: defaultdict = defaultdict(list)
 
 
 def _get_client_ip(request: Request) -> str:
+    """Extract client IP from request, respecting X-Forwarded-For."""
     forwarded = request.headers.get("x-forwarded-for")
     if forwarded:
         return forwarded.split(",")[0].strip()
@@ -28,12 +29,14 @@ def _get_client_ip(request: Request) -> str:
 
 
 def _prune(timestamps: List[float], window: int) -> None:
+    """Remove timestamps outside the window."""
     cutoff = time.monotonic() - window
     while timestamps and timestamps[0] < cutoff:
         timestamps.pop(0)
 
 
 def _check_rate_limit(ip: str) -> bool:
+    """Return True if request is allowed, False if rate limited."""
     now = time.monotonic()
     timestamps = _store[ip]
     _prune(timestamps, RATE_LIMIT_WINDOW)
@@ -44,19 +47,21 @@ def _check_rate_limit(ip: str) -> bool:
 
 
 async def rate_limit_dependency(request: Request) -> None:
+    """FastAPI dependency: raises RateLimitExceeded if client is over limit."""
     ip = _get_client_ip(request)
     if not _check_rate_limit(ip):
         _log.debug("Rate limit exceeded for IP %s", ip)
         raise RateLimitExceeded()
-    _log.debug("Rate limit OK for IP %s", ip)
 
 
 class RateLimitExceeded(Exception):
     """Raised when client exceeds rate limit."""
+
     pass
 
 
 def rate_limit_exceeded_handler(request: Request, exc: RateLimitExceeded) -> JSONResponse:
+    """FastAPI exception handler for RateLimitExceeded."""
     return JSONResponse(
         status_code=429,
         content={"detail": "Too many requests. Please try again later."},

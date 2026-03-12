@@ -1,6 +1,6 @@
 """
 Sun times status for GPIO. Optional API: returns sun up/down and updates sun_up LED.
-Uses Skyfield (same as satellite_pass) for sun elevation at a location.
+Uses Skyfield for sun elevation at a location.
 """
 
 import asyncio
@@ -25,7 +25,8 @@ def _sun_up_at_location(lat: float, lng: float) -> bool:
     try:
         from skyfield.api import load, wgs84
         ts = load.timescale()
-        eph = load(str(_DE421_PATH))
+        path = str(_DE421_PATH) if _DE421_PATH.is_file() else "de421.bsp"
+        eph = load(path)
         sun = eph["sun"]
         earth = eph["earth"]
         t = ts.now()

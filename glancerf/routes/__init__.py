@@ -1,3 +1,1 @@
-"""
-Route handlers for GlanceRF
-"""
+"""Routes for GlanceRF."""

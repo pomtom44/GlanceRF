@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>GlanceRF - First Run Setup</title>
     <link rel="icon" href="/logo.png" type="image/png">
+    <link rel="stylesheet" href="/static/css/pages.css?v=__CACHE_BUST__">
     <link rel="stylesheet" href="/static/css/setup.css?v=__CACHE_BUST__">
     <link rel="stylesheet" href="/static/css/menu.css?v=__CACHE_BUST__">
 </head>
@@ -12,18 +13,10 @@
     <div id="glancerf-menu" role="dialog" aria-modal="true" aria-label="Menu">
         <div class="glancerf-menu-overlay" id="glancerf-menu-overlay"></div>
         <div class="glancerf-menu-panel">
-            <h2>Menu</h2>
-            <ul class="glancerf-menu-list">
-                <li><a href="/setup">Setup</a></li>
-                <li><a href="/layout">Layout & Config editor</a></li>
-                <li><a href="/modules">Modules list</a></li>
-                <li><a href="/updates">Updates</a></li>
-                <li><button type="button" class="menu-link" id="menu-restart-services">Restart services</button></li>
-                __GLANCERF_GPIO_MENU__
-            </ul>
+__GLANCERF_MENU_PANEL__
         </div>
     </div>
-    <div class="setup-container">
+    <div class="glancerf-page-container setup-container">
         <h1>GlanceRF Setup</h1>
 
         <div class="setup-tabs">
@@ -99,12 +92,27 @@
                     <span class="setup-callsign-hyphen">-</span>
                     <input type="text" id="setup_ssid" name="setup_ssid" value="{current_ssid_esc}" placeholder="01" maxlength="2" pattern="[0-9][0-9]?" class="setup-ssid-input" title="APRS SSID (e.g. 01). Used as callsign-SSID when connecting.">
                 </div>
-                <span style="font-size:12px;">Used as default by modules (e.g. Callsign / QTH) and for APRS-IS. SSID is used as callsign-SSID when connecting (default 01 if blank).</span>
+                <span style="font-size:12px;">Callsign is the default used by modules unless overwritten per module.<br>SSID is used when connecting to services such as APRS-IS.</span>
             </div>
             <div class="form-group">
                 <label for="setup_location">Default location</label>
                 <input type="text" id="setup_location" name="setup_location" value="{current_location_esc}" placeholder="Grid square (e.g. RE78hk) or lat,lng (e.g. -43.5,172.6)" maxlength="64">
-                <span style="font-size:12px;">Default for modules that use a location (e.g. Weather, Sunrise/Sunset) unless overridden per cell.</span>
+                <span style="font-size:12px;">Default for modules that use a location (e.g. Weather, Sunrise/Sunset) unless overridden per module.</span>
+            </div>
+            <div class="form-group setup-aprs-cache-section">
+                <h3 class="setup-section-heading">APRS cache</h3>
+                <div class="setup-aprs-cache-grid">
+                    <div class="form-group">
+                        <label for="aprs_cache_max_size_mb">Max size (MB)</label>
+                        <input type="number" id="aprs_cache_max_size_mb" name="aprs_cache_max_size_mb" value="{current_aprs_cache_max_size_mb}" min="100" max="10000" step="100" title="Max file size in MB before purging">
+                        <span class="form-hint">Max cache file size in MB. 100–10,000 MB (100 MB–10 GB). Default 500 MB. Enter 1024 for 1 GB.</span>
+                    </div>
+                    <div class="form-group">
+                        <label for="aprs_cache_max_age_hours">Max age (hours)</label>
+                        <input type="number" id="aprs_cache_max_age_hours" name="aprs_cache_max_age_hours" value="{current_aprs_cache_max_age_hours}" min="1" max="8760" step="1" title="Purge records older than this">
+                        <span class="form-hint">Purge records older than this. 1–8760 (1 year). Default 168 (7 days).</span>
+                    </div>
+                </div>
             </div>
             <div class="form-group">
                 <label for="update_mode">Updates</label>
@@ -125,7 +133,7 @@
                     <option value="1"{telemetry_enabled_selected}>Enabled</option>
                     <option value="0"{telemetry_disabled_selected}>Disabled (Opt-out)</option>
                 </select>
-                <span style="font-size:12px;">Help improve GlanceRF by sending anonymous usage data (version, system info, module counts). No personal information, callsigns, or locations are collected. You can opt-out at any time. <a href="https://github.com/pomtom44/GlanceRF/blob/main/Project/docs/TELEMETRY.md" target="_blank" rel="noopener noreferrer" style="color:#0f0;">Review the telemetry policy on GitHub</a>.</span>
+                <span style="font-size:12px;">Help improve GlanceRF by sending anonymous usage data (version, system info, module counts).<br>No personal information, callsigns, or locations are collected. You can opt-out at any time.<br><a href="https://github.com/pomtom44/GlanceRF/blob/main/Project/docs/TELEMETRY.md" target="_blank" rel="noopener noreferrer" style="color:#0f0;">Review the telemetry policy on GitHub</a>.</span>
             </div>
             <div class="button-row">
                 <button type="button" id="setup-back-btn">Back</button>
@@ -135,8 +143,9 @@
             <div id="setup-page-3" class="setup-page">
             <div class="form-group setup-tips-content">
                 <h2 style="color:#0f0; font-size:20px; margin-bottom:16px;">Menu</h2>
-                <p style="color:#ccc; font-size:14px; line-height:1.6; margin-bottom:12px;">Press <strong style="color:#0f0;">M</strong> to open the menu. From the menu you can go to Setup, Layout & Config editor, Modules list, or run Manual Updates.</p>
-                <p style="color:#ccc; font-size:14px; line-height:1.6; margin-bottom:16px;">The shortcut is ignored when the cursor is in a text field, so you can type normally in inputs.</p>
+                <p style="color:#ccc; font-size:14px; line-height:1.6; margin-bottom:12px;">Right-click or press <strong>M</strong> to open the menu. From the menu you can go to Setup, Layout & Config editor, Modules list, or run Manual Updates.</p>
+                <h2 style="color:#0f0; font-size:20px; margin-bottom:16px;">Map only modules</h2>
+                <p style="color:#ccc; font-size:14px; line-height:1.6; margin-bottom:12px;">Use <a href="/map-modules" style="color:#0f0;">Map only modules</a> to add modules that feed data to the map overlay (e.g. satellites, APRS) without taking a grid cell on the main dashboard.</p>
                 <h2 style="color:#0f0; font-size:20px; margin-bottom:16px;">GPIO</h2>
                 {setup_gpio_section}
                 <h2 style="color:#0f0; font-size:20px; margin-bottom:16px;">Setup guides</h2>
@@ -154,23 +163,6 @@
 
     <script>
         window.SETUP_CONFIG = {setup_config_json};
-    </script>
-    <script>
-        document.addEventListener('keydown', function(event) {{
-            var isInputFocused = document.activeElement && (document.activeElement.tagName === 'INPUT' || document.activeElement.tagName === 'SELECT' || document.activeElement.tagName === 'TEXTAREA' || document.activeElement.isContentEditable);
-            if (isInputFocused) return;
-            if (event.key === 'm' || event.key === 'M') {{
-                event.preventDefault();
-                var menu = document.getElementById('glancerf-menu');
-                if (menu) menu.classList.toggle('open');
-            }}
-            if (event.key === 'Escape') {{
-                var menu = document.getElementById('glancerf-menu');
-                if (menu && menu.classList.contains('open')) {{ menu.classList.remove('open'); event.preventDefault(); }}
-            }}
-        }});
-        var o = document.getElementById('glancerf-menu-overlay');
-        if (o) o.addEventListener('click', function() {{ var m = document.getElementById('glancerf-menu'); if (m) m.classList.remove('open'); }});
     </script>
     <script src="/static/js/menu.js?v=__CACHE_BUST__"></script>
     <script src="/static/js/setup.js?v=__CACHE_BUST__"></script>

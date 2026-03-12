@@ -9,6 +9,7 @@ HF data source: KC2G (prop.kc2g.com) GIRO station data, same as referenced in
 """
 
 import math
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from typing import Any
 
 import httpx
@@ -19,7 +20,7 @@ _log = get_logger("map.propagation_service")
 
 _KC2G_STATIONS_JSON_URL = "https://prop.kc2g.com/api/stations.json"
 _OPENMETEO_URL = "https://api.open-meteo.com/v1/forecast"
-_FETCH_TIMEOUT = 25
+_FETCH_TIMEOUT = 15
 _TROPO_GRID_LAT = [-60, -30, 0, 30, 60]
 _TROPO_GRID_LON = [-180, -135, -90, -45, 0, 45, 90, 135]
 
@@ -90,33 +91,44 @@ def _refractivity(t_c: float, rh_pct: float, p_hpa: float) -> float:
     return n_dry + n_wet
 
 
+def _fetch_tropo_point(lat: float, lon: float) -> tuple[float, float, float] | None:
+    """Fetch one Open-Meteo point; returns (lon, lat, N) or None on failure."""
+    try:
+        with httpx.Client(timeout=_FETCH_TIMEOUT, follow_redirects=True) as client:
+            resp = client.get(
+                _OPENMETEO_URL,
+                params={
+                    "latitude": lat,
+                    "longitude": lon,
+                    "current": "temperature_2m,relative_humidity_2m,surface_pressure",
+                    "timezone": "UTC",
+                },
+            )
+            resp.raise_for_status()
+            data = resp.json()
+            cur = data.get("current") or {}
+            t = cur.get("temperature_2m")
+            rh = cur.get("relative_humidity_2m")
+            p = cur.get("surface_pressure")
+            if t is None or rh is None or p is None:
+                return None
+            n = _refractivity(float(t), float(rh), float(p))
+            return (lon, lat, n)
+    except Exception as e:
+        _log.debug("Open-Meteo point %s,%s failed: %s", lat, lon, e)
+        return None
+
+
 def fetch_tropo_grid() -> list[tuple[float, float, float]]:
     """Fetch weather for a coarse global grid and return list of (lon, lat, refractivity N)."""
     coords: list[tuple[float, float, float]] = []
-    params = {
-        "current": "temperature_2m,relative_humidity_2m,surface_pressure",
-        "timezone": "UTC",
-    }
-    with httpx.Client(timeout=_FETCH_TIMEOUT, follow_redirects=True) as client:
-        for lat in _TROPO_GRID_LAT:
-            for lon in _TROPO_GRID_LON:
-                try:
-                    resp = client.get(
-                        _OPENMETEO_URL,
-                        params={**params, "latitude": lat, "longitude": lon},
-                    )
-                    resp.raise_for_status()
-                    data = resp.json()
-                    cur = data.get("current") or {}
-                    t = cur.get("temperature_2m")
-                    rh = cur.get("relative_humidity_2m")
-                    p = cur.get("surface_pressure")
-                    if t is None or rh is None or p is None:
-                        continue
-                    n = _refractivity(float(t), float(rh), float(p))
-                    coords.append((lon, lat, n))
-                except Exception as e:
-                    _log.debug("Open-Meteo point %s,%s failed: %s", lat, lon, e)
+    points = [(lat, lon) for lat in _TROPO_GRID_LAT for lon in _TROPO_GRID_LON]
+    with ThreadPoolExecutor(max_workers=8) as executor:
+        futures = {executor.submit(_fetch_tropo_point, lat, lon): (lat, lon) for lat, lon in points}
+        for future in as_completed(futures):
+            result = future.result()
+            if result is not None:
+                coords.append(result)
     _log.debug("Tropo grid points: %d", len(coords))
     return coords
 

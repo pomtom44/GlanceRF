@@ -1,6 +1,7 @@
-"""Shows your callsign, grid square (QTH), and an optional comment. Uses Setup callsign and location if you leave the cell fields blank."""
+"""Shows your callsign, grid square (QTH), and an optional comment. Uses Setup callsign and location if you leave the cell fields blank. GPIO input for On The Air toggle."""
 
-# Value is two chars: symbol table (/) or (\) + symbol character. APRS: /- = House QTH, /[ = Human.
+from glancerf.modules.loader import load_assets
+
 QTH_MAP_ICON_OPTIONS = [
     {"value": "/-", "label": "House"},
     {"value": "/>", "label": "Car"},
@@ -15,10 +16,15 @@ QTH_MAP_ICON_OPTIONS = [
     {"value": "/[", "label": "Person"},
 ]
 
+inner_html, css, js = load_assets(__file__)
+
 MODULE = {
     "id": "callsign",
     "name": "Callsign / QTH",
     "color": "#0d1117",
+    "inner_html": inner_html,
+    "css": css,
+    "js": js,
     "settings": [
         {"id": "callsign", "label": "Callsign", "type": "text", "default": ""},
         {"id": "grid", "label": "Grid square / QTH", "type": "text", "default": ""},

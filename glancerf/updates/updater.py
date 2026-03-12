@@ -1,6 +1,7 @@
 """
-Auto-updater for GlanceRF
-Downloads and installs updates from GitHub releases
+Auto-updater for GlanceRF.
+Downloads and installs updates from GitHub releases.
+In Docker (GLANCERF_DOCKER=1): perform_auto_update returns early with a message to pull new image.
 """
 
 import asyncio
@@ -21,18 +22,13 @@ from glancerf.config import DETAILED_LEVEL, get_logger
 
 _log = get_logger("updater")
 
-# GitHub API (same as update_checker) for release-by-tag
 GITHUB_RELEASE_BY_TAG = "https://api.github.com/repos/pomtom44/GlanceRF/releases/tags/{tag}"
 GITHUB_HEADERS = {"Accept": "application/vnd.github.v3+json", "User-Agent": "GlanceRF-updater"}
 
-# Constants
-ITEMS_TO_UPDATE = ["glancerf", "run.py", "requirements.txt"]
-ITEMS_TO_BACKUP = ["glancerf", "run.py", "requirements.txt", "glancerf_config.json"]
-# Never overwrite or delete these at app root (user data / config)
+ITEMS_TO_UPDATE = ["glancerf", "run.py", "requirements"]
+ITEMS_TO_BACKUP = ["glancerf", "run.py", "requirements", "glancerf_config.json"]
 PROTECTED_APP_ROOT_FILES = ["glancerf_config.json"]
-RESTART_DELAY_SECONDS = 10
 
-# Progress for web UI (running, step, message; when done: success, final_message)
 _update_progress = {
     "running": False,
     "step": "",
@@ -53,127 +49,100 @@ def _set_progress(step: str, message: str = "") -> None:
 
 
 def get_app_root() -> Path:
-    """Get the root directory of the application."""
-    # This file is in glancerf/updates/, so go up two levels to Project/
-    return Path(__file__).parent.parent.parent.resolve()
+    """Get the root directory of the application (Project/)."""
+    return Path(__file__).resolve().parent.parent.parent
 
 
 def get_staging_dir() -> Path:
     """Get the staging directory for updates."""
-    app_root = get_app_root()
-    staging = app_root / ".update_staging"
+    staging = get_app_root() / ".update_staging"
     staging.mkdir(exist_ok=True)
     return staging
 
 
 def get_backup_dir() -> Path:
     """Get the backup directory for rollback."""
-    app_root = get_app_root()
-    backup = app_root / ".update_backup"
+    backup = get_app_root() / ".update_backup"
     backup.mkdir(exist_ok=True)
     return backup
 
 
 async def download_release_zip(release_url: str, target_path: Path) -> bool:
-    """
-    Download a release ZIP file from GitHub.
-    """
-    _log.debug("Downloading update from %s to %s", release_url[:80], target_path)
+    """Download a release ZIP file from GitHub."""
     try:
         async with httpx.AsyncClient(timeout=60.0, follow_redirects=True) as client:
-            async with client.stream('GET', release_url) as response:
-                _log.debug("Download response status=%s headers=%s", response.status_code, dict(response.headers))
+            async with client.stream("GET", release_url) as response:
                 response.raise_for_status()
-                with open(target_path, 'wb') as f:
+                with open(target_path, "wb") as f:
                     async for chunk in response.aiter_bytes():
                         f.write(chunk)
-        _log.debug("Download complete: %s (%s bytes)", target_path, target_path.stat().st_size if target_path.exists() else 0)
         return True
     except Exception as e:
-        _log.debug("Download failed: %s", e, exc_info=True)
+        _log.debug("Download failed: %s", e)
         return False
 
 
 async def get_release_zip_url(version: str) -> Optional[str]:
-    """
-    Get the ZIP download URL for a GitHub release.
-    Uses GitHub API release-by-tag (zipball_url); fallback to archive URL with HEAD check.
-    """
+    """Get the ZIP download URL for a GitHub release."""
     tag = f"v{version}" if not version.startswith("v") else version
     try:
-        # 1) Prefer GitHub API: get release by tag and use zipball_url (follows redirects on GET)
         api_url = GITHUB_RELEASE_BY_TAG.format(tag=tag)
-        _log.debug("Getting release zip URL for %s via API: %s", version, api_url)
         async with httpx.AsyncClient(timeout=15.0, follow_redirects=True) as client:
             response = await client.get(api_url, headers=GITHUB_HEADERS)
-            _log.debug("GitHub API release-by-tag response: status=%s", response.status_code)
             if response.status_code == 200:
                 data = response.json()
                 zip_url = data.get("zipball_url")
                 if zip_url:
-                    _log.debug("Using zipball_url: %s", zip_url)
                     return zip_url
-                _log.debug("Release JSON has no zipball_url")
-            else:
-                _log.debug("GitHub API returned %s: %s", response.status_code, response.text[:200] if response.text else "")
-
-        # 2) Fallback: construct archive URL and verify with HEAD (accept 200 or 302)
-        repo = "pomtom44/GlanceRF"
         for candidate_tag in (tag, version):
-            zip_url = f"https://github.com/{repo}/archive/refs/tags/{candidate_tag}.zip"
-            _log.debug("Fallback: HEAD %s", zip_url)
+            zip_url = f"https://github.com/pomtom44/GlanceRF/archive/refs/tags/{candidate_tag}.zip"
             async with httpx.AsyncClient(timeout=10.0, follow_redirects=True) as client:
-                response = await client.head(zip_url)
-                _log.debug("HEAD response: status=%s", response.status_code)
-                if response.status_code in (200, 302):
+                r = await client.head(zip_url)
+                if r.status_code in (200, 302):
                     return zip_url
-        return None
     except Exception as e:
-        _log.debug("Failed to get release URL: %s", e, exc_info=True)
-        return None
+        _log.debug("Failed to get release URL: %s", e)
+    return None
 
 
 def extract_zip(zip_path: Path, extract_to: Path) -> bool:
     """Extract a ZIP file to a directory."""
-    _log.debug("Extracting %s to %s", zip_path, extract_to)
     try:
         extract_to.mkdir(parents=True, exist_ok=True)
-        with zipfile.ZipFile(zip_path, 'r') as zip_ref:
-            names = zip_ref.namelist()
-            _log.debug("ZIP contains %s entries (first few: %s)", len(names), names[:5] if names else [])
-            zip_ref.extractall(extract_to)
-        _log.debug("Extract complete; extract_to contents: %s", [p.name for p in extract_to.iterdir()] if extract_to.exists() else [])
+        with zipfile.ZipFile(zip_path, "r") as zf:
+            zf.extractall(extract_to)
         return True
     except Exception as e:
-        _log.debug("Extract failed: %s", e, exc_info=True)
+        _log.debug("Extract failed: %s", e)
         return False
 
 
 def get_extracted_root(extract_dir: Path) -> Optional[Path]:
-    """Find the root directory inside the extracted ZIP (app root with glancerf/ and run.py)."""
-    _log.debug("Finding extracted root in %s; top-level items: %s", extract_dir, [p.name for p in extract_dir.iterdir()] if extract_dir.exists() else [])
+    """Find the Project directory inside the extracted ZIP (handles V2/Project or Project at root)."""
+    # Direct Project/ at root
     project_dir = extract_dir / "Project"
-    if project_dir.exists() and project_dir.is_dir():
-        if (project_dir / "run.py").exists() and (project_dir / "glancerf").exists():
-            _log.debug("Found Project at %s", project_dir)
-            return project_dir
+    if project_dir.exists() and (project_dir / "run.py").exists() and (project_dir / "glancerf").exists():
+        return project_dir
+    # V2/Project (repo structure with V2 folder)
+    v2_project = extract_dir / "V2" / "Project"
+    if v2_project.exists() and (v2_project / "run.py").exists() and (v2_project / "glancerf").exists():
+        return v2_project
+    # Top-level dirs (e.g. pomtom44-GlanceRF-xxx or GlanceRF-main)
     for item in extract_dir.iterdir():
         if item.is_dir():
-            project_in_sub = item / "Project"
-            if project_in_sub.exists() and project_in_sub.is_dir():
-                if (project_in_sub / "run.py").exists() and (project_in_sub / "glancerf").exists():
-                    _log.debug("Found Project in subdir: %s", project_in_sub)
-                    return project_in_sub
+            sub_project = item / "Project"
+            if sub_project.exists() and (sub_project / "run.py").exists():
+                return sub_project
+            v2_sub = item / "V2" / "Project"
+            if v2_sub.exists() and (v2_sub / "run.py").exists():
+                return v2_sub
             if (item / "run.py").exists() and (item / "glancerf").exists():
-                _log.debug("Found app root at subdir: %s", item)
                 return item
-    _log.debug("No Project or app root found in %s", extract_dir)
     return None
 
 
 def backup_current_installation(backup_dir: Path) -> bool:
     """Backup the current installation for rollback."""
-    _log.debug("Backing up current installation to %s", backup_dir)
     try:
         app_root = get_app_root()
         if backup_dir.exists():
@@ -183,28 +152,20 @@ def backup_current_installation(backup_dir: Path) -> bool:
             src = app_root / item
             if src.exists():
                 dst = backup_dir / item
-                _log.debug("Backup item: %s -> %s", src, dst)
                 if src.is_dir():
                     shutil.copytree(src, dst)
                 else:
                     shutil.copy2(src, dst)
-        version_info = {"version": __version__, "backup_timestamp": time.time()}
-        with open(backup_dir / "version.json", 'w') as f:
-            json.dump(version_info, f)
-        _log.debug("Backup complete; version=%s", __version__)
+        with open(backup_dir / "version.json", "w") as f:
+            json.dump({"version": __version__, "backup_timestamp": time.time()}, f)
         return True
     except Exception as e:
-        _log.error("Backup failed: %s", e, exc_info=True)
+        _log.error("Backup failed: %s", e)
         return False
 
 
 def _merge_glancerf_dir(src: Path, dst: Path) -> None:
-    """
-    Copy src (extracted glancerf/) to dst (app glancerf/).
-    For glancerf/modules/ we merge: copy __init__.py and each subdir from update;
-    preserve dst/modules/_custom/. Then remove from dst any file or dir that is
-    not in the update (obsolete files), except _custom under modules.
-    """
+    """Merge glancerf/ from update into dst, preserving modules/_custom/."""
     for entry in src.iterdir():
         dst_entry = dst / entry.name
         if entry.is_file():
@@ -213,18 +174,15 @@ def _merge_glancerf_dir(src: Path, dst: Path) -> None:
             shutil.copy2(entry, dst_entry)
         elif entry.is_dir():
             if entry.name == "modules":
-                # Merge modules: copy __init__.py and each subdir from update; preserve dst _custom/
-                dst.mkdir(parents=True, exist_ok=True)
                 modules_dst = dst / "modules"
                 modules_dst.mkdir(parents=True, exist_ok=True)
                 for sub in entry.iterdir():
+                    sub_dst = modules_dst / sub.name
                     if sub.is_file():
-                        sub_dst = modules_dst / sub.name
                         if sub_dst.exists():
                             sub_dst.unlink()
                         shutil.copy2(sub, sub_dst)
                     elif sub.is_dir():
-                        sub_dst = modules_dst / sub.name
                         if sub_dst.exists():
                             shutil.rmtree(sub_dst)
                         shutil.copytree(sub, sub_dst)
@@ -232,27 +190,19 @@ def _merge_glancerf_dir(src: Path, dst: Path) -> None:
                 if dst_entry.exists():
                     shutil.rmtree(dst_entry)
                 shutil.copytree(entry, dst_entry)
-
-    # Remove obsolete files/dirs in dst that are not in the update (except _custom)
     for entry in list(dst.iterdir()):
         if (src / entry.name).exists():
             continue
         if entry.name == "modules":
-            modules_src = src / "modules"
-            modules_dst = dst / "modules"
-            if not modules_dst.is_dir():
-                continue
-            for sub in list(modules_dst.iterdir()):
+            for sub in list((dst / "modules").iterdir()):
                 if sub.name == "_custom":
                     continue
-                if not (modules_src / sub.name).exists():
-                    _log.debug("Removing obsolete: %s", sub)
+                if not (src / "modules" / sub.name).exists():
                     if sub.is_dir():
                         shutil.rmtree(sub)
                     else:
                         sub.unlink()
         else:
-            _log.debug("Removing obsolete: %s", entry)
             if entry.is_dir():
                 shutil.rmtree(entry)
             else:
@@ -261,19 +211,15 @@ def _merge_glancerf_dir(src: Path, dst: Path) -> None:
 
 def apply_update(extracted_root: Path) -> Tuple[bool, str]:
     """Apply the update by copying files from extracted update to app root."""
-    _log.debug("Applying update from %s", extracted_root)
     try:
         app_root = get_app_root()
         for item in ITEMS_TO_UPDATE:
             if item in PROTECTED_APP_ROOT_FILES:
-                _log.debug("Skip (protected): %s", item)
                 continue
             src = extracted_root / item
             dst = app_root / item
             if not src.exists():
-                _log.debug("Skip (missing): %s", src)
                 continue
-            _log.debug("Apply item: %s -> %s", src, dst)
             if item == "glancerf" and src.is_dir():
                 if dst.exists() and dst.is_dir():
                     _merge_glancerf_dir(src, dst)
@@ -283,116 +229,139 @@ def apply_update(extracted_root: Path) -> Tuple[bool, str]:
                     shutil.copytree(src, dst)
                 continue
             if dst.exists():
-                if dst.is_dir():
-                    shutil.rmtree(dst)
-                else:
-                    dst.unlink()
+                shutil.rmtree(dst) if dst.is_dir() else dst.unlink()
             if src.is_dir():
                 shutil.copytree(src, dst)
             else:
                 shutil.copy2(src, dst)
-        _log.debug("Apply update complete")
         return True, ""
     except Exception as e:
-        _log.error("Update apply failed: %s", e, exc_info=True)
+        _log.error("Apply failed: %s", e)
         return False, str(e)
 
 
 def install_requirements(app_root: Path) -> Tuple[bool, str]:
-    """
-    Run pip install -r requirements.txt from app_root so new dependencies
-    (e.g. feedparser) are installed after an update.
-    Uses the same Python executable that is running the app.
-    On Linux with PEP 668 (externally-managed-environment), retries with
-    --break-system-packages so headless/system installs can update deps.
-    """
-    req_file = app_root / "requirements.txt"
-    if not req_file.is_file():
-        _log.debug("No requirements.txt at %s, skipping pip install", req_file)
+    """Run pip install for requirements in requirements/ folder."""
+    req_dir = app_root / "requirements"
+    if not req_dir.is_dir():
         return True, ""
-    _log.debug("Installing requirements from %s", req_file)
-    try:
-        result = subprocess.run(
-            [sys.executable, "-m", "pip", "install", "-r", str(req_file)],
-            cwd=str(app_root),
-            capture_output=True,
-            text=True,
-            timeout=300,
-        )
-        if result.returncode == 0:
-            _log.debug("pip install -r requirements.txt succeeded")
-            return True, ""
-        err = (result.stderr or result.stdout or "").strip() or "pip install failed"
-        if "externally-managed-environment" in err:
-            _log.debug("Retrying pip with --break-system-packages (Linux PEP 668)")
-            result2 = subprocess.run(
-                [sys.executable, "-m", "pip", "install", "--break-system-packages", "-r", str(req_file)],
+    req_files = list(req_dir.glob("*.txt"))
+    if not req_files:
+        return True, ""
+    for req_file in req_files:
+        try:
+            result = subprocess.run(
+                [sys.executable, "-m", "pip", "install", "-r", str(req_file)],
                 cwd=str(app_root),
                 capture_output=True,
                 text=True,
                 timeout=300,
             )
-            if result2.returncode == 0:
-                _log.debug("pip install --break-system-packages succeeded")
-                return True, ""
-            err = (result2.stderr or result2.stdout or "").strip() or "pip install failed"
-        _log.warning("pip install -r requirements.txt failed: %s", err[:500])
-        return False, err[:500]
-    except subprocess.TimeoutExpired:
-        _log.warning("pip install -r requirements.txt timed out")
-        return False, "pip install timed out"
+            if result.returncode != 0:
+                err = (result.stderr or result.stdout or "").strip() or "pip install failed"
+                if "externally-managed-environment" in err and sys.platform != "win32":
+                    result2 = subprocess.run(
+                        [sys.executable, "-m", "pip", "install", "--break-system-packages", "-r", str(req_file)],
+                        cwd=str(app_root),
+                        capture_output=True,
+                        text=True,
+                        timeout=300,
+                    )
+                    if result2.returncode != 0:
+                        return False, (result2.stderr or result2.stdout or "")[:500]
+                else:
+                    return False, err[:500]
+        except subprocess.TimeoutExpired:
+            return False, "pip install timed out"
+        except Exception as e:
+            return False, str(e)
+    return True, ""
+
+
+def restore_from_backup(backup_dir: Path) -> bool:
+    """Restore installation from backup (rollback)."""
+    try:
+        app_root = get_app_root()
+        if not backup_dir.exists():
+            return False
+        for item in backup_dir.iterdir():
+            if item.name == "version.json":
+                continue
+            dst = app_root / item.name
+            if dst.exists():
+                shutil.rmtree(dst) if dst.is_dir() else dst.unlink()
+            if item.is_dir():
+                shutil.copytree(item, dst)
+            else:
+                shutil.copy2(item, dst)
+        return True
+    except Exception:
+        return False
+
+
+def create_restart_script() -> Optional[Path]:
+    """Create a script to restart the application after update."""
+    try:
+        app_root = get_app_root()
+        if sys.platform == "win32":
+            bat_path = app_root / "restart_after_update.bat"
+            bat_content = f'@echo off\ncd /d "{app_root}"\ntimeout /t 2 /nobreak >nul\n{sys.executable} run.py\n'
+            with open(bat_path, "w") as f:
+                f.write(bat_content)
+            return bat_path
+        else:
+            sh_path = app_root / "restart_after_update.sh"
+            sh_content = f'#!/bin/sh\ncd "{app_root}"\nsleep 2\nexec "{sys.executable}" run.py\n'
+            with open(sh_path, "w") as f:
+                f.write(sh_content)
+            os.chmod(sh_path, 0o755)
+            return sh_path
     except Exception as e:
-        _log.warning("pip install -r requirements.txt error: %s", e)
-        return False, str(e)
+        _log.error("Failed to create restart script: %s", e)
+        return None
 
 
 async def perform_auto_update(version: str) -> Tuple[bool, str]:
-    """Perform automatic update: download, extract, backup, and apply."""
+    """Perform automatic update. In Docker, returns early with message to pull new image."""
+    if os.environ.get("GLANCERF_DOCKER"):
+        return False, "In Docker: pull the new image and recreate the container. In-app update is not supported."
+
     _update_progress["running"] = True
     _update_progress["success"] = None
     _update_progress["final_message"] = None
     _log.log(DETAILED_LEVEL, "Auto-update started: %s (current %s)", version, __version__)
+
     try:
         staging_dir = get_staging_dir()
         backup_dir = get_backup_dir()
-        _log.debug("Staging dir=%s backup dir=%s", staging_dir, backup_dir)
 
-        # Step 1: Get download URL
         _set_progress("Getting download URL", "Fetching release info from GitHub...")
-        _log.debug("Step 1: Getting release download URL for %s", version)
         zip_url = await get_release_zip_url(version)
         if not zip_url:
-            _log.debug("get_release_zip_url returned None for version=%s", version)
             _update_progress["running"] = False
             _update_progress["success"] = False
             _update_progress["final_message"] = "Could not find release download URL"
             return False, "Could not find release download URL"
 
-        # Step 2: Download ZIP
         zip_path = staging_dir / f"update_{version}.zip"
         _set_progress("Downloading", f"Downloading update {version}...")
-        _log.debug("Step 2: Downloading to %s", zip_path)
         if not await download_release_zip(zip_url, zip_path):
             _update_progress["running"] = False
             _update_progress["success"] = False
             _update_progress["final_message"] = "Failed to download update"
             return False, "Failed to download update"
 
-        # Step 3: Extract ZIP
         extract_dir = staging_dir / f"extracted_{version}"
         if extract_dir.exists():
             shutil.rmtree(extract_dir)
         _set_progress("Extracting", "Extracting archive...")
-        _log.debug("Step 3: Extracting to %s", extract_dir)
         if not extract_zip(zip_path, extract_dir):
             _update_progress["running"] = False
             _update_progress["success"] = False
             _update_progress["final_message"] = "Failed to extract update"
             return False, "Failed to extract update"
 
-        # Step 4: Find Project/ directory
         _set_progress("Preparing", "Locating update files...")
-        _log.debug("Step 4: Finding Project directory in extracted files")
         extracted_root = get_extracted_root(extract_dir)
         if not extracted_root:
             _update_progress["running"] = False
@@ -400,51 +369,37 @@ async def perform_auto_update(version: str) -> Tuple[bool, str]:
             _update_progress["final_message"] = "Could not find Project directory in update"
             return False, "Could not find Project directory in update"
 
-        # Step 5: Backup
         _set_progress("Backing up", "Backing up current installation...")
-        _log.debug("Step 5: Backing up current installation")
         if not backup_current_installation(backup_dir):
             _update_progress["running"] = False
             _update_progress["success"] = False
-            _update_progress["final_message"] = "Failed to backup current installation"
-            return False, "Failed to backup current installation"
+            _update_progress["final_message"] = "Failed to backup"
+            return False, "Failed to backup"
 
-        # Step 6: Apply update
         _set_progress("Applying", "Applying update files...")
-        _log.debug("Step 6: Applying update")
         success, error = apply_update(extracted_root)
         if not success:
-            _log.debug("Apply failed, restoring from backup")
             restore_from_backup(backup_dir)
             _update_progress["running"] = False
             _update_progress["success"] = False
-            _update_progress["final_message"] = f"Failed to apply update: {error}"
-            return False, f"Failed to apply update: {error}"
+            _update_progress["final_message"] = f"Failed to apply: {error}"
+            return False, f"Failed to apply: {error}"
 
-        # Step 6b: Install/upgrade dependencies from new requirements.txt
-        _set_progress("Installing dependencies", "Running pip install -r requirements.txt...")
+        _set_progress("Installing dependencies", "Running pip install...")
         app_root = get_app_root()
         pip_ok, pip_err = install_requirements(app_root)
         if not pip_ok:
-            _log.warning("Dependency install failed after update: %s", pip_err)
-            msg = (
-                f"Update to {version} installed successfully. Restart required. "
-                "Dependency install failed; run manually: pip install -r requirements.txt"
-            )
+            msg = f"Update to {version} installed. Restart required. Dependency install failed: {pip_err}"
             _update_progress["running"] = False
             _update_progress["success"] = True
             _update_progress["final_message"] = msg
             return True, msg
 
-        # Step 7: Clean up staging
-        _set_progress("Cleaning up", "Removing temporary files...")
         try:
             shutil.rmtree(staging_dir)
-            _log.debug("Staging directory removed")
-        except Exception as e:
-            _log.debug("Failed to clean staging directory: %s", e)
+        except Exception:
+            pass
 
-        _log.log(DETAILED_LEVEL, "Auto-update completed: %s", version)
         msg = f"Update to {version} installed successfully. Restart required."
         _update_progress["running"] = False
         _update_progress["success"] = True
@@ -452,91 +407,8 @@ async def perform_auto_update(version: str) -> Tuple[bool, str]:
         return True, msg
 
     except Exception as e:
-        _log.log(DETAILED_LEVEL, "Auto-update failed: %s", e)
-        _log.debug("Update failed with exception: %s", e, exc_info=True)
+        _log.debug("Update failed: %s", e, exc_info=True)
         _update_progress["running"] = False
         _update_progress["success"] = False
         _update_progress["final_message"] = f"Update failed: {str(e)}"
-        return False, f"Update failed: {str(e)}"
-
-
-def restore_from_backup(backup_dir: Path) -> bool:
-    """
-    Restore installation from backup (rollback).
-    
-    Args:
-        backup_dir: Directory containing backup
-    
-    Returns:
-        True if successful, False otherwise
-    """
-    try:
-        app_root = get_app_root()
-        
-        if not backup_dir.exists():
-            return False
-        
-        # Restore each backed up item
-        for item in backup_dir.iterdir():
-            if item.name == "version.json":
-                continue
-            
-            src = item
-            dst = app_root / item.name
-            
-            # Remove destination if it exists
-            if dst.exists():
-                if dst.is_dir():
-                    shutil.rmtree(dst)
-                else:
-                    dst.unlink()
-            
-            # Restore from backup
-            if src.is_dir():
-                shutil.copytree(src, dst)
-            else:
-                shutil.copy2(src, dst)
-        
-        return True
-    except Exception:
-        return False
-
-
-def create_restart_script() -> Optional[Path]:
-    """
-    Create a script to restart the application after update.
-    This is platform-specific.
-    
-    Returns:
-        Path to the restart script, or None if not supported
-    """
-    try:
-        app_root = get_app_root()
-        script_path = app_root / "restart_after_update.py"
-        
-        if sys.platform == "win32":
-            # Windows: Create a batch script
-            bat_path = app_root / "restart_after_update.bat"
-            bat_content = f"""@echo off
-cd /d "{app_root}"
-timeout /t 2 /nobreak >nul
-python run.py
-"""
-            with open(bat_path, 'w') as f:
-                f.write(bat_content)
-            return bat_path
-        else:
-            # Unix-like: Create a shell script
-            sh_path = app_root / "restart_after_update.sh"
-            sh_content = f"""#!/bin/bash
-cd "{app_root}"
-sleep 2
-python3 run.py
-"""
-            with open(sh_path, 'w') as f:
-                f.write(sh_content)
-            os.chmod(sh_path, 0o755)
-            return sh_path
-    except Exception as e:
-        _log.error("Failed to create restart script: %s", e)
-        return None
+        return False, str(e)

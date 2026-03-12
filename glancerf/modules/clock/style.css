@@ -1,4 +1,3 @@
-/* Absolutely fill the cell so content can center; text scales with cell size */
 .grid-cell-clock {
     position: relative;
 }

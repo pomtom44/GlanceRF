@@ -15,6 +15,7 @@ body {
     display: flex;
     flex-direction: column;
     overflow: hidden;
+    padding: 0; /* full-width grid editor */
 }
 #aspect-container {
     display: flex;

@@ -15,7 +15,7 @@ _log = get_logger("live_spots.api_routes")
 
 
 def register_routes(app: FastAPI) -> None:
-    """Register GET /api/live_spots/test and GET /api/live_spots/probe."""
+    """Register GET /api/live_spots/test, /api/live_spots/probe, /api/live_spots/spots."""
 
     @app.get("/api/live_spots/test")
     async def test_pull():

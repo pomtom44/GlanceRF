@@ -1,7 +1,6 @@
 """
 Cross-platform restart of GlanceRF services.
-Used by the menu "Restart services" button.
-Works when running as: Windows service, Linux systemd user service, macOS launchd, or desktop (run.py).
+Works when running as: Windows service, Linux systemd, macOS launchd, or run.py.
 """
 
 import os
@@ -12,36 +11,33 @@ from typing import Tuple
 
 from glancerf.config import get_logger
 
-_log = get_logger("utils.restart")
+_log = get_logger("restart")
 
 
 def get_app_root() -> Path:
-    """Project root (parent of glancerf package). This file is in glancerf/utils/, so go up two levels."""
+    """Project root (parent of glancerf package)."""
     return Path(__file__).resolve().parent.parent.parent
 
 
 def _create_and_run_restart_script() -> bool:
-    """
-    Create a platform-specific script that restarts the service (or runs run.py if not a service),
-    then run it detached and return True. Caller should exit the process after this.
-    """
+    """Create and run platform-specific restart script. Returns True on success."""
     app_root = get_app_root()
     try:
         if sys.platform == "win32":
             script_path = app_root / "restart_services.bat"
             script_content = f"""@echo off
 cd /d "{app_root}"
-timeout /t 2 /nobreak >nul
+rem Wait for old process to exit and port to be released
+timeout /t 4 /nobreak >nul
 net stop GlanceRF 2>nul
 timeout /t 2 /nobreak >nul
 net start GlanceRF 2>nul
 if %errorlevel% neq 0 (
-    start "" "{sys.executable}" run.py
+    start "" /D "{app_root}" "{sys.executable}" run.py
 )
 """
             with open(script_path, "w") as f:
                 f.write(script_content)
-            # Run detached so it continues after we exit
             DETACHED_PROCESS = 0x00000008
             subprocess.Popen(
                 ["cmd.exe", "/c", str(script_path)],
@@ -53,10 +49,8 @@ if %errorlevel% neq 0 (
             )
             return True
         else:
-            # Linux and macOS
             script_path = app_root / "restart_services.sh"
             python_exe = sys.executable
-            # Try systemd (Linux) or launchd (macOS); fallback to running run.py
             if sys.platform == "darwin":
                 plist = os.path.expanduser("~/Library/LaunchAgents/com.glancerf.plist")
                 script_content = f"""#!/bin/sh
@@ -95,8 +89,8 @@ systemctl --user restart glancerf 2>/dev/null || exec "{python_exe}" run.py
 
 def trigger_restart() -> Tuple[bool, str]:
     """
-    Trigger a restart of GlanceRF services. Returns (success, message).
-    On success, the caller should exit the process; the script will restart the service or run.py.
+    Trigger a restart of GlanceRF services.
+    Returns (success, message). Caller should exit after success.
     """
     if _create_and_run_restart_script():
         return True, "Restart initiated. The app will come back in a few seconds."

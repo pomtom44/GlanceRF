@@ -1,40 +1,82 @@
 """
-FastAPI application for GlanceRF
-Main web server and API endpoints
+FastAPI application for GlanceRF.
+Main web server and API endpoints.
 """
 
 import asyncio
 import logging
+import os
 import time
 from pathlib import Path
 
-from fastapi import FastAPI, Request
+from fastapi import Depends, FastAPI, Request
 from fastapi.responses import HTMLResponse, FileResponse, Response
 from fastapi.staticfiles import StaticFiles
 
-from glancerf.config import get_config
-from glancerf.config import DETAILED_LEVEL, get_logger, setup_logging
-from glancerf.utils import RateLimitExceeded, rate_limit_exceeded_handler
-from glancerf.web import ConnectionManager
 from glancerf import __version__
-from glancerf.updates.update_checker import UpdateChecker, check_for_updates, get_latest_release_info, compare_versions, is_version_ahead
-from glancerf.services import TelemetrySender, start_aprs_cache, start_cache_warmer, stop_cache_warmer
-from glancerf.routes import api, websocket, layout_routes, setup_routes
-from glancerf.routes.root import register_root
-from glancerf.routes.readonly import run_readonly_server
-from glancerf.routes.modules_routes import register_modules_routes
+from glancerf.config import DETAILED_LEVEL, get_config, get_logger, setup_logging
 from glancerf.routes.gpio_routes import register_gpio_routes
+from glancerf.routes.layout_routes import register_layout_routes
+from glancerf.routes.pages import register_pages
+from glancerf.routes.readonly import run_readonly_server
+from glancerf.routes.root import register_root
+from glancerf.routes.setup_routes import register_setup_routes
+from glancerf.routes.websocket import register_websocket_routes
+from glancerf.web import ConnectionManager
+from glancerf.services import (
+    TelemetrySender,
+    send_telemetry,
+    start_cache_warmer,
+    stop_cache_warmer,
+    start_aprs_cache,
+    stop_aprs_cache,
+    start_satellite_services,
+    stop_satellite_services,
+)
+from glancerf.updates.update_checker import (
+    UpdateChecker,
+    check_for_updates,
+    compare_versions,
+    get_latest_release_info,
+    is_version_ahead,
+)
+from glancerf.utils import get_current_time, rate_limit_dependency, rate_limit_exceeded_handler, trigger_restart
+from glancerf.utils.rate_limit import RateLimitExceeded
 
-# Initialize FastAPI app
+_log = get_logger("main")
+
+
+def _register_module_api_routes():
+    """Register API routes from modules that provide api_routes.py."""
+    from glancerf.modules import get_module_api_packages
+    import importlib
+    for pkg in get_module_api_packages():
+        try:
+            mod = importlib.import_module(pkg + ".api_routes")
+            register_routes = getattr(mod, "register_routes", None)
+            if callable(register_routes):
+                register_routes(app)
+                _log.debug("Registered API routes for module: %s", pkg.split(".")[-1])
+        except Exception as e:
+            _log.warning("Failed to register API routes for %s: %s", pkg, e)
+
+# Load config and set up logging at startup (before first request)
+config = get_config()
+setup_logging(config)
+
 app = FastAPI(title="GlanceRF")
 app.add_exception_handler(RateLimitExceeded, rate_limit_exceeded_handler)
 
-# Request logging: one [DETAILED] line per request when log_level is detailed or verbose
-_log = get_logger("main")
+telemetry_sender = TelemetrySender()
+connection_manager = ConnectionManager()
+update_checker = UpdateChecker(connection_manager)
+
+_project_dir = Path(__file__).resolve().parent.parent
 
 
 @app.middleware("http")
 async def _request_logging(request: Request, call_next):
+    """Log each request when log_level is detailed or verbose."""
     if _log.isEnabledFor(DETAILED_LEVEL):
         start = time.perf_counter()
         response = await call_next(request)
@@ -42,9 +84,6 @@ async def _request_logging(request: Request, call_next):
         _log.log(DETAILED_LEVEL, "%s %s -> %s (%.1f ms)", request.method, request.url.path, response.status_code, duration_ms)
         return response
     return await call_next(request)
-
-# Project folder (parent of glancerf package); logo for favicon and web
-_project_dir = Path(__file__).resolve().parent.parent
 
 
 def _get_logo_path():
@@ -65,18 +104,45 @@ def _serve_logo():
     return Response(status_code=404)
 
 
-# Serve static assets (CSS, JS) from glancerf/web/static
 _web_static = Path(__file__).resolve().parent / "web" / "static"
 if _web_static.is_dir():
     app.mount("/static", StaticFiles(directory=str(_web_static)), name="static")
 
+register_root(app)
+register_layout_routes(app, connection_manager)
+register_setup_routes(app, connection_manager)
+register_gpio_routes(app)
+register_pages(app, connection_manager)
+register_websocket_routes(app, connection_manager)
+_register_module_api_routes()
+
 
 @app.on_event("startup")
-def _set_connection_reset_handler():
-    """Suppress ConnectionResetError when client closes WebSocket (e.g. desktop close)."""
-    import asyncio
-    import logging
+async def _startup():
+    """Start background services and set connection reset handler."""
+    telemetry_sender.start()
+    update_checker.start()
+    start_cache_warmer()
+    start_aprs_cache()
+    start_satellite_services()
+    try:
+        import asyncio
+        loop = asyncio.get_running_loop()
+        from glancerf.gpio import set_broadcast, start_gpio_manager
+        set_broadcast(connection_manager, loop)
+        start_gpio_manager()
+    except ImportError:
+        pass
+    try:
+        from glancerf.services.aprs_cache import set_aprs_broadcast
+        set_aprs_broadcast(connection_manager, asyncio.get_running_loop())
+    except ImportError:
+        pass
+    _set_connection_reset_handler()
 
+
+def _set_connection_reset_handler() -> None:
+    """Suppress ConnectionResetError when client closes connection (e.g. desktop close)."""
     def handler(loop, ctx):
         ex = ctx.get("exception")
         if ex is not None and isinstance(ex, (ConnectionResetError, OSError)):
@@ -98,196 +164,135 @@ def _set_connection_reset_handler():
         pass
 
 
-# Config is loaded on first get_config(); if file is missing, default config is used and saved
-config = get_config()
-setup_logging(config)
-
-# Global connection manager
-connection_manager = ConnectionManager()
-
-# Global update checker
-update_checker = UpdateChecker(connection_manager)
-
-# Global telemetry sender
-telemetry_sender = TelemetrySender()
-
-# Register all routes
-register_root(app)
-layout_routes.register_layout_routes(app, connection_manager)
-setup_routes.register_setup_routes(app, connection_manager)
-register_modules_routes(app, connection_manager)
-register_gpio_routes(app)
-api.register_api_routes(app)
-websocket.register_websocket_routes(app, connection_manager)
-
-_UPDATES_TEMPLATE_PATH = Path(__file__).resolve().parent / "web" / "templates" / "updates" / "index.html"
-_updates_template_cache = None
+@app.on_event("shutdown")
+async def _shutdown():
+    """Stop background services."""
+    telemetry_sender.stop()
+    await update_checker.stop()
+    stop_aprs_cache()
+    stop_satellite_services()
+    try:
+        from glancerf.gpio import stop_gpio_manager
+        stop_gpio_manager()
+    except ImportError:
+        pass
+    stop_cache_warmer()
 
 
-@app.get("/updates", response_class=HTMLResponse)
-async def updates_page():
-    """Updates page: check for updates, show current/latest version and release notes, trigger update."""
-    global _updates_template_cache
-    if _updates_template_cache is None and _UPDATES_TEMPLATE_PATH.is_file():
-        _updates_template_cache = _UPDATES_TEMPLATE_PATH.read_text(encoding="utf-8")
-    if _updates_template_cache is None:
-        return HTMLResponse(content="<h1>Updates</h1><p>Template not found.</p>", status_code=500)
-    import time
-    from glancerf.gpio import get_gpio_menu_html
-    cache_bust = str(int(time.time() * 1000))
-    content = _updates_template_cache.replace("__GLANCERF_GPIO_MENU__", get_gpio_menu_html())
-    content = content.replace("__CACHE_BUST__", cache_bust)
-    return HTMLResponse(content=content)
+@app.get("/api/time")
+async def get_time():
+    """API endpoint for current time (used for startup check)."""
+    return get_current_time()
+
+
+@app.post("/api/restart")
+async def api_restart(_: None = Depends(rate_limit_dependency)):
+    """Restart GlanceRF services. Returns immediately; process may exit shortly after."""
+    _log.debug("POST /api/restart")
+    success, message = trigger_restart()
+    if success:
+
+        async def _exit_after_delay():
+            await asyncio.sleep(1)
+            os._exit(0)
+
+        asyncio.create_task(_exit_after_delay())
+    return {"success": success, "message": message}
+
+
+@app.post("/api/telemetry/test")
+async def test_telemetry(_: None = Depends(rate_limit_dependency)):
+    """Test endpoint to manually trigger telemetry (for debugging)."""
+    result = await send_telemetry("test", {"manual_trigger": True})
+    return {"status": "success" if result else "failed", "message": "Telemetry sent" if result else "Telemetry disabled or failed"}
 
 
 @app.get("/api/update-status")
 async def get_update_status():
-    """Return current version, latest version (if any), update_available, and release_notes. No broadcast."""
+    """Return current version, latest version (if any), update_available, and release_notes."""
     _log.debug("GET /api/update-status")
     info = await get_latest_release_info()
     current = __version__
     if not info:
-        _log.debug("update-status: no release info; current=%s", current)
         return {"current_version": current, "latest_version": None, "update_available": False, "release_notes": ""}
     latest = info["version"]
     release_notes = info.get("release_notes") or ""
     update_available = compare_versions(current, latest)
     ahead_of_github = is_version_ahead(current, latest)
-    _log.debug("update-status: current=%s latest=%s update_available=%s ahead_of_github=%s", current, latest, update_available, ahead_of_github)
     return {
         "current_version": current,
         "latest_version": latest,
         "update_available": update_available,
         "ahead_of_github": ahead_of_github,
         "release_notes": release_notes,
+        "docker_mode": bool(os.environ.get("GLANCERF_DOCKER")),
     }
 
 
 @app.post("/api/check-updates")
 async def manual_check_updates():
-    """Trigger a manual update check. Returns JSON; if update available also broadcasts via WebSocket."""
+    """Trigger a manual update check. Returns JSON; if update available, broadcasts via WebSocket."""
     _log.debug("POST /api/check-updates")
     latest = await check_for_updates()
     if latest:
-        _log.debug("check-updates: update available %s, sending notification", latest)
-        await update_checker.send_update_notification(latest, "notify")
+        try:
+            await connection_manager.broadcast_update_notification({
+                "type": "update_available",
+                "data": {
+                    "current_version": __version__,
+                    "latest_version": latest,
+                    "docker_mode": bool(os.environ.get("GLANCERF_DOCKER")),
+                },
+            })
+        except Exception as e:
+            _log.debug("broadcast_update_notification failed: %s", e)
         return {"update_available": True, "current_version": __version__, "latest_version": latest}
-    _log.debug("check-updates: no update available (current=%s)", __version__)
     return {"update_available": False, "current_version": __version__}
 
 
 @app.get("/api/update-progress")
 async def get_update_progress():
-    """Return current update progress (step, message, running, success, final_message) for the web UI."""
+    """Return current update progress for the web UI."""
     from glancerf.updates.updater import get_update_progress as _get_progress
     return _get_progress()
 
 
-@app.post("/api/restart")
-async def trigger_restart_services():
-    """Restart GlanceRF services (Windows service, systemd, launchd, or run.py). Returns immediately; process may exit shortly after."""
-    from glancerf.utils import trigger_restart
-    import os
-
-    _log.debug("POST /api/restart")
-    success, message = trigger_restart()
-    if success:
-        async def _exit_after_response():
-            await asyncio.sleep(1)
-            os._exit(0)
-        asyncio.create_task(_exit_after_response())
-    return {"success": success, "message": message}
-
-
 @app.post("/api/apply-update")
-async def trigger_apply_update():
-    """If an update is available, start the update in the background. Returns immediately; client should poll /api/update-progress."""
+async def trigger_apply_update(_: None = Depends(rate_limit_dependency)):
+    """If an update is available, start the update in the background. Docker: returns message to pull new image."""
+    _log.debug("POST /api/apply-update")
+    if os.environ.get("GLANCERF_DOCKER"):
+        return {
+            "success": False,
+            "message": "In Docker: pull the new image and recreate the container instead of in-app update.",
+            "current_version": __version__,
+            "started": False,
+        }
     from glancerf.updates.updater import perform_auto_update, get_update_progress
 
-    _log.debug("POST /api/apply-update")
     latest = await check_for_updates()
     if not latest:
-        _log.debug("apply-update: no update available (current=%s)", __version__)
         return {"success": False, "message": "No update available", "current_version": __version__, "started": False}
     progress = get_update_progress()
     if progress.get("running"):
         return {"success": False, "message": "Update already in progress", "current_version": __version__, "started": False}
-    _log.debug("apply-update: starting update to %s (background)", latest)
 
     async def _run_update_then_restart():
         success, message = await perform_auto_update(latest)
-        _log.debug("apply-update: success=%s message=%s", success, message)
         if success:
-            await update_checker.schedule_restart(delay_seconds=10)
-            _log.debug("apply-update: restart scheduled")
+            await update_checker.schedule_restart(latest, delay_seconds=10)
 
     asyncio.create_task(_run_update_then_restart())
-    return {
-        "success": True,
-        "message": "Update started",
-        "current_version": __version__,
-        "latest_version": latest,
-        "started": True,
-    }
-
-
-@app.on_event("startup")
-async def _start_background_tasks():
-    """Start background tasks."""
-    update_checker.start()
-    telemetry_sender.start()
-    start_aprs_cache()
-    start_cache_warmer(connection_manager)
-    from glancerf.gpio import start_gpio_manager, set_broadcast
-    import asyncio
-    set_broadcast(connection_manager, asyncio.get_running_loop())
-    start_gpio_manager()
-    # Run satellite list cache check once at startup so logs show cache status / update
-    try:
-        from glancerf.modules.satellite_pass.satellite_service import get_satellite_list_cached
-        await asyncio.to_thread(get_satellite_list_cached)
-    except Exception:
-        pass
-    # Background loop: fetch satellite locations (SatChecker, 1 req/s), log only
-    try:
-        from glancerf.modules.satellite_pass.satellite_service import start_satellite_locations_fetch_loop
-        start_satellite_locations_fetch_loop()
-    except Exception:
-        pass
-    try:
-        from glancerf.modules.satellite_pass.satellite_service import start_satellite_tracks_fetch_loop
-        start_satellite_tracks_fetch_loop()
-    except Exception:
-        pass
-
-
-@app.on_event("shutdown")
-async def _stop_background_tasks():
-    """Stop background tasks."""
-    update_checker.stop()
-    telemetry_sender.stop()
-    stop_cache_warmer()
-    try:
-        from glancerf.modules.satellite_pass.satellite_service import stop_satellite_locations_fetch_loop
-        stop_satellite_locations_fetch_loop()
-    except Exception:
-        pass
-    try:
-        from glancerf.modules.satellite_pass.satellite_service import stop_satellite_tracks_fetch_loop
-        stop_satellite_tracks_fetch_loop()
-    except Exception:
-        pass
-    from glancerf.gpio import stop_gpio_manager
-    stop_gpio_manager()
+    return {"success": True, "message": "Update started", "current_version": __version__, "latest_version": latest, "started": True}
 
 
 def run_server(host: str = "0.0.0.0", port: int = 8080, quiet: bool = False):
-    """Run the FastAPI server"""
+    """Run the FastAPI server with Uvicorn."""
     import uvicorn
     uvicorn.run(
         app,
         host=host,
         port=port,
         log_level="error",
-        access_log=False
+        access_log=False,
     )

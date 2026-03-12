@@ -1,4 +1,6 @@
-"""Shows local time, UTC, and an optional third timezone (e.g. London, Tokyo). Can include the current date above the times."""
+"""Shows local time, UTC, and an optional third timezone. Can include the current date above the times."""
+
+from glancerf.modules.loader import load_assets
 
 ON_OFF_OPTIONS = [
     {"value": "1", "label": "On"},
@@ -19,10 +21,15 @@ THIRD_TIMEZONE_OPTIONS = [
     {"value": "Pacific/Auckland", "label": "Auckland"},
 ]
 
+inner_html, css, js = load_assets(__file__)
+
 MODULE = {
     "id": "clock",
     "name": "Clock",
     "color": "#0d1117",
+    "inner_html": inner_html,
+    "css": css,
+    "js": js,
     "settings": [
         {"id": "show_local", "label": "Local time", "type": "select", "options": ON_OFF_OPTIONS, "default": "1"},
         {"id": "show_utc", "label": "UTC time", "type": "select", "options": ON_OFF_OPTIONS, "default": "1"},

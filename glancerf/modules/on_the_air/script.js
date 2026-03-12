@@ -14,18 +14,24 @@
         if ((d.module_id === 'callsign' || d.module_id === 'on_the_air') && d.function_id === 'on_the_air') {
             window.GLANCERF_ON_THE_AIR = !!d.value;
             updateOnTheAirCells();
-            document.querySelectorAll('.grid-cell-callsign .callsign_on_the_air').forEach(function(el) {
-                el.style.display = window.GLANCERF_ON_THE_AIR ? '' : 'none';
-            });
+            var callsignEls = document.querySelectorAll('.grid-cell-callsign .callsign_on_the_air');
+            if (callsignEls.length) {
+                callsignEls.forEach(function(el) {
+                    el.style.display = window.GLANCERF_ON_THE_AIR ? '' : 'none';
+                });
+            }
             window.dispatchEvent(new CustomEvent('glancerf_on_the_air', { detail: { value: window.GLANCERF_ON_THE_AIR } }));
         }
     });
     window.addEventListener('glancerf_on_the_air', function(e) {
         window.GLANCERF_ON_THE_AIR = e.detail != null ? !!e.detail.value : !window.GLANCERF_ON_THE_AIR;
         updateOnTheAirCells();
-        document.querySelectorAll('.grid-cell-callsign .callsign_on_the_air').forEach(function(el) {
-            el.style.display = window.GLANCERF_ON_THE_AIR ? '' : 'none';
-        });
+        var callsignEls = document.querySelectorAll('.grid-cell-callsign .callsign_on_the_air');
+        if (callsignEls.length) {
+            callsignEls.forEach(function(el) {
+                el.style.display = window.GLANCERF_ON_THE_AIR ? '' : 'none';
+            });
+        }
     });
     updateOnTheAirCells();
 })();

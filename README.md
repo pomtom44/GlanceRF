@@ -1,108 +1,32 @@
-# GlanceRF (A Hamclock Modern Rebuild)
+# GlanceRF V2
 
-![GlanceRF logo](logos/logo.png)
+Modular RF/amateur radio dashboard. See **[docs/README.md](docs/README.md)** for full documentation.
 
-Note: This project is still early in development, there will be bugs, errors, things missing.<br>
-Please let me know what you come across so I can fix them as I want to make this project usable by anyone.<br>
-
-## What is GlanceRF
-
-GlanceRF is a modern rebuild of the Original HamClock by Elwood WB0OEW.
-
-During development of this project, early in Beta, Elwood passed away. Originally this was a side project, and I was going to tell people: <br>
-*"If you want a mature project with support, go use hamclock."*
-
-Thoughts go to Elwood, and I thank him for the original project which so many use and which inspired this rebuild.
-
-**Disclaimer:** This is a personal project. I built it for my needs but also designed it for ease of use for others. Once it's working how I want, support will be limited. However, requests, bugs, etc.—I will do my best to sort them out.
+![Main dashboard](docs/screenshots/Main%20Dashboard.png)
 
 ---
 
-## What is GitHub, what do I do?
+## **I don't know GitHub. What do I do?**
 
-If you don't know how to use GitHub, run projects from the command line, or where to start—that's fine. **[Click here for a step-by-step how-to guide](https://glancerf.zl4st.com/quickstart.html)** that walks you through downloading, installing, and running GlanceRF.
-
----
-
-## Quick start
-
-**Option A – Installer (easiest):** Use the installer for your OS. It checks Python, installs dependencies, and can set up run-at-login and a desktop shortcut.
-
-- **Windows:** From the Project folder, double-click `installers\install-windows.bat` 
-- **Linux:** From the Project folder run `chmod +x installers/install-linux.sh` then `./installers/install-linux.sh`. The script detects your distro (Debian/Ubuntu, Fedora/RHEL, Arch, openSUSE, etc.) and uses the right package manager for Python if needed.
-- **macOS:** From the Project folder run `chmod +x installers/install-mac.sh` then `./installers/install-mac.sh`.
-
-**Option B – Manual:**
-
-1. **Download** the project and open a terminal in the **Project** folder (the one that contains `run.py`).
-2. **Install Python** (3.8 or higher) if needed.
-3. **Install dependencies:**  
-   `pip install -r requirements.txt`
-4. **Optional (headless):** Edit `glancerf_config.json` in this folder to set `"use_desktop": false`.
-5. **Run:**  
-   `python run.py`  
-   Then follow the setup (in the app window, or in a browser if headless).
-
-Configuration is stored in **`glancerf_config.json`** in the same folder as `run.py`.
+**[→ Quick & Easy: Download and run the installer](https://glancerf.zl4st.com/quick.html)** — No GitHub needed. Just download for Windows, or run one command for Linux/Mac. Follow the prompts. Done.
 
 ---
 
-## Screenshots
+## Quick Start
 
-**Setup**
+```bash
+pip install -r requirements/requirements-headless.txt
+python run.py
+```
 
-![Setup](screenshots/Setup.png)
-
-**Sample dashboard**
-
-![Sample Dash](screenshots/Sample%20Dash.png)
-
-**Layout & Config editor**
-
-![Layout Editor](screenshots/Layout%20Editor.png)
-
-**Layout with expanded cell**
-
-![Layout Expanded](screenshots/Layout%20Expanded.png)
-
----
+Open http://localhost:8080
 
 ## Documentation
 
-| Guide | Description |
-|-------|-------------|
-| [USER_GUIDE.md](docs/USER_GUIDE.md) | First run, setup, menu (M = open menu: Setup, Layout, Modules, Updates), layout editor, module settings. |
-| [STARTUP_GUIDE.md](docs/STARTUP_GUIDE.md) | Run GlanceRF at startup or logon (installers or manual) on Windows, Linux, macOS, and Raspberry Pi. |
-| [MODULES.md](docs/MODULES.md) | Built-in modules and their options (map, clock, weather, moon, RSS, etc.). |
-| [CREATING_A_MODULE.md](docs/CREATING_A_MODULE.md) | How to create a cell module. Put custom modules in `glancerf/modules/_custom/` so they are not overwritten on update. |
-| [TELEMETRY.md](docs/TELEMETRY.md) | Telemetry and privacy: what is collected, what isn't, how to control it. |
-| [FEATURE_REQUESTS.md](docs/FEATURE_REQUESTS.md) | Requested features and how to report bugs or request features. |
-
----
-
-## Requirements
-
-- **Python** 3.8 or higher
-- Dependencies: `pip install -r requirements.txt`  
-  Includes PyQt5 and PyQtWebEngine for the desktop window. The app skips GUI imports if desktop mode is disabled in config (headless); use the same requirements.txt for both.
-
----
-
-## Features
-
-- **Modes:** Desktop app, server-only (web), and read-only for public displays
-- **Layout:** Any grid size, any monitor; choose which modules go where and resize cells
-- **Built-in modules:** Clock (local, UTC, third timezone), analog clock, date, map (multiple tile sources; optional grid, day/night terminator, sun & moon, aurora overlay; HF/VHF propagation overlays; APRS station locations from local cache with icons or age-coloured dots), weather, sunrise/sunset, moon phase and rise/set, RSS feed, countdown/stopwatch, callsign/QTH, satellite pass, contests calendar, DXpeditions. Custom modules go in `glancerf/modules/_custom/` and survive updates (see [CREATING_A_MODULE.md](docs/CREATING_A_MODULE.md)).
-
----
-
-## Feature requests & Bugs
-
-See **[docs/FEATURE_REQUESTS.md](docs/FEATURE_REQUESTS.md)** for the list.  <br>
-To request a feature or raise a bug, open an Issue using the Github issues. <br>
-If you don't have a github account, and still want to raise a bug, email me GlanceRF@zl4st.com <br>
-
-
----
-
-**Disclaimer:** This project was heavily assisted with AI. The concepts and code review are mine, and I still do manual fixes and bug reviews. If you don't like that, each to their own—I'd appreciate you keeping it to yourself.
+| Doc | Description |
+|-----|-------------|
+| [docs/README.md](docs/README.md) | Overview, modes, web interface |
+| [docs/INSTALLATION.md](docs/INSTALLATION.md) | Windows, Linux, macOS, Docker |
+| [docs/CONFIGURATION.md](docs/CONFIGURATION.md) | Config keys, env vars |
+| [docs/MODULES.md](docs/MODULES.md) | Adding cell modules |
+| [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) | Project structure, routes, API |

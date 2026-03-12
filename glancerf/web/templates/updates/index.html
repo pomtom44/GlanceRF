@@ -5,29 +5,23 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>GlanceRF - Updates</title>
     <link rel="icon" href="/logo.png" type="image/png">
-    <link rel="stylesheet" href="/static/css/updates.css?v=__CACHE_BUST__">
-    <link rel="stylesheet" href="/static/css/menu.css?v=__CACHE_BUST__">
+    <link rel="stylesheet" href="/static/css/pages.css">
+    <link rel="stylesheet" href="/static/css/updates.css">
+    <link rel="stylesheet" href="/static/css/menu.css">
 </head>
 <body>
     <div id="glancerf-menu" role="dialog" aria-modal="true" aria-label="Menu">
         <div class="glancerf-menu-overlay" id="glancerf-menu-overlay"></div>
         <div class="glancerf-menu-panel">
-            <h2>Menu</h2>
-            <ul class="glancerf-menu-list">
-                <li><a href="/setup">Setup</a></li>
-                <li><a href="/layout">Layout & Config editor</a></li>
-                <li><a href="/modules">Modules list</a></li>
-                <li><a href="/updates">Updates</a></li>
-                <li><button type="button" class="menu-link" id="menu-restart-services">Restart services</button></li>
-                __GLANCERF_GPIO_MENU__
-            </ul>
+__GLANCERF_MENU_PANEL__
         </div>
     </div>
-    <div class="container">
-        <a href="/" class="back-link">Back to Main</a>
+    <div class="glancerf-page-container">
+        <a href="/" class="glancerf-page-back-link">&larr; Back to Main</a>
         <h1>Updates</h1>
         <p class="update-versions" id="update-versions">Checking for updates...</p>
         <div class="update-notes" id="update-release-notes"></div>
+        <p class="update-docker-hint" id="update-docker-hint" style="display:none;">In Docker: pull the new image and recreate the container instead of in-app update.</p>
         <button type="button" class="btn btn-primary" id="update-btn" disabled>Check for updates</button>
         <div class="update-progress" id="update-progress" style="display:none;">
             <p class="update-progress-step" id="update-progress-step"></p>
@@ -35,11 +29,12 @@
         </div>
         <p class="update-result" id="update-result" style="display:none;"></p>
     </div>
-    <script src="/static/js/menu.js?v=__CACHE_BUST__"></script>
+    <script src="/static/js/menu.js"></script>
     <script>
         (function() {
             var versionsEl = document.getElementById('update-versions');
             var notesEl = document.getElementById('update-release-notes');
+            var dockerHint = document.getElementById('update-docker-hint');
             var btn = document.getElementById('update-btn');
             var resultEl = document.getElementById('update-result');
             var progressDiv = document.getElementById('update-progress');
@@ -51,6 +46,7 @@
                 if (!versionsEl || !btn) return;
                 versionsEl.textContent = 'Checking for updates...';
                 if (notesEl) notesEl.textContent = '';
+                if (dockerHint) dockerHint.style.display = 'none';
                 btn.disabled = true;
                 if (resultEl) { resultEl.style.display = 'none'; resultEl.textContent = ''; }
                 if (progressDiv) progressDiv.style.display = 'none';
@@ -60,15 +56,9 @@
                         var cur = data.current_version || '—';
                         var lat = data.latest_version;
                         var avail = data.update_available;
-                        var ahead = data.ahead_of_github;
+                        if (data.docker_mode && dockerHint) dockerHint.style.display = 'block';
                         if (lat != null) {
-                            if (avail) {
-                                versionsEl.textContent = 'Current: ' + cur + '  |  Latest: ' + lat;
-                            } else if (ahead) {
-                                versionsEl.textContent = 'Current: ' + cur + '  |  Latest: ' + lat + '  —  Somehow you are more up to date, did you learn time travel?';
-                            } else {
-                                versionsEl.textContent = 'Current: ' + cur + '  |  Latest: ' + lat + ' (you\'re up to date)';
-                            }
+                            versionsEl.textContent = 'Current: ' + cur + (avail ? '  |  Latest: ' + lat : '  |  Latest: ' + lat + ' (you\'re up to date)');
                         } else {
                             versionsEl.textContent = 'Current: ' + cur + '  |  Latest: —';
                         }
@@ -76,6 +66,7 @@
                         btn.textContent = avail ? 'Update now' : 'Check for updates';
                         btn.disabled = false;
                         btn._updateAvailable = !!avail;
+                        if (data.docker_mode) btn._updateAvailable = false;
                     })
                     .catch(function() {
                         versionsEl.textContent = 'Current: —  |  Check failed.';
@@ -86,10 +77,7 @@
             }
 
             function stopProgressPoll() {
-                if (progressPollId) {
-                    clearInterval(progressPollId);
-                    progressPollId = null;
-                }
+                if (progressPollId) { clearInterval(progressPollId); progressPollId = null; }
             }
 
             function pollProgress() {
@@ -148,22 +136,6 @@
                     }
                 });
             }
-
-            document.addEventListener('keydown', function(event) {
-                var isInputFocused = document.activeElement && (document.activeElement.tagName === 'INPUT' || document.activeElement.tagName === 'TEXTAREA' || document.activeElement.isContentEditable);
-                if (isInputFocused) return;
-                if (event.key === 'm' || event.key === 'M') {
-                    event.preventDefault();
-                    var menu = document.getElementById('glancerf-menu');
-                    if (menu) menu.classList.toggle('open');
-                }
-                if (event.key === 'Escape') {
-                    var menu = document.getElementById('glancerf-menu');
-                    if (menu && menu.classList.contains('open')) { menu.classList.remove('open'); event.preventDefault(); }
-                }
-            });
-            var o = document.getElementById('glancerf-menu-overlay');
-            if (o) o.addEventListener('click', function() { var m = document.getElementById('glancerf-menu'); if (m) m.classList.remove('open'); });
 
             loadStatus();
         })();

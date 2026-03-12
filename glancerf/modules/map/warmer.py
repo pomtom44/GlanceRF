@@ -30,8 +30,9 @@ async def warm(settings: dict, config: Any) -> None:
         from glancerf.modules.map.aprs_client import get_aprs_locations_from_cache
         from glancerf.modules.map.api_routes import _APRS_CACHE_TTL
 
-        result = await asyncio.to_thread(get_aprs_locations_from_cache, hours=hours)
-        cache_key = f"map:aprs:{hours}"
+        filter_str = (settings.get("aprs_filter") or "").strip() or None
+        result = await asyncio.to_thread(get_aprs_locations_from_cache, hours=hours, filter_str=filter_str)
+        cache_key = f"map:aprs:{hours}|{filter_str or ''}"
         get_cache().set(cache_key, result, _APRS_CACHE_TTL)
     except Exception:
         pass

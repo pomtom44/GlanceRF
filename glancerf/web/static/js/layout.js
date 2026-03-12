@@ -1142,4 +1142,8 @@ var currentDesktopWidth = 0;
                     if (menu) menu.classList.remove('open');
                 });
             })();
+
+            if (typeof window.renderConflictBanner === 'function') {
+                window.renderConflictBanner('conflict-resolution-container');
+            }
 })();

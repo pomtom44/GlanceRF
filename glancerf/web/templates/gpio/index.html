@@ -5,12 +5,11 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>GlanceRF - GPIO Setup</title>
     <link rel="icon" href="/logo.png" type="image/png">
-    <link rel="stylesheet" href="/static/css/setup.css?v=__CACHE_BUST__">
+    <link rel="stylesheet" href="/static/css/pages.css?v=__CACHE_BUST__">
     <link rel="stylesheet" href="/static/css/menu.css?v=__CACHE_BUST__">
     <style>
-        .gpio-container { max-width: 900px; margin: 0 auto; padding: 20px; }
-        .gpio-container h1 { margin-bottom: 10px; color: #fff; }
-        .gpio-container p { color: #aaa; margin-bottom: 20px; font-size: 14px; }
+        .gpio-page-container p { color: #aaa; margin-bottom: 20px; font-size: 14px; }
+        .gpio-page-container h1 { margin-bottom: 16px; }
         .gpio-table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
         .gpio-table th, .gpio-table td { padding: 10px; text-align: left; border: 1px solid #333; }
         .gpio-table th { background: #222; color: #0f0; }
@@ -27,19 +26,11 @@
     <div id="glancerf-menu" role="dialog" aria-modal="true" aria-label="Menu">
         <div class="glancerf-menu-overlay" id="glancerf-menu-overlay"></div>
         <div class="glancerf-menu-panel">
-            <h2>Menu</h2>
-            <ul class="glancerf-menu-list">
-                <li><a href="/setup">Setup</a></li>
-                <li><a href="/layout">Layout & Config editor</a></li>
-                <li><a href="/modules">Modules list</a></li>
-                <li><a href="/updates">Updates</a></li>
-                <li><button type="button" class="menu-link" id="menu-restart-services">Restart services</button></li>
-                __GPIO_MENU_ITEM__
-            </ul>
+__GLANCERF_MENU_PANEL__
         </div>
     </div>
-    <div class="gpio-container">
-        <a href="/setup" style="color:#0f0; font-size:14px; text-decoration:none;">&larr; Back to Setup</a>
+    <div class="glancerf-page-container gpio-page-container">
+        <a href="/setup" class="glancerf-page-back-link">&larr; Back to Setup</a>
         <h1>GPIO Setup</h1>
         <p>Assign module functions to GPIO pins. Pin direction (input or output) is set by the function you choose.</p>
         <p style="margin-bottom: 16px;">For wiring help (buttons, switches, LEDs, resistors, pull-up/pull-down), check the <a href="https://glancerf.zl4st.com/gpio.html" target="_blank" rel="noopener noreferrer" style="color:#0f0;">website GPIO wiring guide</a>.</p>

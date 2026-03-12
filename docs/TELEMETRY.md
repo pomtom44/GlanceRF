@@ -17,12 +17,11 @@ When telemetry is enabled, the following data may be sent to the telemetry serve
 ### GlanceRF usage (anonymous)
 
 - Application version
+- Desktop mode (desktop, browser, headless, none)
 - Grid size (columns and rows)
 - Number of cells that have a module assigned
-- List of **enabled module IDs** (e.g. `["clock", "weather"]`) – the module type names only, not any settings or content
-- Number of installed modules and their **IDs** (e.g. `["clock", "empty", "weather"]`)
-- Whether the desktop window mode is enabled
-- Update check mode (e.g. "auto", "none")
+- List of **enabled module IDs** (e.g. `["clock", "weather", "aprs"]`) – module type names only, not any settings or content
+- Update check mode (e.g. "auto", "none", "notify")
 
 ### Session and events
 
@@ -34,7 +33,7 @@ When telemetry is enabled, the following data may be sent to the telemetry serve
 
 - Your callsign, location, or any text you enter in Setup or module settings
 - IP addresses are not stored as part of your profile (they may be seen in server logs for normal HTTP requests)
-- No personal data, credentials, or content from any module (e.g. no weather data, no calendar data)
+- No personal data, credentials, or content from any module (e.g. no weather data, no APRS packets, no satellite selections)
 
 ## How telemetry is used
 
@@ -48,7 +47,7 @@ Data is sent over HTTPS to the telemetry endpoint and handled according to the s
 ## How to control telemetry
 
 - **Default:** Telemetry is **enabled** (opt-out).
-- **Disable:** Open **Setup** (from the main menu or first-run wizard), go to **Page 2**, set **Telemetry** to **Disabled (Opt-out)**. No further data is sent until you turn it back on.
+- **Disable:** Open **Setup** (from the menu or first-run wizard), go to **Page 2 – Station & updates**, set **Telemetry** to **Disabled (Opt-out)**. No further data is sent until you turn it back on.
 - You can change this setting at any time. The application works the same with telemetry on or off.
 
 ## When data is sent
@@ -57,12 +56,12 @@ Data is sent over HTTPS to the telemetry endpoint and handled according to the s
 - **Startup:** One event when the application has finished starting (after setup is complete).
 - **Heartbeat:** Approximately once per hour while the app is running (only after setup is complete).
 
-If you disable telemetry, the startup and heartbeat are disabled, however first run still runs to get the GUID.
+If you disable telemetry, startup and heartbeat events stop. The first-run flow may still request a GUID for future use if you re-enable.
 
 ## Technical details
 
-- Telemetry is implemented in `glancerf/telemetry.py`.
+- Telemetry is implemented in `glancerf/services/telemetry.py`.
 - The telemetry endpoint URL is: `https://glancerf-telemetry.zl4st.com/telemetry.php`
 - Requests are sent as JSON over HTTPS with a 10-second timeout. Failures are logged but do not affect application behavior.
 
-For the full list of fields and event types, see the `get_system_info()`, `get_glancerf_info()`, and payload construction in `glancerf/telemetry.py`.
+For the full list of fields and event types, see `get_system_info()`, `get_glancerf_info()`, and payload construction in `glancerf/services/telemetry.py`.

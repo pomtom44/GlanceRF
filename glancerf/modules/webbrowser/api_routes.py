@@ -35,14 +35,12 @@ def _is_allowed_url(url: str | None) -> bool:
 
 def _strip_frame_blocking(html: str) -> str:
     """Remove or relax meta tags that prevent embedding in an iframe."""
-    # Remove X-Frame-Options meta
     html = re.sub(
         r'<meta\s+http-equiv=["\']?X-Frame-Options["\']?\s+content="[^"]*"\s*/?\s*>',
         "",
         html,
         flags=re.IGNORECASE,
     )
-    # Remove Content-Security-Policy meta that contains frame-ancestors (so iframe can display)
     def _replace_csp(match: re.Match) -> str:
         content = match.group(1)
         if "frame-ancestors" in content.lower():
@@ -58,7 +56,7 @@ def _strip_frame_blocking(html: str) -> str:
 
 
 def _inject_base_tag(html: bytes, base_url: str, encoding: str = "utf-8") -> bytes:
-    """Inject <base href="..."> and strip frame-blocking so the page can be embedded in an iframe. Content layout is left as the remote site intended."""
+    """Inject <base href="..."> and strip frame-blocking so the page can be embedded in an iframe."""
     try:
         text = html.decode(encoding, errors="replace")
     except Exception:

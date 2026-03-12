@@ -131,10 +131,7 @@
                 } else if (ms.propagation_aprs_hours && ['1','6','12','24'].indexOf(String(ms.propagation_aprs_hours)) >= 0) {
                     propagationAprsHours = parseFloat(ms.propagation_aprs_hours, 10);
                 }
-                var showAprsLocations = (ms.show_aprs_locations === '1' || ms.show_aprs_locations === true);
-                var aprsDisplayMode = (ms.aprs_display_mode === 'icons') ? 'icons' : 'dots';
-                var aprsFilter = (ms.aprs_filter != null && typeof ms.aprs_filter === 'string') ? ms.aprs_filter.trim() : '';
-                return { zoom: zoom, lat: lat, lng: lng, map_style: mapStyle, tile_style: tileStyle, grid_style: gridStyle, show_terminator: showTerminator, show_sun_moon: showSunMoon, show_aurora: showAurora, aurora_opacity: auroraOpacity, propagation_source: propagationSource, propagation_opacity: propagationOpacity, propagation_aprs_hours: propagationAprsHours, show_aprs_locations: showAprsLocations, aprs_display_mode: aprsDisplayMode, aprs_filter: aprsFilter };
+                return { zoom: zoom, lat: lat, lng: lng, map_style: mapStyle, tile_style: tileStyle, grid_style: gridStyle, show_terminator: showTerminator, show_sun_moon: showSunMoon, show_aurora: showAurora, aurora_opacity: auroraOpacity, propagation_source: propagationSource, propagation_opacity: propagationOpacity, propagation_aprs_hours: propagationAprsHours };
             }
             function getTileLayer(url, options) {
                 return L.tileLayer(url, options || {});
@@ -198,42 +195,49 @@
                 while (lon < -180) lon += 360;
                 return { lat: decDeg, lng: lon };
             }
+            /* Sublunar point: geocentric moon position converted to geographic lat/lng.
+             * Uses formulas from aa.quae.nl / suncalc (Meeus-based) to match timeanddate.com. */
             function sublunarLonLat(now) {
-                var d = new Date(now);
-                var jd = (d.getTime() / 86400000) + 2440587.5;
-                var n = jd - 2451545.0;
-                var moonLon = (218.316 + 13.176396 * n) % 360;
-                var moonLat = 5.16 * Math.sin((2 * Math.PI / 27.32) * n * 57.3);
-                var moonDist = 60.27 - 3.34 * Math.cos((2 * Math.PI / 27.32) * n * 57.3);
-                var ra = moonLon - 1.274 * Math.sin((2 * Math.PI / 29.53) * (n - 2));
-                var dec = 5.14 * Math.sin((2 * Math.PI / 27.32) * n * 57.3);
-                var gmst = (280.46 + 360.9856474 * (jd - 2451545.0)) % 360;
-                var lon = (ra - gmst) % 360;
-                if (lon > 180) lon -= 360;
-                if (lon < -180) lon += 360;
-                return { lat: dec, lng: lon };
+                var rad = Math.PI / 180;
+                var jd = (now / 86400000) - 0.5 + 2440588;
+                var d = jd - 2451545;
+                var L = rad * (218.316 + 13.176396 * d);
+                var M = rad * (134.963 + 13.064993 * d);
+                var F = rad * (93.272 + 13.229350 * d);
+                var D = rad * (297.850 + 12.190749 * d);
+                var l = L + rad * (6.289 * Math.sin(M) + 1.274 * Math.sin(2 * D - M) + 0.658 * Math.sin(2 * D));
+                var b = rad * 5.128 * Math.sin(F);
+                var e = rad * 23.4397;
+                var ra = Math.atan2(Math.sin(l) * Math.cos(e) - Math.tan(b) * Math.sin(e), Math.cos(l));
+                var dec = Math.asin(Math.max(-1, Math.min(1, Math.sin(b) * Math.cos(e) + Math.cos(b) * Math.sin(e) * Math.sin(l))));
+                var gmstDeg = ((280.16 + 360.9856235 * d) % 360 + 360) % 360;
+                var lon = (ra / rad) - gmstDeg;
+                while (lon > 180) lon -= 360;
+                while (lon < -180) lon += 360;
+                return { lat: dec / rad, lng: lon };
             }
+            /* Day/night terminator with twilight zones (inspired by timeanddate.com sunearth map).
+             * angleDeg = angular distance from point to subsolar point. 90° = terminator (sun on horizon).
+             * Twilight zones: civil 0–6° below, nautical 6–12°, astronomical 12–18°, night >18°. */
             function addTerminatorOverlay(map) {
                 var now = Date.now();
                 var sub = subsolarLonLat(now);
                 var decRad = sub.lat * Math.PI / 180;
-                var sunLonRad = sub.lng * Math.PI / 180;
-                var w = 720;
-                var h = 362;
+                var w = 1440;
+                var h = 724;
                 var canvas = document.createElement('canvas');
                 canvas.width = w;
                 canvas.height = h;
                 var ctx = canvas.getContext('2d');
                 var idata = ctx.createImageData(w, h);
                 var d = idata.data;
-                var twilightDeg = 8;
+                var sinDec = Math.sin(decRad);
+                var cosDec = Math.cos(decRad);
                 for (var y = 0; y < h; y++) {
                     var lat = 90 - ((y + 0.5) / h) * 180;
                     var latRad = lat * Math.PI / 180;
                     var sinLat = Math.sin(latRad);
                     var cosLat = Math.cos(latRad);
-                    var sinDec = Math.sin(decRad);
-                    var cosDec = Math.cos(decRad);
                     for (var x = 0; x < w; x++) {
                         var lon = -180 + ((x + 0.5) / w) * 360;
                         var lonDiffRad = (lon - sub.lng) * Math.PI / 180;
@@ -241,15 +245,19 @@
                         var angleRad = Math.acos(Math.max(-1, Math.min(1, cosAngle)));
                         var angleDeg = angleRad * 180 / Math.PI;
                         var nightAlpha = 0;
-                        if (angleDeg >= 90 + twilightDeg) {
-                            nightAlpha = 0.52;
-                        } else if (angleDeg > 90 - twilightDeg) {
-                            nightAlpha = 0.52 * (angleDeg - (90 - twilightDeg)) / (2 * twilightDeg);
+                        if (angleDeg >= 108) {
+                            nightAlpha = 0.58;
+                        } else if (angleDeg >= 102) {
+                            nightAlpha = 0.42 + 0.16 * (angleDeg - 102) / 6;
+                        } else if (angleDeg >= 96) {
+                            nightAlpha = 0.26 + 0.16 * (angleDeg - 96) / 6;
+                        } else if (angleDeg >= 90) {
+                            nightAlpha = 0.10 + 0.16 * (angleDeg - 90) / 6;
                         }
                         var i4 = (y * w + x) * 4;
-                        d[i4] = 12;
-                        d[i4 + 1] = 14;
-                        d[i4 + 2] = 26;
+                        d[i4] = 8;
+                        d[i4 + 1] = 12;
+                        d[i4 + 2] = 28;
                         d[i4 + 3] = Math.round(nightAlpha * 255);
                     }
                 }
@@ -292,7 +300,6 @@
                     fillOpacity: 1
                 }).addTo(map).bindTooltip('Moon', { permanent: false });
             }
-            var AURORA_URL = 'https://services.swpc.noaa.gov/json/ovation_aurora_latest.json';
             var PROPAGATION_DATA_SOURCES = ['kc2g_muf', 'kc2g_fof2', 'tropo', 'vhf_aprs'];
             var PROPAGATION_SOURCES = [
                 { id: 'kc2g_muf', url: 'https://prop.kc2g.com/renders/current/mufd-normal-now.svg', bounds: [[-90, -180], [90, 180]], cacheBust: true },
@@ -439,8 +446,8 @@
                 var valMin, valMax;
                 if (sourceId === 'kc2g_muf') { valMin = 5; valMax = 30; }
                 else if (sourceId === 'kc2g_fof2') { valMin = 2; valMax = 12; }
-                else if (sourceId === 'tropo') { valMin = 250; valMax = 400; }
-                else if (sourceId === 'vhf_aprs') { valMin = 20; valMax = 600; }
+                else if (sourceId === 'tropo') { valMin = 200; valMax = 450; }
+                else if (sourceId === 'vhf_aprs') { valMin = 15; valMax = 800; }
                 else { valMin = 0; valMax = 1; }
                 var url = getMapApiBase() + '/api/map/propagation-data?source=' + encodeURIComponent(sourceId);
                 if (sourceId === 'vhf_aprs' && cfg && cfg.propagation_aprs_hours) {
@@ -499,7 +506,7 @@
                         }
                         return;
                     }
-                    if (sourceId === 'vhf_aprs' && coords && coords.length >= 3) {
+                    if (sourceId === 'vhf_aprs' && coords && coords.length >= 2) {
                         var w = 720;
                         var h = 362;
                         var grid = idwGrid(coords, w, h, 2);
@@ -536,7 +543,7 @@
                         L.imageOverlay(imgUrl, [[-90, -540], [90, -180]], { opacity: 1 }).addTo(layerGroup);
                         return;
                     }
-                    if (!coords || coords.length < 3) {
+                    if (!coords || coords.length < 2) {
                         return;
                     }
                     var w = 720;
@@ -601,9 +608,21 @@
                 overlay.on('error', function() { overlay.remove(); });
             }
             function addAuroraOverlay(map, cfg) {
+                var layerGroup = map._auroraLayerGroup;
+                if (!layerGroup) {
+                    layerGroup = L.layerGroup();
+                    map._auroraLayerGroup = layerGroup;
+                    layerGroup.addTo(map);
+                }
+                layerGroup.clearLayers();
                 var opacityPct = (cfg && cfg.aurora_opacity != null) ? Math.max(0, Math.min(100, cfg.aurora_opacity)) : 50;
                 var opacityMult = opacityPct / 100;
-                fetch(AURORA_URL).then(function(r) { return r.json(); }).then(function(data) {
+                var url = getMapApiBase() + '/api/map/aurora-data';
+                fetch(url).then(function(r) {
+                    if (!r.ok) return null;
+                    return r.json();
+                }).then(function(data) {
+                    if (!data) return;
                     var coords = data.coordinates;
                     if (!coords || !coords.length) return;
                     var threshold = 3;
@@ -618,6 +637,7 @@
                         lon = c[0];
                         var lat = c[1];
                         val = c[2];
+                        if (Math.abs(lat) < 20) continue;
                         if (lon >= 360) lon = 359;
                         latIdx = Math.round(lat + 90);
                         if (latIdx < 0) latIdx = 0;
@@ -626,7 +646,6 @@
                     }
                     for (lon = 0; lon < 360; lon++) {
                         grid[lon][0] = 0;
-                        grid[lon][90] = 0;
                         grid[lon][180] = 0;
                     }
                     var w = 720;
@@ -640,7 +659,8 @@
                     for (var y = 0; y < h; y++) {
                         latIdx = Math.min(180, Math.floor((h - 1 - y) * 181 / h));
                         for (var x = 0; x < w; x++) {
-                            var lonIdx = Math.floor((x / w) * 360) % 360;
+                            var lonDeg = -180 + (x / w) * 360;
+                            var lonIdx = Math.min(359, Math.floor((lonDeg + 360) % 360));
                             val = grid[lonIdx][latIdx];
                             var a = val >= threshold ? Math.round(255 * opacityMult) : 0;
                             var rgb = auroraRgb(val);
@@ -652,11 +672,11 @@
                         }
                     }
                     ctx.putImageData(idata, 0, 0);
-                    var url = canvas.toDataURL('image/png');
+                    var imgUrl = canvas.toDataURL('image/png');
                     var bounds = [[-90, -180], [90, 180]];
-                    L.imageOverlay(url, bounds, { opacity: 1 }).addTo(layerGroup);
-                    L.imageOverlay(url, [[-90, 180], [90, 540]], { opacity: 1 }).addTo(layerGroup);
-                    L.imageOverlay(url, [[-90, -540], [90, -180]], { opacity: 1 }).addTo(layerGroup);
+                    L.imageOverlay(imgUrl, bounds, { opacity: 1 }).addTo(layerGroup);
+                    L.imageOverlay(imgUrl, [[-90, 180], [90, 540]], { opacity: 1 }).addTo(layerGroup);
+                    L.imageOverlay(imgUrl, [[-90, -540], [90, -180]], { opacity: 1 }).addTo(layerGroup);
                 }).catch(function() {});
             }
             var PROPAGATION_REFRESH_MS = 5 * 60 * 1000;
@@ -763,28 +783,6 @@
                 } catch (e) {}
                 return list;
             }
-            function applyAprsLocationsFilter(locs, filterStr) {
-                if (!filterStr || !locs || !locs.length) return locs;
-                var prefixes = [];
-                var parts = filterStr.split(/\s+/);
-                for (var i = 0; i < parts.length; i++) {
-                    var p = parts[i];
-                    if (p.indexOf('p/') === 0) {
-                        var rest = p.slice(2).split('/');
-                        for (var j = 0; j < rest.length; j++) {
-                            if (rest[j]) prefixes.push(rest[j].toUpperCase());
-                        }
-                    }
-                }
-                if (prefixes.length === 0) return locs;
-                return locs.filter(function(loc) {
-                    var call = (loc.callsign || '').toUpperCase().split('-')[0];
-                    for (var k = 0; k < prefixes.length; k++) {
-                        if (call.indexOf(prefixes[k]) === 0) return true;
-                    }
-                    return false;
-                });
-            }
             function addAprsLocationsOverlay(map, cfg) {
                 var layerGroup = map._aprsLocationsLayerGroup;
                 if (!layerGroup) {
@@ -793,17 +791,23 @@
                     layerGroup.addTo(map);
                 }
                 layerGroup.clearLayers();
+                var ms = getMergedModuleSettings('aprs');
                 var hours = (cfg && cfg.propagation_aprs_hours) ? cfg.propagation_aprs_hours : 6;
+                if (ms.hours != null && ms.hours !== '') {
+                    var h = parseFloat(ms.hours, 10);
+                    if (!isNaN(h) && h > 0 && h <= 168) hours = h;
+                }
+                var displayMode = (ms.aprs_display_mode === 'icons') ? 'icons' : 'dots';
+                var aprsFilter = (ms.aprs_filter != null && typeof ms.aprs_filter === 'string') ? ms.aprs_filter.trim() : '';
                 var ageLimitHours = typeof hours === 'number' ? hours : parseFloat(hours, 10) || 6;
-                var displayMode = (cfg && cfg.aprs_display_mode === 'icons') ? 'icons' : 'dots';
                 var url = getMapApiBase() + '/api/map/aprs-locations?hours=' + encodeURIComponent(hours);
+                if (aprsFilter) url += '&filter=' + encodeURIComponent(aprsFilter);
                 fetch(url).then(function(r) {
                     if (!r.ok) return { locations: [] };
                     return r.json();
                 }).then(function(data) {
                     var locs = data && data.locations;
                     if (!locs || !locs.length) return;
-                    locs = applyAprsLocationsFilter(locs, cfg && cfg.aprs_filter ? cfg.aprs_filter : '');
                     if (!locs.length) return;
                     var paddedBounds = getBoundsWithBuffer(map);
                     var nowSec = Date.now() / 1000;
@@ -838,7 +842,125 @@
                     }
                 }).catch(function() {});
             }
-            /* sat_new: cache is updated by the backend regardless of whether the map is in the layout.
+            var LIVE_SPOTS_BANDS = [
+                { id: '160', minKHz: 1800, maxKHz: 2000 }, { id: '80', minKHz: 3500, maxKHz: 4000 },
+                { id: '60', minKHz: 5300, maxKHz: 5400 }, { id: '40', minKHz: 7000, maxKHz: 7300 },
+                { id: '30', minKHz: 10100, maxKHz: 10150 }, { id: '20', minKHz: 14000, maxKHz: 14350 },
+                { id: '17', minKHz: 18068, maxKHz: 18168 }, { id: '15', minKHz: 21000, maxKHz: 21450 },
+                { id: '12', minKHz: 24890, maxKHz: 24990 }, { id: '10', minKHz: 28000, maxKHz: 29700 },
+                { id: '6', minKHz: 50000, maxKHz: 54000 }, { id: '2', minKHz: 144000, maxKHz: 148000 }
+            ];
+            var LIVE_SPOTS_DEFAULT_COLORS = { '160': '#8b4513', '80': '#4682b4', '60': '#20b2aa', '40': '#00ff00', '30': '#9acd32', '20': '#ffd700', '17': '#ff8c00', '15': '#f08080', '12': '#da70d6', '10': '#9370db', '6': '#00ced1', '2': '#e0e0e0' };
+            function liveSpotsFreqToBand(khz) {
+                if (khz == null || isNaN(khz)) return null;
+                var k = parseInt(khz, 10);
+                for (var i = 0; i < LIVE_SPOTS_BANDS.length; i++) {
+                    if (k >= LIVE_SPOTS_BANDS[i].minKHz && k <= LIVE_SPOTS_BANDS[i].maxKHz) return LIVE_SPOTS_BANDS[i].id;
+                }
+                return null;
+            }
+            function liveSpotsGetBandColor(settings, bandId) {
+                if (!bandId) return '#888';
+                var key = 'band_' + bandId + '_color';
+                var c = settings && (settings[key] !== undefined && settings[key] !== null && settings[key] !== '') ? String(settings[key]).trim() : null;
+                if (c && /^#[0-9A-Fa-f]{3,8}$/.test(c)) return c;
+                return LIVE_SPOTS_DEFAULT_COLORS[bandId] || '#888';
+            }
+            function liveSpotsIsBandEnabled(settings, bandId) {
+                if (!settings) return true;
+                var key = 'band_' + bandId;
+                var v = settings[key];
+                if (v === false || v === 'false' || v === '0' || v === 0) return false;
+                return true;
+            }
+            function greatCirclePoints(lat1, lon1, lat2, lon2, numPoints) {
+                var toRad = Math.PI / 180;
+                var lat1r = lat1 * toRad, lon1r = lon1 * toRad;
+                var lat2r = lat2 * toRad, lon2r = lon2 * toRad;
+                var x1 = Math.cos(lat1r) * Math.cos(lon1r);
+                var y1 = Math.cos(lat1r) * Math.sin(lon1r);
+                var z1 = Math.sin(lat1r);
+                var x2 = Math.cos(lat2r) * Math.cos(lon2r);
+                var y2 = Math.cos(lat2r) * Math.sin(lon2r);
+                var z2 = Math.sin(lat2r);
+                var dot = x1 * x2 + y1 * y2 + z1 * z2;
+                if (dot > 1) dot = 1;
+                if (dot < -1) dot = -1;
+                var omega = Math.acos(dot);
+                if (omega < 1e-6) return [[lat1, lon1], [lat2, lon2]];
+                var pts = [];
+                for (var i = 0; i <= numPoints; i++) {
+                    var t = i / numPoints;
+                    var a = Math.sin((1 - t) * omega) / Math.sin(omega);
+                    var b = Math.sin(t * omega) / Math.sin(omega);
+                    var x = a * x1 + b * x2;
+                    var y = a * y1 + b * y2;
+                    var z = a * z1 + b * z2;
+                    var lat = Math.atan2(z, Math.sqrt(x * x + y * y)) / toRad;
+                    var lon = Math.atan2(y, x) / toRad;
+                    pts.push([lat, lon]);
+                }
+                return pts;
+            }
+            function addLiveSpotsLinesOverlay(map) {
+                if (typeof L === 'undefined') return;
+                if (!hasMapOverlayForModule('live_spots')) {
+                    if (map._liveSpotsLinesLayerGroup) {
+                        map.removeLayer(map._liveSpotsLinesLayerGroup);
+                        map._liveSpotsLinesLayerGroup = null;
+                    }
+                    return;
+                }
+                var ms = getMergedModuleSettings('live_spots');
+                var callsignOrGrid = (ms.callsign_or_grid || '').toString().trim();
+                if (!callsignOrGrid) return;
+                var layerGroup = map._liveSpotsLinesLayerGroup;
+                if (!layerGroup) {
+                    layerGroup = L.layerGroup();
+                    map._liveSpotsLinesLayerGroup = layerGroup;
+                    layerGroup.addTo(map);
+                }
+                layerGroup.clearLayers();
+                var filterMode = (ms.filter_mode || 'received').toString().trim().toLowerCase();
+                var ageMins = parseInt(ms.age_mins, 10);
+                if (isNaN(ageMins) || ageMins < 1) ageMins = 60;
+                var setupLoc = (window.GLANCERF_SETUP_LOCATION || '').toString().trim();
+                var qthStr = setupLoc || callsignOrGrid;
+                var qth = parseCenter(qthStr, 0, 0);
+                if (!qth || (qth.lat === 0 && qth.lng === 0 && !qthStr)) return;
+                var url = getMapApiBase() + '/api/live_spots/spots?filter_mode=' + encodeURIComponent(filterMode) +
+                    '&callsign_or_grid=' + encodeURIComponent(callsignOrGrid) + '&age_mins=' + ageMins;
+                fetch(url).then(function(r) {
+                    if (!r.ok) return { spots: [] };
+                    return r.json();
+                }).then(function(data) {
+                    var spots = (data && data.spots) ? data.spots : [];
+                    if (!spots.length) return;
+                    for (var i = 0; i < spots.length; i++) {
+                        var s = spots[i];
+                        var remoteLoc = (filterMode === 'sent')
+                            ? (s.receiverLocator || s.receiver_locator || s.rl)
+                            : (s.senderLocator || s.sender_locator || s.sl);
+                        if (!remoteLoc || (remoteLoc + '').trim().length < 2) continue;
+                        var remote = maidenheadToLatLng(remoteLoc);
+                        if (!remote) continue;
+                        var khz = (s.frequency && !isNaN(Number(s.frequency))) ? Number(s.frequency) / 1000 : null;
+                        var bandId = liveSpotsFreqToBand(khz);
+                        if (!liveSpotsIsBandEnabled(ms, bandId || '20')) continue;
+                        var color = liveSpotsGetBandColor(ms, bandId || '20');
+                        var pts = greatCirclePoints(qth.lat, qth.lng, remote.lat, remote.lng, 24);
+                        var segs = splitPathAtWrapBoundaries(pts);
+                        if (segs.length === 0) segs = [pts];
+                        segs.forEach(function(seg) {
+                            if (seg.length < 2) return;
+                            var linePts = seg.map(function(p) { return [p[0], p[1]]; });
+                            L.polyline(linePts, { color: color, weight: 2, opacity: 0.6, smoothFactor: 1 }).addTo(layerGroup);
+                        });
+                    }
+                    if (map.hasLayer(layerGroup)) layerGroup.bringToFront();
+                }).catch(function() {});
+            }
+            /* sat_new: uses /api/satellite/locations (same cache as satellite_pass overlay).
                We only fetch and display sat_new locations when the map module is loaded (this script
                runs only when map is in the layout and there are .grid-cell-map .map_container elements). */
             function addSatNewLocationsOverlay(map) {
@@ -849,12 +971,16 @@
                     map._satNewLocationsLayerGroup = layerGroup;
                     layerGroup.addTo(map);
                 }
-                var url = getMapApiBase() + '/api/sat_new/locations';
+                var url = getMapApiBase() + '/api/satellite/locations';
                 fetch(url).then(function(r) {
-                    if (!r.ok) return { locations: [] };
+                    if (!r.ok) return { positions: {} };
                     return r.json();
                 }).then(function(data) {
-                    var locs = (data && data.locations) ? data.locations : [];
+                    var positions = (data && data.positions) ? data.positions : {};
+                    var locs = Object.keys(positions).map(function(norad) {
+                        var ll = positions[norad];
+                        return Array.isArray(ll) && ll.length >= 2 ? { lat: ll[0], lon: ll[1] } : null;
+                    }).filter(Boolean);
                     layerGroup.clearLayers();
                     if (!map.hasLayer(layerGroup)) layerGroup.addTo(map);
                     for (var i = 0; i < locs.length; i++) {
@@ -894,22 +1020,101 @@
                 if (hex && /^#[0-9A-Fa-f]{3}([0-9A-Fa-f]{3}([0-9A-Fa-f]{2})?)?$/.test(hex)) return hex;
                 return satPassColorForNorad(noradId);
             }
-            function getSatellitePassSettings() {
-                var cell = document.querySelector('.grid-cell-satellite_pass');
-                if (!cell) return {};
-                var r = cell.getAttribute('data-row');
-                var c = cell.getAttribute('data-col');
-                var key = (r != null && c != null) ? r + '_' + c : '';
-                if (!key) return {};
-                var all = window.GLANCERF_MODULE_SETTINGS || {};
-                var cellSettings = all[key];
-                if (!cellSettings || !cellSettings.sat_satellites) return {};
-                try {
-                    var data = JSON.parse(cellSettings.sat_satellites);
-                    return (data && typeof data === 'object') ? data : {};
-                } catch (e) {
-                    return {};
+            function hasMapOverlayModule(moduleId) {
+                return Array.isArray(window.GLANCERF_MAP_OVERLAY_MODULES) && window.GLANCERF_MAP_OVERLAY_MODULES.indexOf(moduleId) >= 0;
+            }
+            function hasMapOverlayForModule(moduleId) {
+                return document.querySelectorAll('.grid-cell-' + moduleId).length > 0 || hasMapOverlayModule(moduleId);
+            }
+            function getModuleSettings(moduleId) {
+                var instances = getAllModuleSettingsInstances(moduleId);
+                return instances.length > 0 ? instances[0] : {};
+            }
+            function mergeObjectsWithOrBooleans(acc, obj) {
+                if (!obj || typeof obj !== 'object' || Array.isArray(obj)) return acc || {};
+                var out = {};
+                if (acc) for (var kk in acc) { if (Object.prototype.hasOwnProperty.call(acc, kk)) out[kk] = acc[kk]; }
+                for (var k in obj) {
+                    if (!Object.prototype.hasOwnProperty.call(obj, k)) continue;
+                    var v = obj[k];
+                    var existing = out[k];
+                    if (v && typeof v === 'object' && !Array.isArray(v)) {
+                        out[k] = mergeObjectsWithOrBooleans(existing, v);
+                    } else if (typeof v === 'boolean' || v === true || v === false || v === 'true' || v === 'false') {
+                        out[k] = !!(existing || v === true || v === 'true');
+                    } else if (v !== undefined && v !== null && String(v).trim() !== '') {
+                        if (!existing || existing === '' || existing === null) out[k] = v;
+                    }
                 }
+                return out;
+            }
+            function getMergedModuleSettings(moduleId) {
+                var instances = getAllModuleSettingsInstances(moduleId);
+                var schema = (window.GLANCERF_MODULES_SETTINGS_SCHEMA || {})[moduleId] || [];
+                var schemaById = {};
+                for (var i = 0; i < schema.length; i++) {
+                    if (schema[i] && schema[i].id) schemaById[schema[i].id] = schema[i];
+                }
+                var merged = {};
+                for (var s = 0; s < instances.length; s++) {
+                    var inst = instances[s];
+                    for (var key in inst) {
+                        if (!Object.prototype.hasOwnProperty.call(inst, key)) continue;
+                        var val = inst[key];
+                        var schemaEntry = schemaById[key];
+                        var stype = (schemaEntry && schemaEntry.type) || '';
+                        if (stype === 'checkbox') {
+                            merged[key] = !!(merged[key] || val === true || val === 'true' || val === 1 || val === '1');
+                        } else if (typeof val === 'string' && val.trim() && (val.trim().charAt(0) === '{' || val.trim().charAt(0) === '[')) {
+                            try {
+                                var parsed = JSON.parse(val);
+                                if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
+                                    merged[key] = mergeObjectsWithOrBooleans(merged[key], parsed);
+                                } else if (merged[key] === undefined) {
+                                    merged[key] = val;
+                                }
+                            } catch (e) {
+                                if (merged[key] === undefined) merged[key] = val;
+                            }
+                        } else {
+                            if (merged[key] === undefined || merged[key] === '' || merged[key] === null) {
+                                if (val !== undefined && val !== null && String(val).trim() !== '') merged[key] = val;
+                            }
+                        }
+                    }
+                }
+                return merged;
+            }
+            function getAllModuleSettingsInstances(moduleId) {
+                var out = [];
+                var all = window.GLANCERF_MODULE_SETTINGS || {};
+                var layout = Array.isArray(window.GLANCERF_MAP_OVERLAY_LAYOUT) ? window.GLANCERF_MAP_OVERLAY_LAYOUT : [];
+                for (var j = 0; j < layout.length; j++) {
+                    if (layout[j] === moduleId) {
+                        var ms = all['map_overlay_' + j];
+                        if (ms && typeof ms === 'object') out.push(ms);
+                    }
+                }
+                var cells = document.querySelectorAll('.grid-cell-' + moduleId);
+                for (var i = 0; i < cells.length; i++) {
+                    var r = cells[i].getAttribute('data-row');
+                    var c = cells[i].getAttribute('data-col');
+                    var key = (r != null && c != null) ? r + '_' + c : '';
+                    if (key) {
+                        var ms = all[key];
+                        if (ms && typeof ms === 'object') out.push(ms);
+                    }
+                }
+                return out;
+            }
+            function hasSatellitePassOverlay() {
+                return hasMapOverlayForModule('satellite_pass');
+            }
+            function getSatellitePassSettings() {
+                var merged = getMergedModuleSettings('satellite_pass');
+                var sat = merged.sat_satellites;
+                if (sat && typeof sat === 'object') return sat;
+                return {};
             }
             var TRACKS_STEP_SEC = 120;
             function satPassInterpolateTick() {
@@ -964,7 +1169,7 @@
             }
             function addSatellitePassLocationsOverlay(map) {
                 if (typeof L === 'undefined') return;
-                if (document.querySelectorAll('.grid-cell-satellite_pass').length === 0) {
+                if (!hasSatellitePassOverlay()) {
                     /* Hide overlay only; keep layer and markers so we do not recreate all dots at cached position when panel reappears. */
                     if (map._satellitePassLocationsLayerGroup && map.hasLayer(map._satellitePassLocationsLayerGroup)) {
                         map.removeLayer(map._satellitePassLocationsLayerGroup);
@@ -1160,7 +1365,7 @@
             var SAT_TRACE_RETRY_MAX = 8;
             function scheduleTraceRetryForNorad(map, norad) {
                 if (!map || norad == null) return;
-                if (document.querySelectorAll('.grid-cell-satellite_pass').length === 0) {
+                if (!hasSatellitePassOverlay()) {
                     if (map._satellitePassTracePendingNorads) delete map._satellitePassTracePendingNorads[norad];
                     return;
                 }
@@ -1176,7 +1381,7 @@
                     if (!r.ok) return { tracks: {} };
                     return r.json();
                 }).then(function(data) {
-                    if (document.querySelectorAll('.grid-cell-satellite_pass').length === 0) return;
+                    if (!hasSatellitePassOverlay()) return;
                     var tracks = (data && data.tracks) ? data.tracks : {};
                     if (tracks[String(norad)]) {
                         delete pending[norad];
@@ -1210,8 +1415,6 @@
                     if (isNaN(norad)) return;
                     if (satSettings[noradStr] && satSettings[noradStr].show_traces === false) return;
                     var satEntry = satSettings[noradStr];
-                    var showOnMap = !(satEntry && satEntry.show_on_map === false);
-                    if (showOnMap && !markers[noradStr]) return;
                     var t = tracks[noradStr];
                     var tail = (t && t.tail) ? t.tail : [];
                     var lead = (t && t.lead) ? t.lead : [];
@@ -1250,13 +1453,19 @@
                     }
                     var segments = splitPathAtWrapBoundaries(path);
                     var color = satPassColorFromSettings(satEntry, norad);
-                    segments.forEach(function(seg) {
-                        L.polyline(seg, {
+                    function addPolylineForSegment(seg, lonOffset) {
+                        var pts = seg.map(function(p) { return [p[0], p[1] + lonOffset]; });
+                        L.polyline(pts, {
                             color: color,
                             weight: 2,
                             opacity: 0.65,
                             smoothFactor: 1
                         }).addTo(layerGroup);
+                    }
+                    segments.forEach(function(seg) {
+                        addPolylineForSegment(seg, 0);
+                        addPolylineForSegment(seg, 360);
+                        addPolylineForSegment(seg, -360);
                     });
                 });
                 Object.keys(map._satellitePassTrackLead || {}).forEach(function(noradStr) {
@@ -1272,7 +1481,7 @@
             }
             function addSatellitePassTracksOverlay(map) {
                 if (typeof L === 'undefined') return;
-                if (document.querySelectorAll('.grid-cell-satellite_pass').length === 0) {
+                if (!hasSatellitePassOverlay()) {
                     if (map._satellitePassTracksLayerGroup) {
                         map.removeLayer(map._satellitePassTracksLayerGroup);
                         map._satellitePassTracksLayerGroup = null;
@@ -1302,7 +1511,7 @@
                     if (trackCount === 0) {
                         var retries = (map._satellitePassTracksRetryCount != null) ? map._satellitePassTracksRetryCount : 0;
                         map._satellitePassTracksRetryCount = retries + 1;
-                        if (retries < 3 && document.querySelectorAll('.grid-cell-satellite_pass').length > 0) {
+                        if (retries < 3 && hasSatellitePassOverlay()) {
                             setTimeout(function() { addSatellitePassTracksOverlay(map); }, 20000);
                         }
                     } else {
@@ -1322,7 +1531,8 @@
                 if (cfg.show_sun_moon) addSunMoonOverlay(map);
                 if (cfg.show_aurora) addAuroraOverlay(map, cfg);
                 if (cfg.propagation_source && cfg.propagation_source !== 'none') addPropagationOverlay(map, cfg);
-                if (cfg.show_aprs_locations) addAprsLocationsOverlay(map, cfg);
+                if (hasMapOverlayForModule('aprs')) addAprsLocationsOverlay(map, cfg);
+                if (hasMapOverlayForModule('live_spots')) addLiveSpotsLinesOverlay(map);
                 addQthMarkerOverlay(map);
                 addSatNewLocationsOverlay(map);
                 addSatellitePassLocationsOverlay(map);
@@ -1382,18 +1592,40 @@
                         document.querySelectorAll('.grid-cell-map .map_container').forEach(function(el) {
                             if (!el._map) return;
                             var cfg = getMapSettings(el);
+                            if (cfg.show_aurora) addAuroraOverlay(el._map, cfg);
                             if (cfg.propagation_source && cfg.propagation_source !== 'none') addPropagationOverlay(el._map, cfg);
-                            if (cfg.show_aprs_locations) addAprsLocationsOverlay(el._map, cfg);
+                            if (hasMapOverlayForModule('aprs')) addAprsLocationsOverlay(el._map, cfg);
+                            if (hasMapOverlayForModule('live_spots')) addLiveSpotsLinesOverlay(el._map);
                             addSatNewLocationsOverlay(el._map);
                             addSatellitePassLocationsOverlay(el._map);
                         });
                     }, PROPAGATION_REFRESH_MS);
                 }
+                /* APRS overlay: refresh every 10 s when aprs in overlay (live feed). */
+                if (!window._glancerfAprsOverlayRefreshStarted) {
+                    window._glancerfAprsOverlayRefreshStarted = true;
+                    setInterval(function() {
+                        if (!hasMapOverlayForModule('aprs')) return;
+                        document.querySelectorAll('.grid-cell-map .map_container').forEach(function(el) {
+                            if (!el._map) return;
+                            var cfg = getMapSettings(el);
+                            addAprsLocationsOverlay(el._map, cfg);
+                        });
+                    }, 10000);
+                    document.addEventListener('glancerf_aprs_update', function() {
+                        if (!hasMapOverlayForModule('aprs')) return;
+                        document.querySelectorAll('.grid-cell-map .map_container').forEach(function(el) {
+                            if (!el._map) return;
+                            var cfg = getMapSettings(el);
+                            addAprsLocationsOverlay(el._map, cfg);
+                        });
+                    });
+                }
                 /* Satellite positions: refresh from cache every 5 s so new dots appear as soon as each position is written. */
                 if (!window._glancerfSatelliteLocationsRefreshStarted) {
                     window._glancerfSatelliteLocationsRefreshStarted = true;
                     setInterval(function() {
-                        if (document.querySelectorAll('.grid-cell-satellite_pass').length === 0) return;
+                        if (!hasSatellitePassOverlay()) return;
                         document.querySelectorAll('.grid-cell-map .map_container').forEach(function(el) {
                             if (!el._map) return;
                             addSatellitePassLocationsOverlay(el._map);
@@ -1409,7 +1641,7 @@
                 if (!window._glancerfSatelliteTracksRefreshStarted) {
                     window._glancerfSatelliteTracksRefreshStarted = true;
                     setInterval(function() {
-                        if (document.querySelectorAll('.grid-cell-satellite_pass').length === 0) return;
+                        if (!hasSatellitePassOverlay()) return;
                         document.querySelectorAll('.grid-cell-map .map_container').forEach(function(el) {
                             if (!el._map) return;
                             addSatellitePassTracksOverlay(el._map);
