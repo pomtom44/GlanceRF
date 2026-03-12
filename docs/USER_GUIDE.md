@@ -8,7 +8,7 @@ This guide explains how to use GlanceRF: first run, setup, the menu, the layout 
 
 **Option A: Install (choose one of three methods)**
 
-1. **Core installer** — Download from [glancerf.zl4st.com/installers/](https://glancerf.zl4st.com/installers/) (GlanceRF-install-Windows.exe, GlanceRF-install-Linux.sh, or GlanceRF-install-Mac.sh) and run it.
+1. **Core installer** — Download from [glancerf.zl4st.com/installers/](https://glancerf.zl4st.com/installers/) (GlanceRF-Install-Windows.exe, GlanceRF-install-Linux.sh, or GlanceRF-install-Mac.sh) and run it.
 2. **GitHub + installer** — Download the [GitHub ZIP](https://github.com/pomtom44/GlanceRF/archive/refs/heads/main.zip), extract, then run the installer from `Project/installers`:
    - **Windows:** Double-click `installers\install-windows.bat`
    - **Linux:** `chmod +x installers/install-linux.sh` then `./installers/install-linux.sh`

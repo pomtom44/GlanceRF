@@ -16,7 +16,7 @@ Download the installer for your OS and run it. It downloads the latest GlanceRF 
 
 | Platform | Download | Run |
 |----------|----------|-----|
-| **Windows** | [GlanceRF-install-Windows.exe](https://glancerf.zl4st.com/installers/GlanceRF-install-Windows.exe) | Double-click the downloaded file |
+| **Windows** | [GlanceRF-Install-Windows.exe](https://glancerf.zl4st.com/installers/GlanceRF-Install-Windows.exe) | Double-click the downloaded file |
 | **Linux** | [GlanceRF-install-Linux.sh](https://glancerf.zl4st.com/installers/GlanceRF-install-Linux.sh) | `curl -sSL https://glancerf.zl4st.com/installers/GlanceRF-install-Linux.sh \| bash` |
 | **macOS** | [GlanceRF-install-Mac.sh](https://glancerf.zl4st.com/installers/GlanceRF-install-Mac.sh) | `curl -sSL https://glancerf.zl4st.com/installers/GlanceRF-install-Mac.sh \| bash` |
 

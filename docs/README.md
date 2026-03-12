@@ -22,7 +22,7 @@ See the [website](https://glancerf.zl4st.com) for more screenshots.
 
 | Method | Description |
 |--------|--------------|
-| **1. Core installer** | Download from [glancerf.zl4st.com/installers/](https://glancerf.zl4st.com/installers/) — GlanceRF-install-Windows.exe, GlanceRF-install-Linux.sh, or GlanceRF-install-Mac.sh. Runs the full installer. |
+| **1. Core installer** | Download from [glancerf.zl4st.com/installers/](https://glancerf.zl4st.com/installers/) — GlanceRF-Install-Windows.exe, GlanceRF-install-Linux.sh, or GlanceRF-install-Mac.sh. Runs the full installer. |
 | **2. GitHub + installer** | Download the [GitHub ZIP](https://github.com/pomtom44/GlanceRF/archive/refs/heads/main.zip), extract, then run the installer from `Project/installers`. |
 | **3. Manual** | Download from GitHub, then `pip install -r requirements/requirements-headless.txt` and `python run.py` from the Project folder. |
 

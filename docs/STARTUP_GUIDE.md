@@ -24,7 +24,7 @@ Before you start:
 
 The simplest way to get GlanceRF running at logon is to run the **installer**. You can use either:
 
-- **Method 1:** Download the core installer from [glancerf.zl4st.com/installers/](https://glancerf.zl4st.com/installers/) (GlanceRF-install-Windows.exe, GlanceRF-install-Linux.sh, or GlanceRF-install-Mac.sh)
+- **Method 1:** Download the core installer from [glancerf.zl4st.com/installers/](https://glancerf.zl4st.com/installers/) (GlanceRF-Install-Windows.exe, GlanceRF-install-Linux.sh, or GlanceRF-install-Mac.sh)
 - **Method 2:** Download the GitHub ZIP, extract, then run the installer from `Project/installers`
 
 When prompted "Run GlanceRF at logon? (y/n)", choose **y**. The installer also handles Python, requirements, desktop mode, and an optional desktop shortcut.
@@ -220,7 +220,7 @@ After changing `glancerf_config.json`, restart GlanceRF (or the service/task) fo
 
 | Platform     | Easiest              | Manual option                    |
 |-------------|----------------------|----------------------------------|
-| Windows     | [Core installer](https://glancerf.zl4st.com/installers/GlanceRF-install-Windows.exe) or `installers\install-windows.bat` | Startup folder shortcut or Task Scheduler |
+| Windows     | [Core installer](https://glancerf.zl4st.com/installers/GlanceRF-Install-Windows.exe) or `installers\install-windows.bat` | Startup folder shortcut or Task Scheduler |
 | Ubuntu/Linux| [Core installer](https://glancerf.zl4st.com/installers/GlanceRF-install-Linux.sh) or `./installers/install-linux.sh`  | systemd user service (`~/.config/systemd/user/glancerf.service`) |
 | macOS       | [Core installer](https://glancerf.zl4st.com/installers/GlanceRF-install-Mac.sh) or `./installers/install-mac.sh`    | launchd (`~/Library/LaunchAgents/com.glancerf.plist`) |
 | Raspberry Pi| Same as Linux        | Same as Ubuntu; optionally system-wide |
