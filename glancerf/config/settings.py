@@ -134,6 +134,16 @@ def _validate_config(config: Dict[str, Any]) -> None:
         _check_type("setup_callsign", config["setup_callsign"], str)
     if "setup_location" in config and config["setup_location"] is not None:
         _check_type("setup_location", config["setup_location"], str)
+    if "gps_location_enabled" in config and config["gps_location_enabled"] is not None:
+        _check_type("gps_location_enabled", config["gps_location_enabled"], bool)
+    if "gps_time_enabled" in config and config["gps_time_enabled"] is not None:
+        _check_type("gps_time_enabled", config["gps_time_enabled"], bool)
+    if "gps_source" in config and config["gps_source"] is not None:
+        _check_type("gps_source", config["gps_source"], str)
+        if config["gps_source"] not in ("gpsd", "serial", "auto"):
+            raise ConfigValidationError("Config key 'gps_source' must be 'gpsd', 'serial', or 'auto'")
+    if "gps_serial_port" in config and config["gps_serial_port"] is not None:
+        _check_type("gps_serial_port", config["gps_serial_port"], str)
     if "setup_ssid" in config and config["setup_ssid"] is not None:
         _check_type("setup_ssid", config["setup_ssid"], str)
     if "aprs_passcode" in config and config["aprs_passcode"] is not None and config["aprs_passcode"] != "":

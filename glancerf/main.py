@@ -10,7 +10,7 @@ import time
 from pathlib import Path
 
 from fastapi import Depends, FastAPI, Request
-from fastapi.responses import HTMLResponse, FileResponse, Response
+from fastapi.responses import HTMLResponse, FileResponse, JSONResponse, Response
 from fastapi.staticfiles import StaticFiles
 
 from glancerf import __version__
@@ -182,7 +182,40 @@ async def _shutdown():
 @app.get("/api/time")
 async def get_time():
     """API endpoint for current time (used for startup check)."""
-    return get_current_time()
+    return get_current_time(config)
+
+
+@app.get("/api/gps/status")
+async def get_gps_status():
+    """Return GPS setup status: devices, methods (GPSD, serial), hints for setup page."""
+    from glancerf.services.gps_service import get_gps_status as _get_gps_status
+    return await asyncio.to_thread(_get_gps_status, config)
+
+
+@app.get("/api/gps/stats")
+async def get_gps_stats():
+    """Return GPS stats when connected: lat, lon, time, altitude, speed, track, satellites."""
+    from glancerf.services.gps_service import get_gps_stats as _get_gps_stats
+    stats = await asyncio.to_thread(_get_gps_stats, config)
+    if stats is None:
+        return {"connected": False}
+    return {"connected": True, **stats}
+
+
+@app.post("/api/gps/config")
+async def save_gps_config(request: Request, _: None = Depends(rate_limit_dependency)):
+    """Save GPS source and serial port config."""
+    try:
+        body = await request.json()
+    except Exception:
+        return JSONResponse({"error": "Invalid JSON"}, status_code=400)
+    gps_source = (body.get("gps_source") or "auto").strip().lower()
+    gps_serial_port = (body.get("gps_serial_port") or "").strip()
+    if gps_source not in ("gpsd", "serial", "auto"):
+        gps_source = "auto"
+    config.set("gps_source", gps_source)
+    config.set("gps_serial_port", gps_serial_port)
+    return {"ok": True}
 
 
 @app.post("/api/restart")

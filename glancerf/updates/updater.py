@@ -241,13 +241,24 @@ def apply_update(extracted_root: Path) -> Tuple[bool, str]:
 
 
 def install_requirements(app_root: Path) -> Tuple[bool, str]:
-    """Run pip install for requirements in requirements/ folder."""
+    """Run pip install for platform-appropriate requirements file."""
     req_dir = app_root / "requirements"
     if not req_dir.is_dir():
         return True, ""
-    req_files = list(req_dir.glob("*.txt"))
-    if not req_files:
+    # Install only the platform-appropriate file to avoid pywin32 on Linux/mac, etc.
+    if sys.platform == "win32":
+        req_file = req_dir / "requirements-windows-desktop.txt"
+        if not req_file.exists():
+            req_file = req_dir / "requirements-windows.txt"
+    elif sys.platform == "darwin":
+        req_file = req_dir / "requirements-mac.txt"
+        if not req_file.exists():
+            req_file = req_dir / "requirements-linux.txt"
+    else:
+        req_file = req_dir / "requirements-linux.txt"
+    if not req_file.exists():
         return True, ""
+    req_files = [req_file]
     for req_file in req_files:
         try:
             result = subprocess.run(

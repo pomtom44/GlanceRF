@@ -4,13 +4,13 @@ import asyncio
 from typing import Any
 
 from glancerf.utils.cache import get_cache
-from glancerf.utils.location import parse_location
+from glancerf.utils.location import get_effective_location, parse_location
 
 
 async def warm(settings: dict, config: Any) -> None:
     """Compute sun up/down and fill cache. No-op if location not set or invalid."""
-    loc_str = (settings.get("location") or config.get("setup_location") or "").strip()
-    coords = parse_location(loc_str)
+    loc_str = (settings.get("location") or "").strip()
+    coords = parse_location(loc_str) if loc_str else get_effective_location(config)
     if coords is None:
         return
     lat, lng = coords

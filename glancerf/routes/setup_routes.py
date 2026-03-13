@@ -61,6 +61,10 @@ def register_setup_routes(app: FastAPI, connection_manager: Optional[ConnectionM
         current_callsign = current_config.get("setup_callsign") or ""
         current_ssid = current_config.get("setup_ssid") or "01"
         current_location = current_config.get("setup_location") or ""
+        gps_location_enabled = current_config.get("gps_location_enabled") or False
+        gps_time_enabled = current_config.get("gps_time_enabled") or False
+        gps_source = current_config.get("gps_source") or "auto"
+        gps_serial_port = current_config.get("gps_serial_port") or ""
         current_aprs_cache_max_size_mb = current_config.get("aprs_cache_max_size_mb")
         if current_aprs_cache_max_size_mb is None or current_aprs_cache_max_size_mb == "":
             old_size = current_config.get("aprs_cache_max_size")
@@ -110,7 +114,17 @@ def register_setup_routes(app: FastAPI, connection_manager: Optional[ConnectionM
         update_mode_auto_selected = " selected" if current_update_mode == "auto" else ""
         telemetry_enabled_selected = " selected" if current_telemetry_enabled else ""
         telemetry_disabled_selected = " selected" if not current_telemetry_enabled else ""
+        gps_location_enabled_selected = " selected" if gps_location_enabled else ""
+        gps_location_disabled_selected = " selected" if not gps_location_enabled else ""
+        gps_location_enabled_value = "1" if gps_location_enabled else "0"
+        gps_time_enabled_selected = " selected" if gps_time_enabled else ""
+        gps_time_disabled_selected = " selected" if not gps_time_enabled else ""
+        gps_source_auto_selected = " selected" if gps_source == "auto" else ""
+        gps_source_gpsd_selected = " selected" if gps_source == "gpsd" else ""
+        gps_source_serial_selected = " selected" if gps_source == "serial" else ""
         setup_config_json = _json.dumps({
+            "gps_source": gps_source,
+            "gps_serial_port": gps_serial_port,
             "current_ratio": current_ratio,
             "current_orientation": current_orientation,
         })
@@ -147,6 +161,14 @@ def register_setup_routes(app: FastAPI, connection_manager: Optional[ConnectionM
             current_update_check_time=current_update_check_time,
             telemetry_enabled_selected=telemetry_enabled_selected,
             telemetry_disabled_selected=telemetry_disabled_selected,
+            gps_location_enabled_selected=gps_location_enabled_selected,
+            gps_location_disabled_selected=gps_location_disabled_selected,
+            gps_location_enabled_value=gps_location_enabled_value,
+            gps_time_enabled_selected=gps_time_enabled_selected,
+            gps_time_disabled_selected=gps_time_disabled_selected,
+            gps_source_auto_selected=gps_source_auto_selected,
+            gps_source_gpsd_selected=gps_source_gpsd_selected,
+            gps_source_serial_selected=gps_source_serial_selected,
             current_ratio=current_ratio,
             current_orientation=current_orientation,
             setup_config_json=setup_config_json,
@@ -167,6 +189,10 @@ def register_setup_routes(app: FastAPI, connection_manager: Optional[ConnectionM
         setup_callsign: str = Form(""),
         setup_ssid: str = Form("01"),
         setup_location: str = Form(""),
+        gps_location_enabled: str = Form("0"),
+        gps_time_enabled: str = Form("0"),
+        gps_source: str = Form("auto"),
+        gps_serial_port: str = Form(""),
         aprs_cache_max_size_mb: float = Form(500),
         aprs_cache_max_age_hours: float = Form(168),
         update_mode: str = Form("auto"),
@@ -223,6 +249,10 @@ def register_setup_routes(app: FastAPI, connection_manager: Optional[ConnectionM
             ssid = "01"
         config_instance.set("setup_ssid", ssid)
         config_instance.set("setup_location", (setup_location or "").strip())
+        config_instance.set("gps_location_enabled", gps_location_enabled == "1")
+        config_instance.set("gps_time_enabled", gps_time_enabled == "1")
+        config_instance.set("gps_source", (gps_source or "auto").lower() if gps_source in ("gpsd", "serial", "auto") else "auto")
+        config_instance.set("gps_serial_port", (gps_serial_port or "").strip())
         config_instance.set("aprs_passcode", None)  # Always auto-compute from callsign
         try:
             aprs_mb = max(100.0, min(10000.0, float(aprs_cache_max_size_mb or 500)))
@@ -261,3 +291,8 @@ def register_setup_routes(app: FastAPI, connection_manager: Optional[ConnectionM
 
         _log.debug("setup: saved, redirecting to %s", redirect_url)
         return RedirectResponse(url=redirect_url, status_code=303)
+
+    @app.get("/setup/gps")
+    async def setup_gps_redirect():
+        """Redirect to main setup GPS tab."""
+        return RedirectResponse(url="/setup?tab=hardware")

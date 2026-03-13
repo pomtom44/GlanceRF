@@ -1,6 +1,7 @@
 """Parse location strings (grid square or lat,lng) to (lat, lng). Used by modules that need coordinates."""
 
 import re
+from typing import Any
 
 
 def parse_location(s: str) -> tuple[float, float] | None:
@@ -38,3 +39,31 @@ def parse_location(s: str) -> tuple[float, float] | None:
         return (lat, lon)
     except (ValueError, IndexError):
         return None
+
+
+def get_effective_location(config: Any) -> tuple[float, float] | None:
+    """
+    Get effective system location. If gps_location_enabled and GPS has fix, use GPS.
+    Otherwise use setup_location from config. Returns (lat, lon) or None.
+    """
+    if config.get("gps_location_enabled"):
+        try:
+            from glancerf.services.gps_service import get_gps_location
+            coords = get_gps_location(config)
+            if coords is not None:
+                return coords
+        except Exception:
+            pass
+    loc_str = (config.get("setup_location") or "").strip()
+    return parse_location(loc_str)
+
+
+def get_effective_location_string(config: Any) -> str:
+    """
+    Get effective location as string for frontend (grid square or lat,lon).
+    Uses GPS when gps_location_enabled, else setup_location.
+    """
+    coords = get_effective_location(config)
+    if coords is not None:
+        return f"{coords[0]},{coords[1]}"
+    return (config.get("setup_location") or "").strip()

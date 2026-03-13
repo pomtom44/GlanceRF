@@ -147,7 +147,8 @@ $form.Controls.Add($progressBar)
 $btnCancel = New-Object System.Windows.Forms.Button
 $btnCancel.Location = New-Object System.Drawing.Point(20, 130)
 $btnCancel.Size = New-Object System.Drawing.Size(75, 32)
-$btnCancel.Text = "Cancel"
+$btnCancel.Text = "Finish"
+$btnCancel.Visible = $false  # Shown only when install completes (Cancel removed - can't cancel during blocking ops)
 $form.Controls.Add($btnCancel)
 
 $form.Add_FormClosed({ [System.Windows.Forms.Application]::Exit() })
@@ -155,6 +156,7 @@ $form.Add_FormClosed({ [System.Windows.Forms.Application]::Exit() })
 # --- Python check runs after main window is shown ---
 $PythonCmd = $null
 $script:needPythonDownload = $false
+$script:launchOnFinish = $null  # Scriptblock to run when user clicks Finish (launch GlanceRF)
 
 $form.Add_Shown({
     # Let form paint immediately before heavy work (helps in Sandbox/VMs)
@@ -220,7 +222,6 @@ $form.Add_Shown({
     # --- LONG OPERATIONS (Python install, dependencies) ---
 
     if ($script:needPythonDownload) {
-        $btnCancel.Enabled = $false
         Update-Progress "Downloading Python..." 12
 
         $is64 = [Environment]::Is64BitOperatingSystem
@@ -295,14 +296,14 @@ $form.Add_Shown({
     # Build dependency list and compute total progress units (dynamic - scales with package count)
     $depPackages = @()
     if ($desktopMode -eq "desktop") {
-        $desktopReq = Join-Path $ProjectPath "requirements\requirements-desktop-window.txt"
+        $desktopReq = Join-Path $ProjectPath "requirements\requirements-windows-desktop.txt"
         if (Test-Path $desktopReq) {
             $depPackages = (Get-Content $desktopReq | Where-Object { $_ -match "^\s*[a-zA-Z0-9_-]+" } | ForEach-Object { ($_ -split "==|>=|<=|~=")[0].Trim() })
         }
         if ($depPackages.Count -eq 0) { $depPackages = @("PyQt5", "PyQtWebEngine") }
     }
     if ($desktopMode -eq "browser" -or $desktopMode -eq "terminal" -or $desktopMode -eq "headless") {
-        $headlessReq = Join-Path $ProjectPath "requirements\requirements-headless.txt"
+        $headlessReq = Join-Path $ProjectPath "requirements\requirements-windows.txt"
         if (Test-Path $headlessReq) {
             $depPackages = (Get-Content $headlessReq | Where-Object { $_ -match "^\s*[a-zA-Z0-9_-]+" } | ForEach-Object { ($_ -split "==|>=|<=|~=")[0].Trim() })
         }
@@ -365,8 +366,8 @@ $form.Add_Shown({
             [System.Windows.Forms.MessageBox]::Show("Service install failed (may require Administrator). Run this installer as Administrator, or install manually: cd to Project folder, then run: python -m glancerf.desktop.glancerf_service install", "GlanceRF Installer", [System.Windows.Forms.MessageBoxButtons]::OK, [System.Windows.Forms.MessageBoxIcon]::Warning)
         }
         if ($serviceInstallOk) {
-            Update-Progress "Starting service and tray icon..." (90 + [int](($script:unitsDone / $script:totalUnits) * 10))
-            Start-Process -FilePath "net" -ArgumentList "start", "GlanceRF" -Verb RunAs -Wait -ErrorAction SilentlyContinue
+            Update-Progress "Configuring service and tray (will start when you click Finish)..." (90 + [int](($script:unitsDone / $script:totalUnits) * 10))
+            # Create tray shortcut in Startup folder now (so it runs at next logon)
             try {
                 $pyExePath = if ($script:PythonCmd -eq "py -3") { (py -3 -c "import sys; print(sys.executable)" 2>$null).Trim() } else { (& $script:PythonCmd -c "import sys; print(sys.executable)" 2>$null).Trim() }
                 $pythonwPath = $pyExePath -replace "python\.exe$", "pythonw.exe"
@@ -382,8 +383,16 @@ $form.Add_Shown({
                 if (Test-Path $logoIco) { $sc.IconLocation = "$logoIco,0" }
                 $sc.Save()
                 [System.Runtime.Interopservices.Marshal]::ReleaseComObject($ws) | Out-Null
-                Start-Process -FilePath $pythonwPath -ArgumentList "-m glancerf.desktop.tray_helper" -WorkingDirectory $ProjectPath -WindowStyle Hidden
             } catch {}
+            $script:launchOnFinish = {
+                Start-Process -FilePath "net" -ArgumentList "start", "GlanceRF" -Verb RunAs -Wait -ErrorAction SilentlyContinue
+                try {
+                    $pyExePath = if ($script:PythonCmd -eq "py -3") { (py -3 -c "import sys; print(sys.executable)" 2>$null).Trim() } else { (& $script:PythonCmd -c "import sys; print(sys.executable)" 2>$null).Trim() }
+                    $pythonwPath = $pyExePath -replace "python\.exe$", "pythonw.exe"
+                    if (-not (Test-Path $pythonwPath)) { $pythonwPath = $pyExePath }
+                    Start-Process -FilePath $pythonwPath -ArgumentList "-m glancerf.desktop.tray_helper" -WorkingDirectory $ProjectPath -WindowStyle Hidden
+                } catch {}
+            }
             $script:unitsDone++
         }
     }
@@ -451,18 +460,28 @@ $form.Add_Shown({
         $configObj = $null
         try { $configObj = Get-Content $configPath -Raw | ConvertFrom-Json } catch {}
         $port = if ($configObj -and $configObj.port) { $configObj.port } else { 8080 }
-        $completeMsg = "Install complete. GlanceRF is running as a service. Open http://localhost:$port in your browser. Click the tray icon to open GlanceRF."
+        $completeMsg = "Install complete. GlanceRF will start when you click Finish. Open http://localhost:$port in your browser. Click the tray icon to open GlanceRF."
     } elseif ($WantStartup -and $startupTaskCreated) {
-        try { Start-ScheduledTask -TaskName "GlanceRF" -ErrorAction Stop } catch {}
-        $completeMsg = "Install complete. GlanceRF will run at logon. It is starting now."
+        $script:launchOnFinish = {
+            try { Start-ScheduledTask -TaskName "GlanceRF" -ErrorAction Stop } catch {}
+        }
+        $completeMsg = "Install complete. GlanceRF will start when you click Finish (and will run at logon)."
     }
     Update-Progress $completeMsg 100
 
-    $btnCancel.Text = "Finish"
+    $btnCancel.Visible = $true
     $btnCancel.Enabled = $true
 })
 
-$btnCancel.Add_Click({ $form.Close() })
+$btnCancel.Add_Click({
+    if ($script:launchOnFinish) {
+        $btnCancel.Enabled = $false
+        $lblStatus.Text = "Starting GlanceRF..."
+        [System.Windows.Forms.Application]::DoEvents()
+        try { & $script:launchOnFinish } catch {}
+    }
+    $form.Close()
+})
 
 [void]$form.ShowDialog()
 exit 0

@@ -8,8 +8,8 @@ FROM python:3.11-slim
 WORKDIR /app
 
 # Install Python dependencies (headless Linux - no GUI)
-COPY requirements/requirements-headless-linux.txt .
-RUN pip install --no-cache-dir -r requirements-headless-linux.txt
+COPY requirements/requirements-linux.txt .
+RUN pip install --no-cache-dir -r requirements-linux.txt
 
 # Copy application code
 COPY run.py .

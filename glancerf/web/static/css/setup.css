@@ -55,6 +55,23 @@ label {
   border-radius: 8px;
 }
 
+.setup-gps-status { margin-bottom: 20px; }
+.gps-status-box { padding: 16px; border-radius: 8px; margin-bottom: 12px; border: 1px solid #333; }
+.gps-status-box.gps-status-ok { background: rgba(0, 255, 0, 0.08); border-color: #0f0; }
+.gps-status-box.gps-status-warning { background: rgba(255, 180, 0, 0.08); border-color: #fa0; }
+.gps-status-box.gps-status-error { background: rgba(255, 80, 80, 0.08); border-color: #f44; }
+.gps-status-title { font-weight: bold; font-size: 16px; margin-bottom: 8px; }
+.gps-status-box.gps-status-ok .gps-status-title { color: #0f0; }
+.gps-status-box.gps-status-warning .gps-status-title { color: #fa0; }
+.gps-status-box.gps-status-error .gps-status-title { color: #f66; }
+.gps-devices-list { list-style: none; padding: 0; margin: 8px 0; }
+.gps-devices-list li { padding: 6px 10px; background: #1a1a1a; margin-bottom: 4px; border-radius: 4px; font-size: 13px; }
+.gps-hints { margin-top: 12px; padding-left: 20px; color: #ccc; font-size: 12px; line-height: 1.6; }
+.gps-loading { color: #888; font-style: italic; }
+#gps-refresh-btn { padding: 10px 20px; background: #333; color: #fff; border: 1px solid #555; border-radius: 6px; cursor: pointer; font-family: inherit; }
+#gps-refresh-btn:hover:not(:disabled) { background: #444; }
+#gps-refresh-btn:disabled { opacity: 0.6; cursor: not-allowed; }
+
 .setup-aprs-cache-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;

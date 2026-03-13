@@ -20,65 +20,50 @@ __GLANCERF_MENU_PANEL__
         <h1>GlanceRF Setup</h1>
 
         <div class="setup-tabs">
-            <button type="button" class="setup-tab active" id="tab-page-1" data-page="1">1. Layout</button>
-            <button type="button" class="setup-tab" id="tab-page-2" data-page="2">2. Station &amp; updates</button>
-            <button type="button" class="setup-tab" id="tab-page-3" data-page="3">3. Tips &amp; shortcuts</button>
+            <button type="button" class="setup-tab active" id="tab-page-1" data-page="1">1. Hardware</button>
+            <button type="button" class="setup-tab" id="tab-page-2" data-page="2">2. Station</button>
+            <button type="button" class="setup-tab" id="tab-page-3" data-page="3">3. Layout</button>
+            <button type="button" class="setup-tab" id="tab-page-4" data-page="4">4. Tips &amp; shortcuts</button>
         </div>
 
         <form id="setup-form" method="POST" action="/setup" onsubmit="if (window._setupFormSubmitting) return false; window._setupFormSubmitting = true; var btn = document.getElementById('setup-continue-btn'); if (btn) btn.disabled = true; return true;">
             <div id="setup-page-1" class="setup-page active">
-            <div class="form-group">
-                <table class="setup-ratio-table">
-                    <tr>
-                        <td><label for="aspect_ratio">Screen Aspect Ratio</label></td>
-                        <td><select id="aspect_ratio" name="aspect_ratio" class="setup-ratio-select" required>
-                            {ratio_options}
-                        </select></td>
-                    </tr>
-                    <tr>
-                        <td><label for="orientation">Orientation</label></td>
-                        <td><select id="orientation" name="orientation" class="setup-ratio-select" required>
-                            <option value="landscape"{orientation_landscape_selected}>Landscape</option>
-                            <option value="portrait"{orientation_portrait_selected}>Portrait</option>
-                        </select></td>
-                    </tr>
-                    <tr class="setup-ratio-note-row">
-                        <td colspan="2"><span class="setup-ratio-note">This is just a guide to get your layout looking right, this does not lock the project to that aspect ratio.</span></td>
-                    </tr>
-                </table>
-            </div>
-
-            <div class="form-group">
-                <div class="preview-with-sliders">
-                    <div class="slider-container">
-                        <div class="slider-container-inner">
-                            <div class="slider-label">
-                                <span id="columns-value">{current_columns}</span>
-                            </div>
-                            <input type="range" id="grid_columns" name="grid_columns" min="1" max="{max_grid_scale}" value="{current_columns}" class="slider" orient="horizontal">
-                        </div>
-                    </div>
-
-                    <div class="preview-wrapper">
-                        <div class="slider-vertical-wrapper">
-                            <div class="slider-vertical-container">
-                                <div class="slider-vertical-label">
-                                    <span id="rows-value">{current_rows}</span>
-                                </div>
-                                <div class="slider-vertical-rotated">
-                                    <input type="range" id="grid_rows" name="grid_rows" min="1" max="{max_grid_scale}" value="{current_rows}" class="slider-vertical" orient="vertical">
-                                </div>
-                            </div>
-                        </div>
-
-                        <div class="preview-container">
-                            <div class="preview-square" id="preview-square">
-                            </div>
-                        </div>
-                    </div>
+            <h2 style="color:#0f0; font-size:18px; margin-bottom:16px;">GPIO</h2>
+            {setup_gpio_section}
+            <div id="gps-section">
+            <h2 style="color:#0f0; font-size:18px; margin-bottom:16px;">GPS</h2>
+            <p style="color:#aaa; font-size:14px; line-height:1.6; margin-bottom:16px;">Configure connection method and time sync.</p>
+            <div id="gps-status-container" class="setup-gps-status"></div>
+            <div id="gps-config-form" class="setup-gps-config" style="margin-bottom:20px; padding:16px; background:rgba(0,255,0,0.05); border-radius:8px; border:1px solid #333;">
+                <h3 class="setup-section-heading">Connection</h3>
+                <div class="form-group" style="margin-bottom:12px;">
+                    <label for="gps_source" style="display:block; margin-bottom:4px; color:#aaa;">Method</label>
+                    <select id="gps_source" name="gps_source" style="background:#111; color:#fff; border:1px solid #444; padding:8px; min-width:200px;">
+                        <option value="auto"{gps_source_auto_selected}>Auto (GPSD first, then serial)</option>
+                        <option value="gpsd"{gps_source_gpsd_selected}>GPSD only</option>
+                        <option value="serial"{gps_source_serial_selected}>Direct serial (NMEA) only</option>
+                    </select>
                 </div>
+                <div id="gps-serial-port-row" class="form-group" style="margin-bottom:12px; display:none;">
+                    <label for="gps_serial_port" style="display:block; margin-bottom:4px; color:#aaa;">Serial port</label>
+                    <select id="gps_serial_port" name="gps_serial_port" style="background:#111; color:#fff; border:1px solid #444; padding:8px; min-width:200px;">
+                        <option value="">-- Select port --</option>
+                    </select>
+                </div>
+                <div class="form-group" style="margin-bottom:12px;">
+                    <label for="gps_time_enabled" style="display:block; margin-bottom:4px; color:#aaa;">Use GPS for time sync</label>
+                    <select id="gps_time_enabled" name="gps_time_enabled" style="background:#111; color:#fff; border:1px solid #444; padding:8px; min-width:200px;">
+                        <option value="0"{gps_time_disabled_selected}>Off (use system time)</option>
+                        <option value="1"{gps_time_enabled_selected}>On</option>
+                    </select>
+                </div>
+                <button type="button" id="gps-refresh-btn">Refresh status</button>
             </div>
-
+            </div>
+            <div id="gps-no-connect-msg" style="display:none; color:#888; font-size:14px; margin-bottom:16px;">
+                <p>No GPS connected. Connect a USB GPS receiver and start GPSD or use direct serial. <a href="https://gpsd.io/installation.html" target="_blank" rel="noopener noreferrer" style="color:#0f0;">Setup guide</a></p>
+                <button type="button" id="gps-refresh-no-connect-btn">Check again</button>
+            </div>
             <div class="button-group">
                 <button type="button" id="setup-next-btn">Next</button>
             </div>
@@ -97,7 +82,16 @@ __GLANCERF_MENU_PANEL__
             <div class="form-group">
                 <label for="setup_location">Default location</label>
                 <input type="text" id="setup_location" name="setup_location" value="{current_location_esc}" placeholder="Grid square (e.g. RE78hk) or lat,lng (e.g. -43.5,172.6)" maxlength="64">
-                <span style="font-size:12px;">Default for modules that use a location (e.g. Weather, Sunrise/Sunset) unless overridden per module.</span>
+                <div class="form-group" style="margin-top:12px; margin-bottom:0;">
+                    <label for="gps_location_enabled" style="display:inline-block; margin-right:8px;">Use GPS for default location</label>
+                    <select id="gps_location_enabled" style="display:inline-block; min-width:120px;">
+                        <option value="0"{gps_location_disabled_selected}>Off</option>
+                        <option value="1"{gps_location_enabled_selected}>On</option>
+                    </select>
+                    <input type="hidden" id="gps_location_enabled_submit" name="gps_location_enabled" value="{gps_location_enabled_value}">
+                    <span id="gps-location-hint" style="font-size:12px; display:block; margin-top:6px; color:#888;"></span>
+                </div>
+                <span style="font-size:12px;">Manual location above, or use GPS when available (requires GPS fix).</span>
             </div>
             <div class="form-group setup-aprs-cache-section">
                 <h3 class="setup-section-heading">APRS cache</h3>
@@ -140,21 +134,77 @@ __GLANCERF_MENU_PANEL__
                 <button type="button" id="setup-next-btn-2">Next</button>
             </div>
             </div>
+
             <div id="setup-page-3" class="setup-page">
+            <div class="form-group">
+                <table class="setup-ratio-table">
+                    <tr>
+                        <td><label for="aspect_ratio">Screen Aspect Ratio</label></td>
+                        <td><select id="aspect_ratio" name="aspect_ratio" class="setup-ratio-select" required>
+                            {ratio_options}
+                        </select></td>
+                    </tr>
+                    <tr>
+                        <td><label for="orientation">Orientation</label></td>
+                        <td><select id="orientation" name="orientation" class="setup-ratio-select" required>
+                            <option value="landscape"{orientation_landscape_selected}>Landscape</option>
+                            <option value="portrait"{orientation_portrait_selected}>Portrait</option>
+                        </select></td>
+                    </tr>
+                    <tr class="setup-ratio-note-row">
+                        <td colspan="2"><span class="setup-ratio-note">This is just a guide to get your layout looking right, this does not lock the project to that aspect ratio.</span></td>
+                    </tr>
+                </table>
+            </div>
+            <div class="form-group">
+                <div class="preview-with-sliders">
+                    <div class="slider-container">
+                        <div class="slider-container-inner">
+                            <div class="slider-label">
+                                <span id="columns-value">{current_columns}</span>
+                            </div>
+                            <input type="range" id="grid_columns" name="grid_columns" min="1" max="{max_grid_scale}" value="{current_columns}" class="slider" orient="horizontal">
+                        </div>
+                    </div>
+                    <div class="preview-wrapper">
+                        <div class="slider-vertical-wrapper">
+                            <div class="slider-vertical-container">
+                                <div class="slider-vertical-label">
+                                    <span id="rows-value">{current_rows}</span>
+                                </div>
+                                <div class="slider-vertical-rotated">
+                                    <input type="range" id="grid_rows" name="grid_rows" min="1" max="{max_grid_scale}" value="{current_rows}" class="slider-vertical" orient="vertical">
+                                </div>
+                            </div>
+                        </div>
+                        <div class="preview-container">
+                            <div class="preview-square" id="preview-square">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="button-row">
+                <button type="button" id="setup-back-btn-3">Back</button>
+                <button type="button" id="setup-next-btn-3">Next</button>
+            </div>
+            </div>
+
+            <div id="setup-page-4" class="setup-page">
             <div class="form-group setup-tips-content">
                 <h2 style="color:#0f0; font-size:20px; margin-bottom:16px;">Menu</h2>
                 <p style="color:#ccc; font-size:14px; line-height:1.6; margin-bottom:12px;">Right-click or press <strong>M</strong> to open the menu. From the menu you can go to Setup, Layout & Config editor, Modules list, or run Manual Updates.</p>
+                <h2 style="color:#0f0; font-size:20px; margin-bottom:16px;">GPS module</h2>
+                <p style="color:#ccc; font-size:14px; line-height:1.6; margin-bottom:12px;">Add the <strong>GPS</strong> module to the grid to see live GPS stats (position, time, altitude, speed, track, satellites) when a GPS receiver is connected.</p>
                 <h2 style="color:#0f0; font-size:20px; margin-bottom:16px;">Map only modules</h2>
                 <p style="color:#ccc; font-size:14px; line-height:1.6; margin-bottom:12px;">Use <a href="/map-modules" style="color:#0f0;">Map only modules</a> to add modules that feed data to the map overlay (e.g. satellites, APRS) without taking a grid cell on the main dashboard.</p>
-                <h2 style="color:#0f0; font-size:20px; margin-bottom:16px;">GPIO</h2>
-                {setup_gpio_section}
                 <h2 style="color:#0f0; font-size:20px; margin-bottom:16px;">Setup guides</h2>
                 <p style="color:#ccc; font-size:14px; line-height:1.6; margin-bottom:12px;">Check the <a href="https://glancerf.zl4st.com" target="_blank" rel="noopener noreferrer" style="color:#0f0;">GlanceRF website</a> for setup guides (quick start, GPIO wiring, and more).</p>
                 <h2 style="color:#0f0; font-size:20px; margin-bottom:16px;">Report problems</h2>
                 <p style="color:#ccc; font-size:14px; line-height:1.6;">Found a bug or have a suggestion? <a href="https://github.com/pomtom44/GlanceRF/issues" target="_blank" rel="noopener noreferrer" style="color:#0f0;">Open an issue on GitHub</a> to report it.</p>
             </div>
             <div class="button-row">
-                <button type="button" id="setup-back-btn-3">Back</button>
+                <button type="button" id="setup-back-btn-4">Back</button>
                 <button type="submit" id="setup-continue-btn">Continue</button>
             </div>
             </div>

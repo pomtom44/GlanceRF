@@ -8,6 +8,7 @@ from fastapi import FastAPI
 from fastapi.responses import JSONResponse
 
 from glancerf.config import get_config, get_logger
+from glancerf.utils import get_effective_location
 from .satellite_service import (
     get_satellite_list_cached,
     get_satellite_locations_cached,
@@ -78,7 +79,7 @@ def register_routes(app: FastAPI) -> None:
 
     @app.get("/api/satellite/next_pass")
     async def get_next_pass(lat: float | None = None, lon: float | None = None, location: str | None = None):
-        """Return next pass times from cache for a location. Use query lat/lon, or location (gridsquare or lat,lon), or config setup_location."""
+        """Return next pass times from cache for a location. Use query lat/lon, or location (gridsquare or lat,lon), or effective location (GPS or config)."""
         try:
             obs_lat, obs_lon = None, None
             if lat is not None and lon is not None:
@@ -89,11 +90,9 @@ def register_routes(app: FastAPI) -> None:
                     obs_lat, obs_lon = ll
             if obs_lat is None or obs_lon is None:
                 config = get_config()
-                setup_loc = (config.get("setup_location") or "").strip()
-                if setup_loc:
-                    ll = parse_location_to_lat_lon(setup_loc)
-                    if ll is not None:
-                        obs_lat, obs_lon = ll
+                ll = get_effective_location(config)
+                if ll is not None:
+                    obs_lat, obs_lon = ll
             if obs_lat is None or obs_lon is None:
                 return {
                     "text": "No location set. Use Setup default location (grid square or lat,lon), or pass ?lat=&lon= or ?location= to this API.",

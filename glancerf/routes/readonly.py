@@ -15,7 +15,7 @@ from fastapi.staticfiles import StaticFiles
 from glancerf.config import get_config, get_logger
 from glancerf.web.menu_html import get_menu_html
 from glancerf.modules import get_module_assets, get_modules
-from glancerf.utils import build_merged_cells_from_spans, build_grid_html, get_aspect_ratio_css
+from glancerf.utils import build_merged_cells_from_spans, build_grid_html, get_aspect_ratio_css, get_effective_location_string
 from glancerf.views import render_readonly_page
 
 _log = get_logger("readonly")
@@ -131,7 +131,7 @@ def register_readonly_routes(readonly_app: FastAPI) -> None:
         map_overlay_modules_json = json.dumps(list(overlay_modules))
         map_overlay_layout_json = json.dumps(map_overlay_layout)
         setup_callsign_json = json.dumps(current_config.get("setup_callsign") or "")
-        setup_location_json = json.dumps(current_config.get("setup_location") or "")
+        setup_location_json = json.dumps(get_effective_location_string(current_config))
 
         main_port = current_config.get("port")
         if main_port is None or not isinstance(main_port, int):

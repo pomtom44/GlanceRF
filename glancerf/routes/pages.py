@@ -13,7 +13,7 @@ from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
 
 from glancerf.config import get_config, get_logger
 from glancerf.modules import get_module_by_id, get_module_dir, get_modules
-from glancerf.utils import rate_limit_dependency
+from glancerf.utils import get_effective_location_string, rate_limit_dependency
 from glancerf.web import ConnectionManager
 from glancerf.web.menu_html import get_menu_html
 
@@ -113,7 +113,7 @@ def register_pages(app, connection_manager: Optional[ConnectionManager] = None):
         module_settings_by_cell_json = _json.dumps(module_settings_by_cell)
         modules_settings_schema_json = _json.dumps(modules_settings_schema)
         setup_callsign_json = _json.dumps(current_config.get("setup_callsign") or "")
-        setup_location_json = _json.dumps(current_config.get("setup_location") or "")
+        setup_location_json = _json.dumps(get_effective_location_string(current_config))
 
         html_content = f"""
 <!DOCTYPE html>

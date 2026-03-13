@@ -149,12 +149,12 @@ if ($needPythonDownload) {
 # --- 2. Install requirements ---
 $reqPath = $null
 if ($desktopMode -eq "desktop") {
-    $reqPath = Join-Path $ProjectPath "requirements\requirements-desktop-window.txt"
+    $reqPath = Join-Path $ProjectPath "requirements\requirements-windows-desktop.txt"
 } else {
-    $reqPath = Join-Path $ProjectPath "requirements\requirements-headless.txt"
+    $reqPath = Join-Path $ProjectPath "requirements\requirements-windows.txt"
 }
 if (-not (Test-Path $reqPath)) {
-    $reqPath = Join-Path $ProjectPath "requirements\requirements-headless.txt"
+    $reqPath = Join-Path $ProjectPath "requirements\requirements-windows.txt"
 }
 if (-not (Test-Path $reqPath)) {
     Exit-WithError "Requirements file not found: $reqPath"

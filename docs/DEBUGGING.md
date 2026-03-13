@@ -103,9 +103,4 @@ The APRS list and map overlay use WebSocket for real-time updates. When new pack
 | `aprs_cache_max_size_mb` | Max cache file size in MB before purging (Setup) |
 | `aprs_cache_max_age_hours` | Purge records older than this (Setup) |
 
-## Environment variables
-
-| Variable | Description |
-|----------|-------------|
-| `GLANCERF_PROJECT` | Override project/config directory |
-| `GLANCERF_CONFIG_PATH` | Override config file path |
+For environment variables (e.g. `GLANCERF_PROJECT`, `GLANCERF_CONFIG_PATH`), see [CONFIGURATION.md](CONFIGURATION.md).

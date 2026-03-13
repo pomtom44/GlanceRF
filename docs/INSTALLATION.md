@@ -72,7 +72,7 @@ chmod +x install-mac.sh
 
 ```bash
 cd Project
-pip install -r requirements/requirements-headless.txt   # or requirements-desktop-window.txt for desktop
+pip install -r requirements/requirements-linux.txt   # Linux; or requirements-mac.txt (macOS); or requirements-windows.txt / requirements-windows-desktop.txt (Windows)
 python run.py
 ```
 

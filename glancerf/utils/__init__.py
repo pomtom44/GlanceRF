@@ -19,7 +19,7 @@ from glancerf.utils.restart import trigger_restart
 from glancerf.utils.time_utils import get_current_time
 from glancerf.utils.utils import get_local_ip
 from glancerf.utils.view_utils import build_merged_cells_from_spans, build_grid_html
-from glancerf.utils.location import parse_location
+from glancerf.utils.location import parse_location, get_effective_location, get_effective_location_string
 from glancerf.utils.numpy_fallback import try_numpy_baseline_fallback
 from glancerf.utils.grid_layout import (
     GRID_LAYOUTS,
@@ -49,6 +49,8 @@ __all__ = [
     "build_merged_cells_from_spans",
     "build_grid_html",
     "parse_location",
+    "get_effective_location",
+    "get_effective_location_string",
     "try_numpy_baseline_fallback",
     "GRID_LAYOUTS",
     "get_grid_layout_list",

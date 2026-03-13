@@ -1,0 +1,49 @@
+.grid-cell-gps .gps_display {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 0.2em;
+    text-align: center;
+}
+.grid-cell-gps .gps_position {
+    font-size: 2.5vmin;
+    font-weight: bold;
+    color: #0f0;
+}
+.grid-cell-gps .gps_time {
+    font-size: 2.5vmin;
+    color: #fff;
+}
+.grid-cell-gps .gps_altitude,
+.grid-cell-gps .gps_speed,
+.grid-cell-gps .gps_track,
+.grid-cell-gps .gps_satellites {
+    font-size: 2vmin;
+    color: #aaa;
+}
+.grid-cell-gps .gps_loading,
+.grid-cell-gps .gps_disconnected {
+    font-size: 2.5vmin;
+    color: #888;
+}
+@supports (container-type: size) {
+    .grid-cell-gps .gps_position {
+        font-size: 8cqmin;
+    }
+    .grid-cell-gps .gps_time {
+        font-size: 8cqmin;
+    }
+    .grid-cell-gps .gps_altitude,
+    .grid-cell-gps .gps_speed,
+    .grid-cell-gps .gps_track,
+    .grid-cell-gps .gps_satellites {
+        font-size: 6cqmin;
+    }
+    .grid-cell-gps .gps_loading,
+    .grid-cell-gps .gps_disconnected {
+        font-size: 8cqmin;
+    }
+}

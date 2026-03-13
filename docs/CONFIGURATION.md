@@ -20,10 +20,14 @@ Config is stored in `glancerf_config.json` in the Project directory.
 | `module_settings` | dict | {} | Per-cell settings: `"row_col"` → `{...}` |
 | `setup_callsign` | str | "" | Callsign for modules |
 | `setup_location` | str | "" | Grid square or lat,lng |
+| `gps_location_enabled` | bool | false | Use GPS for system location when on |
+| `gps_time_enabled` | bool | false | Use GPS for UTC time when on |
+| `gps_source` | str | "auto" | `gpsd`, `serial`, or `auto` (try GPSD then serial) |
+| `gps_serial_port` | str | "" | Serial port for direct NMEA (e.g. /dev/ttyUSB0, COM3) |
 | `setup_ssid` | str | "01" | APRS SSID |
 | `update_mode` | str | "auto" | `none`, `notify`, or `auto` |
 | `update_check_time` | str | "03:00" | HH:MM for update check |
-| `telemetry_enabled` | bool | true | Opt-in telemetry |
+| `telemetry_enabled` | bool | true | Telemetry enabled by default (opt-out) |
 | `log_level` | str | "default" | `default`, `detailed`, `verbose`, `debug` |
 | `log_path` | str | — | Log file path |
 | `aprs_debug` | bool | false | Log each incoming APRS packet to console (very verbose at full feed) |

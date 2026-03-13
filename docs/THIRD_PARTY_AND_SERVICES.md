@@ -119,7 +119,7 @@ The app connects as a client and stores packets in a local SQLite database (`con
 
 ## 9. Python (server) dependencies
 
-The server runs on Python and uses these main third-party packages (see `requirements.txt`):
+The server runs on Python and uses these main third-party packages (see `requirements/requirements-*.txt`):
 
 | Package | Purpose |
 |---------|---------|

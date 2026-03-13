@@ -160,7 +160,7 @@ echo ""
 echo "Installing dependencies..."
 
 if [ "$DESKTOP_MODE" = "headless" ]; then
-    HEADLESS_REQ="$PROJECT_DIR/requirements/requirements-headless-linux.txt"
+    HEADLESS_REQ="$PROJECT_DIR/requirements/requirements-mac.txt"
     if [ -f "$HEADLESS_REQ" ]; then
         "$VENV_PYTHON" -m pip install -r "$HEADLESS_REQ" -q 2>/dev/null || "$VENV_PYTHON" -m pip install -r "$HEADLESS_REQ"
     else
@@ -168,7 +168,7 @@ if [ "$DESKTOP_MODE" = "headless" ]; then
     fi
 else
     # browser or terminal mode
-    HEADLESS_REQ="$PROJECT_DIR/requirements/requirements-headless-linux.txt"
+    HEADLESS_REQ="$PROJECT_DIR/requirements/requirements-mac.txt"
     if [ -f "$HEADLESS_REQ" ]; then
         "$VENV_PYTHON" -m pip install -r "$HEADLESS_REQ" -q 2>/dev/null || "$VENV_PYTHON" -m pip install -r "$HEADLESS_REQ"
     else

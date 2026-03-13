@@ -27,6 +27,10 @@ Project/
 │   ├── updates/           # Update checker, updater
 │   └── utils/
 ├── requirements/
+│   ├── requirements-linux.txt
+│   ├── requirements-mac.txt
+│   ├── requirements-windows.txt
+│   └── requirements-windows-desktop.txt
 ├── installers/
 └── docs/
 ```
@@ -45,7 +49,7 @@ Both run in the same process (threads). Read-only connects to main's WebSocket f
 | Path | Description |
 |------|-------------|
 | `/` | Main dashboard |
-| `/setup` | First-run setup |
+| `/setup` | First-run setup (Hardware, Station, Layout, Tips) |
 | `/layout` | Layout configurator |
 | `/map-modules` | Map only modules (data providers for map overlay) |
 | `/modules` | Modules list |
@@ -60,6 +64,9 @@ Both run in the same process (threads). Read-only connects to main's WebSocket f
 | Method | Path | Description |
 |--------|------|-------------|
 | GET | `/api/time` | Current time (startup check) |
+| GET | `/api/gps/status` | GPS setup status (devices, methods, hints) |
+| GET | `/api/gps/stats` | GPS stats when connected (lat, lon, time, alt, speed, track, sats) |
+| POST | `/api/gps/config` | Save GPS source and serial port |
 | POST | `/api/restart` | Restart services |
 | POST | `/api/telemetry/test` | Test telemetry |
 | GET | `/api/update-status` | Version, update info |

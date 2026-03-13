@@ -10,7 +10,7 @@ from fastapi.responses import HTMLResponse, RedirectResponse
 from glancerf.config import get_config, get_logger
 from glancerf.web.menu_html import get_menu_html
 from glancerf.modules import get_module_assets, get_modules
-from glancerf.utils import build_merged_cells_from_spans, build_grid_html, get_aspect_ratio_css
+from glancerf.utils import build_merged_cells_from_spans, build_grid_html, get_aspect_ratio_css, get_effective_location_string
 from glancerf.views import render_main_page
 
 _log = get_logger("root")
@@ -93,7 +93,7 @@ def register_root(app):
         map_overlay_modules_json = json.dumps(list(overlay_modules))
         map_overlay_layout_json = json.dumps(map_overlay_layout)
         setup_callsign_json = json.dumps(current_config.get("setup_callsign") or "")
-        setup_location_json = json.dumps(current_config.get("setup_location") or "")
+        setup_location_json = json.dumps(get_effective_location_string(current_config))
         on_the_air_shortcut_json = json.dumps(current_config.get("on_the_air_shortcut") or "")
 
         _log.debug("root: rendering main page grid=%sx%s", grid_columns, grid_rows)

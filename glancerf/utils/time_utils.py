@@ -3,13 +3,24 @@ Time utilities for GlanceRF.
 """
 
 from datetime import datetime, timezone
-from typing import Dict
+from typing import Any, Dict, Optional
 
 
-def get_current_time() -> Dict[str, str]:
-    """Get current UTC and local time information."""
+def get_current_time(config: Optional[Any] = None) -> Dict[str, str]:
+    """
+    Get current UTC and local time information.
+    If config has gps_time_enabled and GPS provides time, use GPS time for UTC.
+    """
     now_utc = datetime.now(timezone.utc)
-    now_local = datetime.now()
+    if config and config.get("gps_time_enabled"):
+        try:
+            from glancerf.services.gps_service import get_gps_time
+            gps_time = get_gps_time(config)
+            if gps_time is not None:
+                now_utc = gps_time
+        except Exception:
+            pass
+    now_local = now_utc.astimezone()
 
     return {
         "utc": now_utc.strftime("%H:%M:%S"),

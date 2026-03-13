@@ -6,6 +6,29 @@
 set -e
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
+# Run a command quietly with a spinner; returns command exit code
+run_quiet() {
+    local msg="$1"
+    shift
+    local spinstr='|/-\'
+    ("$@" >/dev/null 2>&1) &
+    local pid=$!
+    while kill -0 "$pid" 2>/dev/null; do
+        local temp=${spinstr#?}
+        printf "\r%s [%c] " "$msg" "$spinstr"
+        spinstr=$temp${spinstr%"$temp"}
+        sleep 0.1
+    done
+    wait $pid
+    local ret=$?
+    if [ $ret -eq 0 ]; then
+        printf "\r%s done\n" "$msg"
+    else
+        printf "\r%s failed\n" "$msg"
+    fi
+    return $ret
+}
+
 # Do not run as root; use sudo only for package installs
 if [ "$(id -u)" -eq 0 ]; then
     echo "Do not run this script as root or with sudo."
@@ -14,13 +37,10 @@ if [ "$(id -u)" -eq 0 ]; then
     exit 1
 fi
 
-echo ""
 echo "=========================================="
 echo "  GlanceRF Linux Installer"
 echo "=========================================="
-echo ""
 echo "Run as your normal user; sudo is used only for package installs."
-echo ""
 
 # --- Resolve project path ---
 PROJECT_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
@@ -32,7 +52,6 @@ if [ ! -f "$PROJECT_DIR/run.py" ]; then
     exit 1
 fi
 echo "Project folder: $PROJECT_DIR"
-echo ""
 
 # --- Distro detection ---
 DISTRO_ID=""
@@ -113,7 +132,6 @@ case "${DISTRO_ID}" in
 esac
 
 echo "Detected distro: ${DISTRO_NAME:-unknown}"
-echo ""
 
 # --- Desktop vs Server detection ---
 HAS_DISPLAY="no"
@@ -123,7 +141,6 @@ fi
 
 if [ "$HAS_DISPLAY" = "yes" ]; then
     echo "Desktop environment detected (display available)."
-    echo ""
     echo "How would you like to run GlanceRF?"
     echo "  1) Terminal + Browser - Terminal visible, opens browser"
     echo "  2) Terminal only      - Terminal visible, no browser"
@@ -158,7 +175,6 @@ if [ "$HAS_DISPLAY" = "yes" ]; then
     fi
 else
     echo "Server mode detected (no display - SSH, TTY, or headless)."
-    echo ""
     read -r -p "Install as a service (runs in background)? (y/n) [y]: " service_resp
     service_resp="${service_resp:-y}"
     case "$service_resp" in
@@ -169,17 +185,13 @@ else
     WANT_SHORTCUT=false
     WANT_STARTUP=false
 fi
-echo ""
 echo "Installing... (this may take a few minutes)"
-echo ""
 
 # --- 1. Install system packages (Python, pip, venv) ---
 if [ -n "$PKG_INSTALL" ]; then
-    echo "Installing system packages (Python, pip, venv)..."
-    if ! eval "$PKG_INSTALL"; then
+    if ! run_quiet "Installing system packages (Python, pip, venv)" bash -c "$PKG_INSTALL"; then
         echo "System package install had warnings; continuing if Python is available."
     fi
-    echo ""
 fi
 
 # --- 2. Find Python ---
@@ -204,7 +216,6 @@ if ! "$PYTHON3" -c "import ensurepip" 2>/dev/null; then
     echo "Python venv module not available. Install python3-venv (e.g. sudo apt-get install -y python3-venv) and run again."
     exit 1
 fi
-echo ""
 
 # --- 3. Create venv ---
 VENV_DIR="$PROJECT_DIR/.venv"
@@ -216,38 +227,27 @@ if [ -d "$VENV_DIR" ] && ! "$VENV_PYTHON" -m pip --version &>/dev/null 2>&1; the
 fi
 
 if [ ! -d "$VENV_DIR" ]; then
-    echo "Creating virtual environment..."
-    if ! "$PYTHON3" -m venv "$VENV_DIR"; then
+    if ! run_quiet "Creating virtual environment" "$PYTHON3" -m venv "$VENV_DIR"; then
         echo "Failed to create venv. Install python3-venv and run again."
         exit 1
     fi
 fi
-echo ""
 
 # --- 4. Install dependencies (based on mode) ---
-echo "Installing dependencies..."
-
-if [ "$DESKTOP_MODE" = "headless" ]; then
-    HEADLESS_REQ="$PROJECT_DIR/requirements/requirements-headless-linux.txt"
+install_deps() {
     if [ -f "$HEADLESS_REQ" ]; then
-        "$VENV_PYTHON" -m pip install -r "$HEADLESS_REQ" -q 2>/dev/null || "$VENV_PYTHON" -m pip install -r "$HEADLESS_REQ"
+        "$VENV_PYTHON" -m pip install -r "$HEADLESS_REQ" -q
     else
-        "$VENV_PYTHON" -m pip install pystray Pillow -q 2>/dev/null || "$VENV_PYTHON" -m pip install pystray Pillow
+        "$VENV_PYTHON" -m pip install pystray Pillow -q
     fi
-else
-    # browser or terminal mode
-    HEADLESS_REQ="$PROJECT_DIR/requirements/requirements-headless-linux.txt"
-    if [ -f "$HEADLESS_REQ" ]; then
-        "$VENV_PYTHON" -m pip install -r "$HEADLESS_REQ" -q 2>/dev/null || "$VENV_PYTHON" -m pip install -r "$HEADLESS_REQ"
-    else
-        "$VENV_PYTHON" -m pip install pystray Pillow -q 2>/dev/null || "$VENV_PYTHON" -m pip install pystray Pillow
-    fi
+}
+HEADLESS_REQ="$PROJECT_DIR/requirements/requirements-linux.txt"
+if ! run_quiet "Installing dependencies" install_deps; then
+    echo "Retrying with full output..."
+    install_deps || exit 1
 fi
-echo "Dependencies OK."
-echo ""
 
 # --- 5. Update config ---
-echo "Saving config..."
 CONFIG_PATH="$PROJECT_DIR/glancerf_config.json"
 export GLANCERF_PROJECT="$PROJECT_DIR"
 export GLANCERF_DESKTOP_MODE="$DESKTOP_MODE"
@@ -259,7 +259,6 @@ c['desktop_mode'] = os.environ.get('GLANCERF_DESKTOP_MODE', 'browser')
 json.dump(c, open(p, 'w', encoding='utf-8'), indent=2)
 " 2>/dev/null || true
 echo "Config: desktop_mode=$DESKTOP_MODE"
-echo ""
 
 # --- 6. Desktop shortcut ---
 if [ "$WANT_SHORTCUT" = true ] && [ "$HAS_DISPLAY" = "yes" ]; then
@@ -279,7 +278,7 @@ Terminal=false
 Categories=Utility;
 EOF
         chmod +x "$DESKTOP_FILE"
-        echo "Shortcut created: $DESKTOP_FILE (opens browser)"
+        echo "Shortcut: $DESKTOP_FILE (opens browser)"
     else
         # Terminal + Browser or Terminal only: shortcut runs GlanceRF
         DESKTOP_FILE="$DESKTOP_DIR/GlanceRF.desktop"
@@ -294,9 +293,8 @@ Terminal=true
 Categories=Utility;
 EOF
         chmod +x "$DESKTOP_FILE"
-        echo "Shortcut created: $DESKTOP_FILE"
+        echo "Shortcut: $DESKTOP_FILE"
     fi
-    echo ""
 fi
 
 # --- 7. Headless: systemd user service + tray autostart ---
@@ -361,7 +359,6 @@ EOF
     else
         echo "systemd not available; service requires systemd."
     fi
-    echo ""
 fi
 
 # --- 8. Startup at logon (for terminal+browser and terminal-only modes) ---
@@ -389,14 +386,12 @@ EOF
     systemctl --user daemon-reload 2>/dev/null || true
     systemctl --user enable glancerf.service 2>/dev/null || true
     echo "Startup at logon enabled: $SERVICE_FILE"
-    echo ""
 fi
 
 # --- 9. Complete and run ---
 echo "=========================================="
 echo "  Install complete."
 echo "=========================================="
-echo ""
 
 if [ "$INSTALL_SERVICE" = true ] && [ "$HAS_SYSTEMD" = "yes" ]; then
     echo "Starting GlanceRF service..."
@@ -405,17 +400,25 @@ if [ "$INSTALL_SERVICE" = true ] && [ "$HAS_SYSTEMD" = "yes" ]; then
         (cd "$PROJECT_DIR" && nohup "$VENV_PYTHON" -m glancerf.desktop.tray_helper >/dev/null 2>&1 &)
     fi
     PORT="$("$VENV_PYTHON" -c "import json; c=json.load(open('$PROJECT_DIR/glancerf_config.json')); print(c.get('port',8080))" 2>/dev/null || echo "8080")"
-    echo ""
-    echo "GlanceRF is running. Open http://localhost:$PORT in your browser."
+    LOCAL_IP="$("$VENV_PYTHON" -c "
+import socket
+s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+try:
+    s.connect(('8.8.8.8', 80))
+    print(s.getsockname()[0])
+except Exception:
+    print('localhost')
+finally:
+    s.close()
+" 2>/dev/null || echo "localhost")"
+    echo "GlanceRF is running. Open http://${LOCAL_IP}:$PORT in your browser."
     if [ "$HAS_DISPLAY" = "yes" ]; then
         echo "Tray icon started. It will also start at next logon."
     fi
-    echo ""
 elif [ "$WANT_STARTUP" = true ] && [ "$HAS_SYSTEMD" = "yes" ]; then
     echo "Starting GlanceRF..."
     systemctl --user start glancerf.service 2>/dev/null || true
     echo "GlanceRF started. Status: systemctl --user status glancerf"
-    echo ""
 else
     echo "Starting GlanceRF..."
     cd "$PROJECT_DIR"
